@@ -1,0 +1,204 @@
+;-------------------------------------------
+; printhex subroutine
+; input: a  - value to print
+;        de - video memory address
+; uses:  a,b
+; output: de - new cursor position of video address
+;-------------------------------------------
+printhex:
+	ld b,a
+    rra
+	rra
+	rra
+	rra
+	and $0f
+    call printnibble
+	ld a,b
+	and $0f
+	call printnibble
+	ret
+
+printnibble:
+	add $30
+	cp $3A
+	jp c,.print
+	add 7
+.print:
+	ld (de),a
+	inc de
+	ret
+
+;---------------------------------------------------
+; printdec routine
+; input: a  - value to print
+;        de - video memory address
+; uses:  a,b,c,hl
+;---------------------------------------------------
+printdec:
+	ld b,0					; store hundredths digit
+	ld c,0					; store tenths digit
+.hundredths:
+	cp a,100				; check smaller than 100
+	jp c,.tenths				; if so, go to tenths
+	sub 100					; if not, subtract 100
+	inc b					; increment counter
+	jp .hundredths			; check for more
+.tenths:
+	cp a,10					; check smaller than 10
+	jp c,.ones				; if so, remainder are ones
+	sub 10					; if not, subtract 10
+	inc c					; increment counter
+	jp .tenths				; check for more
+.ones:
+	push af
+	ld a,b
+	add $30					; int to ascii
+	ld (de),a				; print hundredths
+	inc de
+	ld a,c
+	add $30
+	ld (de),a				; print tenths
+	inc de
+	pop af
+	add $30
+	ld (de),a
+	inc de
+	ret
+
+;-------------------------------------------
+; Clear screen
+; uses: a,bc,de,hl
+;-------------------------------------------
+clearscreen:
+	ld a,0 ; load 0 into first byte
+	ld ($5000),a
+	ld de,$5001
+	ld bc,$1000
+	dec bc
+	ld hl,$5000
+	ldir ; copy next byte from previous
+	ret
+
+;-------------------------------------------
+; convert hex characters to int
+; input:  bc - two digit hex characters
+; output:  a - integer result
+; errors: bc = 0
+;-------------------------------------------	
+atoi:
+	call ati		; int in a, error status in b
+	push af			; put a on stack
+	or b			; check if a = b = 0
+	jp z,.atoierr	; if so, give error
+	pop af			; get a result
+	ld b,c			; load lower nibble hex in b
+	ld c,a			; keep upper nibble in c
+	call ati
+	push af
+	or b			; check if a = b = 0
+	jp z,.atoierr	; if so, give error
+	pop af			; upper nibble on a
+	ld b,a			; store lower nibble on b
+	ld a,c			; put upper nibble back on a
+	rla				; shift to left
+	rla
+	rla
+	rla
+	and $F0			; mask upper nibble
+	or b			; get lower nibble from b
+	ret
+.atoierr:
+	pop af			; restore stack
+	ld bc,0
+	ld a,0
+	ret
+
+;-------------------------------------------
+; convert hex characters to int
+; input:  b - hex char
+; output: a - integer result
+; errors: a = b = 0
+;-------------------------------------------
+ati:
+	ld a,b
+	cp 71	; larger than 'F', but might be lowercase
+	jp c,.atipass
+	sub 32	; subtract 32 to potentially get uppercase
+.atipass:
+	cp 71	; larger than 'F', so give error
+	jp nc,.atierror
+	cp 48   ; smaller than '0', so give error
+	jp c,.atierror
+	cp 58	; between 0-9, so convert the digit
+	jp c,.convdig
+	cp 41
+	jp c,.atierror ; between '0' and 'A', so give error
+	sub 55
+	ret
+.convdig:
+	sub 48
+	ret
+.atierror:
+	ld a,0
+	ld b,0
+	ret
+
+;-------------------------------------------------------------------------------
+; push video to RAM
+; uses: all
+;-------------------------------------------------------------------------------
+pushvideo:
+	ld de,VIDEOTEMP	; set destination address
+	ld hl,VIDEO		; set source address
+	ld c,24			; 24 lines
+.nextline:
+	push bc			; push counter
+	ld bc,40
+	ldir
+	pop bc			; retrieve counter
+	dec c
+	ret z
+	push de
+	ld de,40		; increment de by 40
+	add hl,de
+	pop de
+	jp .nextline
+
+;-------------------------------------------------------------------------------
+; pop video from RAM
+; uses all
+;-------------------------------------------------------------------------------
+popvideo:
+	ld de,VIDEO		; set destination address
+	ld hl,VIDEOTEMP	; set source address
+	ld c,24			; 24 lines
+.nextline:
+	push bc			; push counter
+	ld bc,40
+	ldir
+	pop bc			; retrieve counter
+	dec c
+	ret z
+	push hl			; put source address on stack
+	ex de,hl		; put destination address on hl
+	ld de,40		; increment de by 40
+	add hl,de
+	ex de,hl		; put destination address back on de
+	pop hl			; load source address back in hl
+	jp .nextline
+
+;-------------------------------------------------------------------------------
+; print string to screen
+; input: hl - string pointer
+; 		 de - screen address
+; output: de - exit video address
+; uses: a
+;-------------------------------------------------------------------------------
+printstring:
+	ld a,(hl)
+	cp 255
+	ret z
+	ld (de),a
+	inc de
+	inc hl
+	jp printstring
