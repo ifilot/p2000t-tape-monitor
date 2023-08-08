@@ -1,8 +1,8 @@
 ;-------------------------------------------------------------------------------
 ; VARIABLES
 ;-------------------------------------------------------------------------------
-TAPE: 		equ $0018
-BUFFER: 	equ $9400
+TAPE: 		equ $0018   ; address of the "tape" function
+BUFFER: 	equ $9400   ; position to store tape data
 MONADDR: 	equ $9000	; address for monitor (word)
 
 ; variables for command buffer
@@ -63,6 +63,7 @@ ROMCHIP:	equ	$9143	; which rom chip to use (internal or external)
 CHIPID:		equ $9144	; chip id
 CMDPTR:		equ $9146	; command pointer
 STRPTR:		equ $9148	; string pointer
+CRC:		equ $9150	; used to store intermediary CRC result (2 bytes)
 
 ; variables for keyboard interface
 KEYBUF:		equ $6000	; start of key buffer

@@ -347,8 +347,6 @@ cmdcopy:
 	cp 'S'						; check if S
 	jp nz,.askforce				; throw error when no chip
 .force:
-	ld a,CAS_REWIND
-	call tape
 	call taperewind
 	call resetarchive
 .nextfile:
@@ -369,7 +367,7 @@ cmdcopy:
 	ld a,(CASSTAT)				; check for errors
 	cp 0
 	jp nz,prtarchive			; stop on error
-	call copyramrom				; copy to ROM when no error
+	call copyramrom				; copy block from system RAM to ROM
 	ld a,(BLOCKCTR)				; get number of blocks
 	ld b,a
 	dec b
@@ -502,6 +500,12 @@ cmdformat:
 ;-------------------------------------------------------------------------------
 ; Copy cartridge header ($40 bytes) and part in BUFFER RAM ($400 bytes) to ROM.
 ; Uses first free available rom block as storage location.
+;
+; Sets the following variables in memory:
+; FREEBANK		- next free bank
+; FREEBLOCK		- next free block
+; MARKERADDR	- rom address for storing block marker
+; HEADERADDR	- rom address for storing cassette header
 ;-------------------------------------------------------------------------------
 copyramrom:
 	ld a,O_ROM_EXT			; set external rom chip
@@ -518,10 +522,11 @@ copyramrom:
 	push de
 	;call copyramromlog		; store data in log
 	di
-	call markblock
-	call copyheader
+	call markblock          ; mark that the block is used
+	call copyheader         ; copy header from RAM to ROM
 	call copyblock			; copy block from RAM to ROM
-	call setlinkedlist
+	call writechecksum		; write a two byte checksum of the rom data
+	call setlinkedlist      ; set this block as the next element in the l-list
 	ei
 	pop de					; recall screen address
 	ld a,'-'
@@ -561,7 +566,7 @@ cmdnext:
 	ret
 
 ;-------------------------------------------------------------------------------
-; Show next block in monitor
+; Show previous block in monitor
 ; Uses: de,hl
 ;-------------------------------------------------------------------------------
 cmdprev:
@@ -1481,11 +1486,9 @@ sst39checkchip:
 .msgnochip:	DB COL_RED,"No chip: ",255
 
 ;-------------------------------------------------------------------------------
-; Set rom bank
-;
-; 	input: a - ROM BANK
-;	 uses: a,hl
-;
+; set rom bank
+; input: a - ROM BANK
+; uses: a,hl
 ;-------------------------------------------------------------------------------
 setrombank:
 	ld (ROMBANK),a
