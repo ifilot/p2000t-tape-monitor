@@ -525,6 +525,7 @@ copyramrom:
 	call markblock          ; mark that the block is used
 	call copyheader         ; copy header from RAM to ROM
 	call copyblock			; copy block from RAM to ROM
+	call calcchecksum		; calculate the checksum from memory
 	call writechecksum		; write a two byte checksum of the rom data
 	call setlinkedlist      ; set this block as the next element in the l-list
 	ei
@@ -1468,6 +1469,11 @@ sst39checkchip:
 	ld a,'0'
 	inc de
 	ld (de),a
+	ld a,0			; print two empty cells after chip name
+	inc de
+	ld (de),a
+	inc de
+	ld (de),a
 	ret
 .false:				; parse invalid CHIP id
 	ld hl,.msgnochip
@@ -1504,6 +1510,7 @@ include "util.asm"
 include "monitor.asm"
 include "modal.asm"
 include "file.asm"
+include "crc16.asm"
 include "copy.asm"
 include "ram.asm"
 

@@ -53,7 +53,7 @@ uses more than one block. If not, the default value corresponds to `0xFF`.
 |       $0003 | Next bank          | $FF when last block      |
 | $0004       | Next block         | $FF when last block      |
 | $0005       | *Unused*           |                          |
-| $0006-$0007 | Checksum           | To be implemented        |
+| $0006-$0007 | Checksum           | CRC-16, see below        |
 |       $0008 | Free?              | $FF if free, else $00    |
 |       $0009 | Current block      |                          |
 |       $000A | Total blocks       |                          |
@@ -78,6 +78,13 @@ in the P2000T ROM (e.g. 0x0000 - 0x1000) and cannot be changed.
 | $6045-$6046 | Load             |
 | $6047-$604E | Descriptor (2/2) |
 |       $604F | Blocks remaining |
+
+### Checksum
+
+For each 1kb block of data, a 16-bit checksum is generated using the 
+CRC-16/XMODEM checksum algorithm. Efficient Z80 source code for the algorithm 
+is taken from [here](https://mdfs.net/Info/Comp/Comms/CRC16.htm).
+A handy site for generating checksums can be found [here](https://crccalc.com/).
 
 ## Formatting
 

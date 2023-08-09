@@ -246,42 +246,23 @@ markblock:
 	ret
 
 ;-------------------------------------------------------------------------------
-; calculate a two-byte checksum
-; source: https://mdfs.net/Info/Comp/Comms/CRC16.htm
+; calculate a 16 bit checksum
 ;-------------------------------------------------------------------------------
 calcchecksum:
-	ld hl,$00
-	ld (CRC),hl					; set CRC to $0000
-.crc16:
-	ld hl,(BUFFER)				; set address to cassette DATA buffer
+	ld de,$0000					; set initial checksum to $0000
+	ld hl,BUFFER				; set address to cassette DATA buffer
 	ld bc,$400					; parse $400 bytes = 1kb
-	ld de,(crc)					; load current value of CRC into de
-.bytelp:
-	push bc						; push counter onto stack
-	ld a,(hl)					; fetch byte
-	xor d						; xor byte into CRC top byte
-	ld b,8						; prepare to rotate 8 bits
-.rotlp:
-	sla e						; rotate crc
-	adc a,a
-	jp nc,.clear				; bit 15 was zero
-	ld d,a						; put crc high byte back into d
-	ld a,e						; crc = crc ^ $1021 (xmodem polynomic)
-	xor $21
-	ld e,a
-	ld a,d						; get crc top byte back into a
-	xor $10
-.clear:
-	dec b						; decrement bit counter
-	jp nz,.rotlp				; loop for 8 bits
-	ld d,a						; put crc top byte back into d
-	inc hl						; step to next byte
-	pop bc						; get counter back from stack
-	dec bc						; decrement counter
-	ld a,b						; check if counter is zero
-	or c
-	jp nz,.bytelp				; if not zero, go to next byte
-	ld (crc),de					; store crc
+	call crc16					; call crc routine, result returned in de
+	ld (CRC),de					; store crc in memory
+	ld hl,(CRC)
+	ld de,$5022
+	ld a,'$'
+	ld (de),a
+	inc de
+	ld a,h
+	call printhex
+	ld a,l
+	call printhex
 	ret
 
 ;-------------------------------------------------------------------------------
@@ -294,10 +275,10 @@ writechecksum:
 	ld de,(MARKERADDR)			; load ROM header address
 	dec de						; checksum address lies two bytes earlier
 	dec de
-	call sst39sfwrbyteacc
+	call sst39sfwrbytemem
 	inc hl
 	inc de
-	call sst39sfwrbyteacc
+	call sst39sfwrbytemem
 	ret
 
 ;-------------------------------------------------------------------------------

@@ -38,8 +38,8 @@ sst39erase64kb:
 sst39sfid:
 	;---
 	; uncomment the lines below for debugging
-	ld hl,$BFB7
-	ret
+	;ld hl,$BFB7
+	;ret
 	;---
 	ld a,0
 	out (O_ROM_BANK),a	; set to bank 0
