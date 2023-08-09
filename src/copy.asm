@@ -49,7 +49,7 @@ copybank_raro:
 	ld hl,0					; set RAM address (fixed to start at 0)
 .next:
 	ex de,hl				; RAM address in de
-	call ramrecv			; read byte from RAM in a from address de
+	call ramrecvde			; read byte from RAM in a from address de
 	ex de,hl				; ROM address in de
 	call sst39sfwrbyteacc	; write byte from a into address de
 	inc de					; increment ROM address

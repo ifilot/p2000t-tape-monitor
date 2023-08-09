@@ -64,6 +64,9 @@ CHIPID:		equ $9144	; chip id
 CMDPTR:		equ $9146	; command pointer
 STRPTR:		equ $9148	; string pointer
 CRC:		equ $9150	; used to store intermediary CRC result (2 bytes)
+EXRAMADDR:	equ $9152	; current address in external RAM to monitor (2 bytes)
+RAMFLAG:	equ $9154	; byte which RAM should be shown
+RAMBUF:		equ $9155	; store single RAM byte for printascii
 
 ; variables for keyboard interface
 KEYBUF:		equ $6000	; start of key buffer

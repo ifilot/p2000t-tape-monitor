@@ -48,6 +48,9 @@ init:
 	call setrombank
 	ld hl,0						; set rom address to 0
 	ld (ROMADDR),hl
+	ld (EXRAMADDR),hl			; set external ram address to 0
+	ld a,0						; point monitor to internal RAM
+	ld (RAMFLAG),a
 	ld a,$FF
 	ld (FREEBANK),a
 	ld (FREEBLOCK),a
@@ -158,8 +161,11 @@ parsecmd:
 .strformat:		DB "format",255
 .strfindblk:	DB "findblk",255
 .strversion:	DB "version",255
+.strsetramint:	DB "sri",255
+.strsetramext:	DB "sre",255
+.strstairram:	DB "srs",255
 
-.cmdlengths: 	DB 7,7,4,8,8,4,5,6,7,7
+.cmdlengths: 	DB 7,7,4,8,8,4,5,6,7,7,3,3,3
 
 .cmdptrs:		DW cmdcopyram
 				DW cmdcopybuf
@@ -171,6 +177,9 @@ parsecmd:
 				DW cmdformat
 				DW cmdfindblk
 				DW cmdversion
+				DW cmdsri
+				DW cmdsre
+				DW cmdstairram
 
 .msgunknown: 	DB 3,"Unknown command",0,255
 
@@ -195,6 +204,46 @@ cmdversion:
 	ret
 
 .message: DB "TAPEMONITOR v.0.1.0.1",255
+
+;-------------------------------------------------------------------------------
+; Set monitor to internal RAM
+;-------------------------------------------------------------------------------
+cmdsri:
+	ld a,0
+	ld (RAMFLAG),a
+	ld hl,.message
+	call printmessage
+	call printblock
+	ret
+
+.message: DB "Monitor set to *INTERNAL* RAM",255
+
+;-------------------------------------------------------------------------------
+; Set monitor to external RAM
+;-------------------------------------------------------------------------------
+cmdsre:
+	ld a,1
+	ld (RAMFLAG),a
+	ld hl,.message
+	call printmessage
+	call printblock
+	ret
+
+.message: DB "Monitor set to *EXTERNAL* RAM",255
+
+;-------------------------------------------------------------------------------
+; Set incrementing values for addresses in RAM
+;-------------------------------------------------------------------------------
+cmdstairram:
+	ld hl,.message
+	call printmessage
+	call stairram
+	ld hl,.msgdone
+	call printmessage
+	ret
+
+.message: DB "Performing stair-ram test...",255
+.msgdone: DB "Done stair-ram test.        ",255
 
 ;-------------------------------------------------------------------------------
 ; Find the next free block on external ROM chip
@@ -244,7 +293,7 @@ cmdcopyram:
 	ld hl,BUFFER		; set destination address
 	ld de,0 			; set ram chip address
 .nextbyte:
-	call ramrecv
+	call ramrecvde
 	ld (hl),a
 	inc de
 	inc hl
@@ -330,8 +379,15 @@ cmdreadmon:
 	pop af
 	ld l,a
 	ld a,(TEMP1)
-	ld h,a
+	ld h,a			; address is not set in hl
+	ld a,(RAMFLAG)	; read RAM flag
+	cp 0
+	jr nz,.setexramaddr
 	ld (MONADDR),hl
+	jr .end
+.setexramaddr:
+	ld (EXRAMADDR),hl
+.end:
 	call printblock
 	ret
 
