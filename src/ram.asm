@@ -60,7 +60,7 @@ clearram:
 	dec hl
 	ld a,h
 	or l
-	djnz .nextbyte
+	jr nz,.nextbyte
 	ret
 
 ;-------------------------------------------------------------------------------
@@ -70,17 +70,17 @@ clearram:
 ;-------------------------------------------------------------------------------
 stairram:
 	ld de,0
-	ld hl,$8000
+	ld hl,$8000		; counter
 	ld c,0
 .nextbyte:
 	ld a,c
-	call ramsend
+	call ramsend	; write to RAM at address 'de' from 'a'
 	inc c
-	inc de
-	dec hl
+	inc de			; next address in external ram
+	dec hl			; decrement hl counter
 	ld a,h
 	or l
-	djnz .nextbyte
+	jr nz,.nextbyte	; check if counter is zero, if not, next byte
 	ret
 
 ;-------------------------------------------------------------------------------
