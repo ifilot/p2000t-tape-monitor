@@ -1,39 +1,48 @@
-;-------------------------------------------
+;-------------------------------------------------------------------------------
 ; printhex subroutine
+;
+; input: a  - value to print
+;        de - video memory address
+; uses:  a,i
+; output: de - new cursor position of video address
+;-------------------------------------------------------------------------------
+printhex:
+	ld i,a					; load value into b
+    rra						; shift right by 4, ignore leaving bits
+	rra
+	rra
+	rra
+	and $0f					; mask
+    call printnibble		; print upper nibble
+	ld a,i					; reload value to print
+	and $0f					; mask
+	call printnibble		; print lower nibble
+	ret
+
+;-------------------------------------------------------------------------------
+; printnibble subroutine
+;
 ; input: a  - value to print
 ;        de - video memory address
 ; uses:  a,b
 ; output: de - new cursor position of video address
-;-------------------------------------------
-printhex:
-	ld b,a
-    rra
-	rra
-	rra
-	rra
-	and $0f
-    call printnibble
-	ld a,b
-	and $0f
-	call printnibble
-	ret
-
+;-------------------------------------------------------------------------------
 printnibble:
-	add $30
-	cp $3A
-	jp c,.print
-	add 7
+	add $30					; add $30 to number in a
+	cp $3A					; less than $3A?
+	jp c,.print				; if so, number between 0-9, so print it
+	add 7					; if not, number between A-F, so add 7
 .print:
-	ld (de),a
-	inc de
+	ld (de),a				; load accumulator into (de)
+	inc de					; increment video position
 	ret
 
-;---------------------------------------------------
+;-------------------------------------------------------------------------------
 ; printdec routine
 ; input: a  - value to print
 ;        de - video memory address
 ; uses:  a,b,c,hl
-;---------------------------------------------------
+;-------------------------------------------------------------------------------
 printdec:
 	ld b,0					; store hundredths digit
 	ld c,0					; store tenths digit
@@ -65,10 +74,10 @@ printdec:
 	inc de
 	ret
 
-;-------------------------------------------
+;-------------------------------------------------------------------------------
 ; Clear screen
 ; uses: a,bc,de,hl
-;-------------------------------------------
+;-------------------------------------------------------------------------------
 clearscreen:
 	ld a,0 ; load 0 into first byte
 	ld ($5000),a
@@ -79,12 +88,12 @@ clearscreen:
 	ldir ; copy next byte from previous
 	ret
 
-;-------------------------------------------
+;-------------------------------------------------------------------------------
 ; convert hex characters to int
 ; input:  bc - two digit hex characters
 ; output:  a - integer result
 ; errors: bc = 0
-;-------------------------------------------	
+;-------------------------------------------------------------------------------
 atoi:
 	call ati		; int in a, error status in b
 	push af			; put a on stack
@@ -113,12 +122,12 @@ atoi:
 	ld a,0
 	ret
 
-;-------------------------------------------
+;-------------------------------------------------------------------------------
 ; convert hex characters to int
 ; input:  b - hex char
 ; output: a - integer result
 ; errors: a = b = 0
-;-------------------------------------------
+;-------------------------------------------------------------------------------
 ati:
 	ld a,b
 	cp 71	; larger than 'F', but might be lowercase

@@ -238,12 +238,13 @@ cmdstairram:
 	ld hl,.message
 	call printmessage
 	call stairram
+	call cleanmessage
 	ld hl,.msgdone
 	call printmessage
 	ret
 
 .message: DB "Performing stair-ram test...",255
-.msgdone: DB "Done stair-ram test.        ",255
+.msgdone: DB "Done stair-ram test.",255
 
 ;-------------------------------------------------------------------------------
 ; Find the next free block on external ROM chip
@@ -286,24 +287,24 @@ cmdcopybuf:
 ; Copy $400 bytes from RAM to $9400 and display it
 ;-------------------------------------------------------------------------------
 cmdcopyram:
-	call cleanmessage
-	ld hl,.message
+	call cleanmessage	; clean message
+	ld hl,.message		; inform user on operation
 	call printmessage
-	ld bc,$400
+	ld bc,$400			; set counter (1kb)
 	ld hl,BUFFER		; set destination address
 	ld de,0 			; set ram chip address
 .nextbyte:
-	call ramrecvde
-	ld (hl),a
-	inc de
-	inc hl
-	dec bc
+	call ramrecvde		; load character from external ram (set by de) into a
+	ld (hl),a			; put a into memory
+	inc de				; increment external ram memory address
+	inc hl				; increment internal ram memory address
+	dec bc				; decrement rounter
 	ld a,c
-	or b 
-	jp nz,.nextbyte
-	ld hl,BUFFER   		; load monitor address from RAM
-	ld (MONADDR),hl
-	call printblock
+	or b				; check if counter reached zero
+	jr nz,.nextbyte		; if not, next byte
+	ld hl,BUFFER   		; put BUFFER address into hl
+	ld (MONADDR),hl		; use buffer address as monitor address
+	call printblock		; show buffer in monitor
 	ret
 
 .message: DB "Copying current RAM buffer.",255
@@ -629,6 +630,7 @@ cmdnext:
 cmdprev:
 	ld hl,(MONADDR)
 	ld de,BLOCKSIZE
+	or a					; reset carry flag
 	sbc hl,de
 	ld (MONADDR),hl
 	call printblock

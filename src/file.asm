@@ -169,6 +169,7 @@ calcheaderaddr:
 	add hl,de
 	ld (HEADERADDR),hl
 	ld de,24
+	or a				; reset carry flag
 	sbc hl,de
 	ld (MARKERADDR),hl
 	ret
@@ -298,6 +299,7 @@ setlinkedlist:
 	ld c,a
 	ld hl,(PREVMKADDR)			; store marker address
 	ld de,5
+	or a						; reset carry flag
 	sbc hl,de					; load next bank address ($0003)
 	ex de,hl					; set in register de
 	ld a,(FREEBANK)				; load current bank

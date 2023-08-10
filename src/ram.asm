@@ -38,9 +38,9 @@ ramrecvde:
 ; fixed: hl
 ;-------------------------------------------------------------------------------
 ramrecvhl:
-	ld a,h
-	out (O_ROM_LA),a		; set lower address
 	ld a,l
+	out (O_ROM_LA),a		; set lower address
+	ld a,h
 	out (O_ROM_UA),a		; set upper address
 	in a,(O_RAM_RW)
 	ret
