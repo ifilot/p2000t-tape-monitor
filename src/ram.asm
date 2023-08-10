@@ -2,16 +2,33 @@
 ; Send a byte to RAM chip
 ; input: de - chip address
 ;         a - byte to write
-; uses: b
+; uses: i
 ; fixed: de
 ;-------------------------------------------------------------------------------
 ramsend:
-	ld b,a					; temporarily store a in b
+	ld i,a					; temporarily store a in i
 	ld a,e
 	out (O_ROM_LA),a		; set lower address
 	ld a,d
 	out (O_ROM_UA),a		; set upper address
-	ld a,b					; recall a from b
+	ld a,i					; recall a from i
+	out (O_RAM_RW),a		; store byte
+	ret
+
+;-------------------------------------------------------------------------------
+; Send a byte to RAM chip
+; input: hl - chip address
+;         a - byte to write
+; uses: i
+; fixed: de
+;-------------------------------------------------------------------------------
+ramsendhl:
+	ld i,a					; temporarily store a in i
+	ld a,l
+	out (O_ROM_LA),a		; set lower address
+	ld a,h
+	out (O_ROM_UA),a		; set upper address
+	ld a,i					; recall a from i
 	out (O_RAM_RW),a		; store byte
 	ret
 

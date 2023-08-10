@@ -145,9 +145,13 @@ parsecmd:
 	call printstring
 	ret
 
-;--------------------------------
+;-------------------------------------------------------------------------------
 ; command instructions
-;--------------------------------
+;
+; When a command is submitted by the user, the program will parse through this
+; list and see if a string matches. If so, the corresponding subroutine
+; corresponding to the command label is called.
+;-------------------------------------------------------------------------------
 .NUMCMDS:		equ .cmdptrs - .cmdlengths
 
 .strptrs:
@@ -164,8 +168,9 @@ parsecmd:
 .strsetramint:	DB "sri",255
 .strsetramext:	DB "sre",255
 .strstairram:	DB "srs",255
+.strlist:		DB "list",255
 
-.cmdlengths: 	DB 7,7,4,8,8,4,5,6,7,7,3,3,3
+.cmdlengths: 	DB 7,7,4,8,8,4,5,6,7,7,3,3,3,4
 
 .cmdptrs:		DW cmdcopyram
 				DW cmdcopybuf
@@ -180,6 +185,7 @@ parsecmd:
 				DW cmdsri
 				DW cmdsre
 				DW cmdstairram
+				DW cmdlist
 
 .msgunknown: 	DB 3,"Unknown command",0,255
 
@@ -245,6 +251,43 @@ cmdstairram:
 
 .message: DB "Performing stair-ram test...",255
 .msgdone: DB "Done stair-ram test.",255
+
+;-------------------------------------------------------------------------------
+; Copy program metadata from external ROM to external RAM, such that it can
+; be easily displayed.
+;-------------------------------------------------------------------------------
+cmdlist:
+	ld b,8					; set bank counter
+	ld c,0					; current bank
+	ld hl,0					; set start ram storage location
+.nextbank:
+	ld a,c
+	out (O_ROM_BANK),a		; set bank
+	ld de,0					; first address on the bank
+.nextbyte:
+	call sst39sfrecvexrom	; read start block from external rom
+	cp $FF					; check if end of bank
+	jr z,.endbank			; if so, end reading of this bank
+	jr .storebytes			; if not, store data in ram
+.endbank:
+	dec b
+	jr z,.done
+	inc c
+	jr .nextbank
+.storebytes:
+	call ramsendhl			; store current block (still in a)
+	ld a,c					; load current bank in a
+	inc hl					; increment ext ram addr
+	call ramsendhl			; store current bank in ext ram
+	inc hl					; increment ext ram addr (for next program)
+	inc de					; increment rom addr
+	jr .nextbyte
+.done:
+	ld a,(ROMBANK)			; restore rom bank
+	out (O_ROM_BANK),a
+	ld a,$FF				; write terminating byte
+	call ramsendhl			; store current bank in ext ram
+	ret
 
 ;-------------------------------------------------------------------------------
 ; Find the next free block on external ROM chip

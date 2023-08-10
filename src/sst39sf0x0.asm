@@ -103,6 +103,20 @@ sst39sfrecv:
 	ret
 
 ;-------------------------------------------------------------------------------
+; Receive a byte from external SST39SF0x0 chip
+; input: de - chip address
+; output: a - byte at address
+;		 de - chip address
+;-------------------------------------------------------------------------------
+sst39sfrecvexrom:
+	ld a,e
+	out (O_ROM_LA),a
+	ld a,d
+	out (O_ROM_UA),a
+	in a,(O_ROM_EXT)
+	ret
+
+;-------------------------------------------------------------------------------
 ; Clear a 4kb sector
 ; input:  de - chip address
 ;		   b - bank number
