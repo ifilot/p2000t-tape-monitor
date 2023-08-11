@@ -255,38 +255,12 @@ cmdstairram:
 ;-------------------------------------------------------------------------------
 ; Copy program metadata from external ROM to external RAM, such that it can
 ; be easily displayed.
+;
+;
 ;-------------------------------------------------------------------------------
 cmdlist:
-	ld b,8					; set bank counter
-	ld c,0					; current bank
-	ld hl,0					; set start ram storage location
-.nextbank:
-	ld a,c
-	out (O_ROM_BANK),a		; set bank
-	ld de,0					; first address on the bank
-.nextbyte:
-	call sst39sfrecvexrom	; read start block from external rom
-	cp $FF					; check if end of bank
-	jr z,.endbank			; if so, end reading of this bank
-	jr .storebytes			; if not, store data in ram
-.endbank:
-	dec b
-	jr z,.done
-	inc c
-	jr .nextbank
-.storebytes:
-	call ramsendhl			; store current block (still in a)
-	ld a,c					; load current bank in a
-	inc hl					; increment ext ram addr
-	call ramsendhl			; store current bank in ext ram
-	inc hl					; increment ext ram addr (for next program)
-	inc de					; increment rom addr
-	jr .nextbyte
-.done:
-	ld a,(ROMBANK)			; restore rom bank
-	out (O_ROM_BANK),a
-	ld a,$FF				; write terminating byte
-	call ramsendhl			; store current bank in ext ram
+	call copyprogblocks
+	call copydesceroera
 	ret
 
 ;-------------------------------------------------------------------------------
@@ -309,7 +283,7 @@ cmdcopybuf:
 	push de					; store screen address on stack
 	call findfreeblock		; load first free block and bank in bc
 	call calcromaddr		; calculate rom address in de
-	call calcheaderaddr		; calculate header storage address
+	call calcmetaaddr		; calculate header storage address
 	pop de
 	call printromaddr		; print rom address
 	push de
@@ -616,7 +590,7 @@ copyramrom:
 	call findfreeblock		; load first free block and bank in bc
 	call prtrombank			; show current rom bank
 	call calcromaddr		; calculate rom address in de
-	call calcheaderaddr		; calculate header storage address
+	call calcmetaaddr		; calculate header storage address
 	pop de
 	call printromaddr		; print rom address
 	push de

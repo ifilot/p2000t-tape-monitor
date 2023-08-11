@@ -138,7 +138,7 @@ calcromaddr:
 	ret
 
 ;-------------------------------------------------------------------------------
-; calculate metadata header addresses from block number
+; calculate addresses from block number
 ;
 ; input:  FREEBLOCK
 ; output: HEADERADDR - cartridge header start address
@@ -146,19 +146,40 @@ calcromaddr:
 ;
 ; uses: all
 ;-------------------------------------------------------------------------------
-calcheaderaddr:
+calcmetaaddr:
 	ld a,(FREEBLOCK)
-	rla
+	call calcheader
+	ld (HEADERADDR),hl
+	ld de,24
+	or a				; reset carry flag
+	sbc hl,de
+	ld (MARKERADDR),hl
+	ret
+
+;-------------------------------------------------------------------------------
+; calculate metadata CAS header addresses from block number
+;
+; This routine effectively multiplies the value in a with 40 and adds 
+; $0120 to it to find the starting byte of the CAS header.
+;
+; input:  a - block number
+; output: hl - cartridge header start address
+;
+; uses: de,i
+; fixed: a
+;-------------------------------------------------------------------------------
+calcheader:
+	rla					; rotate left two times
 	rla
 	and $FC
-	push af				; store result
+	ld i,a
+	rra					; rotate right four times
 	rra
 	rra
 	rra
-	rra
-	and $0F
+	and $0F				; place center 4 bits at right end
 	ld h,a				; store upper byte
-	pop af
+	ld a,i
 	rla
 	rla
 	rla
@@ -167,13 +188,8 @@ calcheaderaddr:
 	ld l,a				; store lower byte
 	ld de,$0120
 	add hl,de
-	ld (HEADERADDR),hl
-	ld de,24
-	or a				; reset carry flag
-	sbc hl,de
-	ld (MARKERADDR),hl
+	ld a,i
 	ret
-
 ;-------------------------------------------------------------------------------
 ; copies block from buffer to rom, uses fixed positions in memory 
 ; for location data
@@ -395,3 +411,93 @@ chiperase:
 	jp .nextbank
 
 .msg: DB "Wiping bank: $",255
+
+;-------------------------------------------------------------------------------
+; Copy starting blocks from external rom to external ram
+;
+; Programs (files) are indicated by two bytes, the first byte is the first block
+; of the file on the bank and the second byte is the bank number. This
+; information can at most cover 2*8*60 = 960 bytes of data, for which
+; $0000-$0400 in RAM is allocated.
+;
+;-------------------------------------------------------------------------------
+copyprogblocks:
+	ld b,8					; set bank counter
+	ld c,0					; current bank
+	ld hl,0					; set start ram storage location
+.nextbank:
+	ld a,c
+	out (O_ROM_BANK),a		; set bank
+	ld de,0					; first address on the bank
+.nextbyte:
+	call sst39sfrecvexrom	; read start block from external rom
+	cp $FF					; check if end of bank
+	jr z,.endbank			; if so, end reading of this bank
+	jr .storebytes			; if not, store data in ram
+.endbank:
+	dec b
+	jr z,.done
+	inc c
+	jr .nextbank
+.storebytes:
+	call ramsendhl			; store current block (still in a)
+	ld a,c					; load current bank in a
+	inc hl					; increment ext ram addr
+	call ramsendhl			; store current bank in ext ram
+	inc hl					; increment ext ram addr (for next program)
+	inc de					; increment rom addr
+	jr .nextbyte
+.done:
+	ld a,(ROMBANK)			; restore rom bank
+	out (O_ROM_BANK),a
+	ld a,$FF				; write terminating byte (twice)
+	call ramsendhl			; store terminating byte
+	inc hl
+	call ramsendhl			; store terminating byte
+
+;-------------------------------------------------------------------------------
+; Copy CAS descriptors from external rom to external ram
+;
+; Filenames are stored as 16 byte strings which can take at most 7680 bytes of
+; information. To store the filenames, $0400-$2200 in memory is reserved.
+;-------------------------------------------------------------------------------
+copydesceroera:
+	ld hl,0					; start at first program
+	ld bc,$400				; start of string locations
+.nextprog:
+	call ramrecvhl			; load block number in accumulator
+	cp $FF					; check if this is the last block
+	ret z					; return if so
+	ld i,a					; store temporarily in i
+	inc hl
+	call ramrecvhl			; load bank number in accumulator
+	out (O_ROM_BANK),a		; set external rom bank
+	inc hl					; next program address
+	push hl					; push block index addr to stack
+	ld a,i					; recover block number
+	call calcheader			; determine start header addr, result stored in hl
+	ld de,$0006				; add $26 to get to start descriptor
+	add hl,de
+	ex de,hl				; de is set to start of RAM descriptor
+	ld h,8					; use h as byte counter
+.nextbyte1:
+	call sst39sfrecvexrom	; read descriptor byte from ext rom
+	call ramsendbc			; send to external ram
+	inc de					; next byte from external rom
+	inc bc					; next byte in external ram
+	dec h					; decrement counter
+	jr nz,.nextbyte1		; check if zero, if not, next byte
+	ex de,hl				; set rom address in hl
+	ld de,10				; set increment for next descriptor block
+	add hl,de				; add to address
+	ex de,hl				; set rom address back into de
+	ld h,8					; set byte counter
+.nextbyte2:
+	call sst39sfrecvexrom	; read descriptor byte from ext rom
+	call ramsendbc			; send to external ram
+	inc de					; next byte from external rom
+	inc bc					; next byte in external ram
+	dec h					; decrement counter
+	jr nz,.nextbyte2		; check if zero, if not, next byte
+	pop hl					; recover hl
+	jp .nextprog			; try to grab next program

@@ -33,6 +33,23 @@ ramsendhl:
 	ret
 
 ;-------------------------------------------------------------------------------
+; Send a byte to RAM chip
+; input: bc - chip address
+;         a - byte to write
+; uses: i
+; fixed: de
+;-------------------------------------------------------------------------------
+ramsendbc:
+	ld i,a					; temporarily store a in i
+	ld a,c
+	out (O_ROM_LA),a		; set lower address
+	ld a,b
+	out (O_ROM_UA),a		; set upper address
+	ld a,i					; recall a from i
+	out (O_RAM_RW),a		; store byte
+	ret
+
+;-------------------------------------------------------------------------------
 ; Receive a byte from RAM chip via address in de
 ;
 ; input: de - chip address
