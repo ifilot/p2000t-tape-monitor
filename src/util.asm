@@ -41,30 +41,30 @@ printnibble:
 ; printdec routine
 ; input: a  - value to print
 ;        de - video memory address
-; uses:  a,b,c,hl
+; uses:  a,ix
 ;-------------------------------------------------------------------------------
 printdec:
-	ld b,0					; store hundredths digit
-	ld c,0					; store tenths digit
+	ld ixh,0				; store hundredths digit
+	ld ixl,0				; store tenths digit
 .hundredths:
 	cp a,100				; check smaller than 100
-	jp c,.tenths				; if so, go to tenths
+	jp c,.tenths			; if so, go to tenths
 	sub 100					; if not, subtract 100
-	inc b					; increment counter
+	inc ixh					; increment counter
 	jp .hundredths			; check for more
 .tenths:
 	cp a,10					; check smaller than 10
 	jp c,.ones				; if so, remainder are ones
 	sub 10					; if not, subtract 10
-	inc c					; increment counter
+	inc ixl					; increment counter
 	jp .tenths				; check for more
 .ones:
 	push af
-	ld a,b
+	ld a,ixh
 	add $30					; int to ascii
 	ld (de),a				; print hundredths
 	inc de
-	ld a,c
+	ld a,ixl
 	add $30
 	ld (de),a				; print tenths
 	inc de

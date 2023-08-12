@@ -66,6 +66,8 @@ STRPTR:		equ $9148	; string pointer
 CRC:		equ $9150	; used to store intermediary CRC result (2 bytes)
 EXRAMADDR:	equ $9152	; current address in external RAM to monitor (2 bytes)
 RAMFLAG:	equ $9154	; byte which RAM should be shown
+MAXFILES:	equ $9156	; how many files are on the external ROM (2 bytes)
+FILESTART:	equ $9158   ; which file to look at (2 bytes)
 
 ; variables for keyboard interface
 KEYBUF:		equ $6000	; start of key buffer

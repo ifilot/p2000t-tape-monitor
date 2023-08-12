@@ -261,6 +261,9 @@ cmdstairram:
 cmdlist:
 	call copyprogblocks
 	call copydesceroera
+	call copyfileext
+	call copyfilelengths
+	call showfiles
 	ret
 
 ;-------------------------------------------------------------------------------
@@ -1588,6 +1591,7 @@ include "file.asm"
 include "crc16.asm"
 include "copy.asm"
 include "ram.asm"
+include "programlist.asm"
 
 ;-------------------------------------------------------------------------------
 ; ascii conversion table
