@@ -264,6 +264,7 @@ cmdlist:
 	call copyfileext
 	call copyfilelengths
 	call showfiles
+	call init 					; go back to monitor
 	ret
 
 ;-------------------------------------------------------------------------------

@@ -3,18 +3,18 @@
 ;
 ; input: a  - value to print
 ;        de - video memory address
-; uses:  a,i
+; uses:  a,iyh
 ; output: de - new cursor position of video address
 ;-------------------------------------------------------------------------------
 printhex:
-	ld i,a					; load value into b
+	ld iyh,a				; load value into b
     rra						; shift right by 4, ignore leaving bits
 	rra
 	rra
 	rra
 	and $0f					; mask
     call printnibble		; print upper nibble
-	ld a,i					; reload value to print
+	ld a,iyh				; reload value to print
 	and $0f					; mask
 	call printnibble		; print lower nibble
 	ret

@@ -62,13 +62,13 @@ copydesceroera:
 	call ramrecvhl			; load block number in accumulator
 	cp $FF					; check if this is the last block
 	ret z					; return if so
-	ld i,a					; store temporarily in i
+	ld ixh,a				; store temporarily in i
 	inc hl
 	call ramrecvhl			; load bank number in accumulator
 	out (O_ROM_BANK),a		; set external rom bank
 	inc hl					; next program address
 	push hl					; push block index addr to stack
-	ld a,i					; recover block number
+	ld a,ixh				; recover block number
 	call calcheader			; determine start header addr, result stored in hl
 	ld de,$0006				; add 6 to get to start descriptor
 	add hl,de
@@ -109,13 +109,13 @@ copyfileext:
 	call ramrecvhl			; load block number in accumulator
 	cp $FF					; check if this is the last block
 	ret z					; return if so
-	ld i,a					; store temporarily in i
+	ld ixh,a				; store temporarily in i
 	inc hl
 	call ramrecvhl			; load bank number in accumulator
 	out (O_ROM_BANK),a		; set external rom bank
 	inc hl					; next program address
 	push hl					; push block index addr to stack
-	ld a,i					; recover block number
+	ld a,ixh				; recover block number
 	call calcheader			; determine start header addr, result stored in hl
 	ld de,$000E				; add $000E to get to start extension
 	add hl,de
@@ -144,13 +144,13 @@ copyfilelengths:
 	call ramrecvhl			; load block number in accumulator
 	cp $FF					; check if this is the last block
 	ret z					; return if so
-	ld i,a					; store temporarily in i
+	ld ixh,a				; store temporarily in i
 	inc hl
 	call ramrecvhl			; load bank number in accumulator
 	out (O_ROM_BANK),a		; set external rom bank
 	inc hl					; next program address
 	push hl					; push block index addr to stack
-	ld a,i					; recover block number
+	ld a,ixh				; recover block number
 	call calcheader			; determine start header addr, result stored in hl
 	ld de,$0002				; add 2 to get to start of file lengths
 	add hl,de
@@ -172,8 +172,24 @@ copyfilelengths:
 showfiles:
 	ld hl,0					; set current file counter to 0
 	ld (FILESTART),hl
-.interface:
+	call filesdraw
+	call showfilesuserinput
+	ret
+
+;-------------------------------------------------------------------------------
+; Draw routine for the files
+;-------------------------------------------------------------------------------
+filesdraw:
 	call clearscreen
+	ld hl,.title
+	ld de,$5000
+	call printstring
+	ld de,$5000 + 22*$50
+	ld hl,.instructions1
+	call printstring
+	ld de,$5000 + 23*$50
+	ld hl,.instructions2
+	call printstring
 	ld de,$5000 + 28
 	ld a,'$'
 	ld (de),a
@@ -194,10 +210,25 @@ showfiles:
 	call printhex
 	ld a,l
 	call printhex
+	ld hl,(MAXFILES)
+	ld a,h
+	or l
+	ret z
 	call showdescriptions
 	call showextensions
 	call showfilelengths
 	ret
+
+.title: DB COL_CYAN,150,127
+		DB 127,127,127,127,127,00
+		DB "FILE LIST"
+		DB 00,127,127,127,127,127,127,135,255
+
+.instructions1:
+	DB COL_MAG,"p - previous page  n - next page",255
+
+.instructions2:
+	DB COL_MAG,"b - back to monitor",255
 
 ;-------------------------------------------------------------------------------
 ; Show descriptions
@@ -207,10 +238,15 @@ showdescriptions:
 	ld ixh,20					; number of files on screen
 	ld de, $5000+$50 * 2 		; set start address
 .nextprogram:
+	ld a,COL_CYAN
+	ld (de),a
+	inc de
 	ld a,b
 	call printhex
 	ld a,c
 	call printhex
+	ld a,COL_WHITE
+	ld (de),a
 	inc de
 	ld a,b					; load upper address in b
 	rla						; shift right by 4 (multiply by 16)
@@ -254,7 +290,7 @@ showdescriptions:
 	dec ixh					; decrement program per page counter
 	ret z					; check if zero, if so, return
 	ex de,hl				; swap de,hl
-	ld de,$50-21			; load next line increment
+	ld de,$50-22			; load next line increment
 	add hl,de				; add increment to video ram
 	ex de,hl				; swap hl and de
 	jp .nextprogram			; go to next program if not zero
@@ -267,6 +303,9 @@ showextensions:
 	ld ixh,20					; number of files on screen
 	ld de, $5000+$50 * 2 + 22	; set start address
 .nextprogram:
+	ld a,COL_GREEN
+	ld (de),a
+	inc de
 	ld h,b
 	ld l,c
 	add hl,bc
@@ -291,7 +330,7 @@ showextensions:
 	dec ixh					; decrement program per page counter
 	ret z					; check if zero, if so, return
 	ex de,hl				; swap de,hl
-	ld de,$50-3				; load next line increment
+	ld de,$50-4				; load next line increment
 	add hl,de				; add increment to video ram
 	ex de,hl				; swap hl and de
 	jp .nextprogram			; go to next program if not zero
@@ -304,11 +343,14 @@ showfilelengths:
 	ld ixh,20					; number of files on screen
 	ld de, $5000+$50 * 2 + 26	; set start address
 .nextprogram:
+	ld a,COL_YELLOW
+	ld (de),a
+	inc de
 	ld h,b
 	ld l,c
-	add hl,bc
+	add hl,bc				; multiply program counter by 2
 	push de					; put video addr on stack
-	ld de,$2200				; set ex ram offset
+	ld de,$2800				; set ex ram offset
 	add hl,de				; add to ex ram address
 	pop de					; get video ram from stack
 	ld a,'$'
@@ -319,6 +361,9 @@ showfilelengths:
 	inc hl
 	call ramrecvhl			; get character from external ram
 	call printhex
+	ld a,COL_WHITE
+	ld (de),a
+	inc de
 	inc hl
 	inc bc					; increment program counter
 	ld hl,(MAXFILES)		; load maximum number of files
@@ -328,7 +373,100 @@ showfilelengths:
 	dec ixh					; decrement program per page counter
 	ret z					; check if zero, if so, return
 	ex de,hl				; swap de,hl
-	ld de,$50-5				; load next line increment
+	ld de,$50-7				; load next line increment
 	add hl,de				; add increment to video ram
 	ex de,hl				; swap hl and de
 	jp .nextprogram			; go to next program if not zero
+
+;-------------------------------------------------------------------------------
+; Loop waiting for user input
+;-------------------------------------------------------------------------------
+showfilesuserinput:
+.userinput:
+	ld a,(NKEYBUF)
+	cp 0
+	jp z,.userinput
+	ld de,KEYBUF
+.nextkey:
+	ld a,(de)					; load key from buffer
+	cp 29 						; compare to 'b'
+	jr z,.exitloop
+	cp 25						; compare to 'n'
+	call z,filesnextpage		; call routine next page
+	cp 53						; compare to 'p'
+	call z,filesprevpage		; call routine to previous page
+	cp 70						; compare to 'i'
+	call z,fileinc		; call routine next page
+	cp 12						; compare to 'd'
+	call z,filedec
+.getkeycont:
+	ld hl,KEYBUF
+	ld d,0
+	ld a,(NKEYBUF)
+	ld e,a
+	add hl,de
+	ex de,hl
+	inc de						; next position in key buffer
+	ld a,(NKEYBUF)
+	dec a						; decrement number of keys to print
+	ld (NKEYBUF),a				; store this number in nkeybuf
+	cp 0						; zero keys reached, return
+	jp z,.userinput
+	jp .nextkey					; else parse next key
+.exitloop:
+	ld a,0
+	ld (KEYBUF),a
+	ret
+
+;-------------------------------------------------------------------------------
+; Go to next page
+;-------------------------------------------------------------------------------
+filesprevpage:
+	ld hl,(FILESTART)
+	ld a,h
+	or l
+	jp z,filekeyreturn
+	ld de,20
+	or a
+	sbc hl,de
+	ld (FILESTART),hl
+	jp filekeyreturn			; clean return when parsing keys
+
+;-------------------------------------------------------------------------------
+; Go to previous page
+;-------------------------------------------------------------------------------
+filesnextpage:
+	ld hl,(MAXFILES)
+	ld a,h
+	or l
+	jp z,filekeyreturn
+	ld hl,(FILESTART)
+	ld de,20
+	add hl,de
+	ld bc,(MAXFILES)
+	or a
+	sbc hl,bc
+	jp nc,filekeyreturn
+	ld hl,(FILESTART)
+	ld de,20
+	add hl,de
+	ld (FILESTART),hl
+	jp filekeyreturn			; clean return when parsing keys
+
+fileinc:
+	ld hl,(FILESTART)
+	inc hl
+	ld (FILESTART),hl
+	jp filekeyreturn
+
+filedec:
+	ld hl,(FILESTART)
+	dec hl
+	ld (FILESTART),hl
+	jp filekeyreturn
+
+filekeyreturn:
+	call filesdraw
+	ld a,0						; set zero in key buffer
+	ld (KEYBUF),a
+	ret
