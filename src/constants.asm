@@ -68,6 +68,7 @@ EXRAMADDR:	equ $9152	; current address in external RAM to monitor (2 bytes)
 RAMFLAG:	equ $9154	; byte which RAM should be shown
 MAXFILES:	equ $9156	; how many files are on the external ROM (2 bytes)
 FILESTART:	equ $9158   ; which file to look at (2 bytes)
+PRGPOINTER: equ $9160	; currently selected program
 
 ; variables for keyboard interface
 KEYBUF:		equ $6000	; start of key buffer
@@ -131,3 +132,9 @@ COL_BLUE:	equ $04
 COL_MAG:	equ $05
 COL_CYAN:	equ $06
 COL_WHITE:	equ $07
+
+GRAPHIC_RED: equ 145
+
+TEXT_WHITE: equ 135
+
+CHAR_SQUARE: equ 127

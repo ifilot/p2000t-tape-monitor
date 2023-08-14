@@ -170,8 +170,9 @@ copyfilelengths:
 ; Show all files on the ROM
 ;-------------------------------------------------------------------------------
 showfiles:
-	ld hl,0					; set current file counter to 0
-	ld (FILESTART),hl
+	ld hl,0					
+	ld (FILESTART),hl		; set current file counter to 0
+	ld (PRGPOINTER),hl		; set current program counter to 0
 	call filesdraw
 	call showfilesuserinput
 	ret
@@ -190,26 +191,15 @@ filesdraw:
 	ld de,$5000 + 23*$50
 	ld hl,.instructions2
 	call printstring
-	ld de,$5000 + 28
-	ld a,'$'
-	ld (de),a
-	inc de
+	ld de,$5000 + 31
 	ld hl,(FILESTART)
-	ld a,h
-	call printhex
-	ld a,l
-	call printhex
+	inc hl						; start counting from 1
+	call printdec16_3
 	ld a,'/'
 	ld (de),a
 	inc de
-	ld a,'$'
-	ld (de),a
-	inc de
 	ld hl,(MAXFILES)
-	ld a,h
-	call printhex
-	ld a,l
-	call printhex
+	call printdec16_3
 	ld hl,(MAXFILES)
 	ld a,h
 	or l
@@ -217,12 +207,13 @@ filesdraw:
 	call showdescriptions
 	call showextensions
 	call showfilelengths
+	call showpointer
 	ret
 
 .title: DB COL_CYAN,150,127
-		DB 127,127,127,127,127,00
+		DB 127,127,127,127,127,127,127,00
 		DB "FILE LIST"
-		DB 00,127,127,127,127,127,127,135,255
+		DB 00,127,127,127,127,127,127,127,127,135,255
 
 .instructions1:
 	DB COL_MAG,"p - previous page  n - next page",255
@@ -236,64 +227,66 @@ filesdraw:
 showdescriptions:
 	ld bc,(FILESTART)			; set bc as program counter
 	ld ixh,20					; number of files on screen
-	ld de, $5000+$50 * 2 		; set start address
+	ld de, $5000+$50 * 2 + 2	; set start address
 .nextprogram:
 	ld a,COL_CYAN
 	ld (de),a
 	inc de
-	ld a,b
-	call printhex
-	ld a,c
-	call printhex
+	push bc						; put program number on stack
+	inc bc						; start counting from 1
+	ld h,b						; put bc into hl
+	ld l,c
+	call printdec16_3			; print program value, garbles bc
+	pop bc						; retrieve program number from stack
 	ld a,COL_WHITE
 	ld (de),a
 	inc de
-	ld a,b					; load upper address in b
-	rla						; shift right by 4 (multiply by 16)
+	ld a,b						; load upper address in b
+	rla							; shift right by 4 (multiply by 16)
 	rla
 	rla
 	rla
-	and $F0					; keep only upper nibble of upper byte
-	ld h,a					; store upper byte in h
-	ld a,c					; load lower byte
-	rra						; shift right by 4 (divide by 16)
+	and $F0						; keep only upper nibble of upper byte
+	ld h,a						; store upper byte in h
+	ld a,c						; load lower byte
+	rra							; shift right by 4 (divide by 16)
 	rra
 	rra
 	rra
-	and $0F					; keep only lower nibble
-	or h					; put together with upper nibble of upper byte
-	ld h,a					; store upper byte position
-	ld a,c					; load lower byte
-	rla						; shift left by 4 (multiply by 16)
+	and $0F						; keep only lower nibble
+	or h						; put together with upper nibble of upper byte
+	ld h,a						; store upper byte position
+	ld a,c						; load lower byte
+	rla							; shift left by 4 (multiply by 16)
 	rla
 	rla
 	rla
-	and $F0					; keep only upper nibble
-	ld l,a					; store lower byte in l
-	push de					; put video addr on stack
-	ld de,$400				; set ex ram offset
-	add hl,de				; add to ex ram address
-	pop de					; get video ram from stack
-	ld ixl,16				; number of bytes
+	and $F0						; keep only upper nibble
+	ld l,a						; store lower byte in l
+	push de						; put video addr on stack
+	ld de,$400					; set ex ram offset
+	add hl,de					; add to ex ram address
+	pop de						; get video ram from stack
+	ld ixl,16					; number of bytes
 .nextbyte:
-	call ramrecvhl			; get character from external ram
-	ld (de),a				; store in video ram
-	inc de					; increment video ram addr
-	inc hl					; increment ex ram addr
-	dec ixl					; decrement byte counter
-	jr nz,.nextbyte			; if not zero, go to next byte
-	inc bc					; increment program counter
-	ld hl,(MAXFILES)		; load maximum number of files
-	or a					; reset carry flag
-	sbc hl,bc				; subtract bc from hl, check if zero flag is set
-	ret z					; return if max files is reached
-	dec ixh					; decrement program per page counter
-	ret z					; check if zero, if so, return
-	ex de,hl				; swap de,hl
-	ld de,$50-22			; load next line increment
-	add hl,de				; add increment to video ram
-	ex de,hl				; swap hl and de
-	jp .nextprogram			; go to next program if not zero
+	call ramrecvhl				; get character from external ram
+	ld (de),a					; store in video ram
+	inc de						; increment video ram addr
+	inc hl						; increment ex ram addr
+	dec ixl						; decrement byte counter
+	jr nz,.nextbyte				; if not zero, go to next byte
+	inc bc						; increment program counter
+	ld hl,(MAXFILES)			; load maximum number of files
+	or a						; reset carry flag
+	sbc hl,bc					; subtract bc from hl, check if zero flag is set
+	ret z						; return if max files is reached
+	dec ixh						; decrement program per page counter
+	ret z						; check if zero, if so, return
+	ex de,hl					; swap de,hl
+	ld de,$50-21				; load next line increment
+	add hl,de					; add increment to video ram
+	ex de,hl					; swap hl and de
+	jp .nextprogram				; go to next program if not zero
 
 ;-------------------------------------------------------------------------------
 ; Show extensions
@@ -301,7 +294,7 @@ showdescriptions:
 showextensions:
 	ld bc,(FILESTART)			; set bc as program counter
 	ld ixh,20					; number of files on screen
-	ld de, $5000+$50 * 2 + 22	; set start address
+	ld de, $5000+$50 * 2 + 24	; set start address
 .nextprogram:
 	ld a,COL_GREEN
 	ld (de),a
@@ -341,7 +334,7 @@ showextensions:
 showfilelengths:
 	ld bc,(FILESTART)			; set bc as program counter
 	ld ixh,20					; number of files on screen
-	ld de, $5000+$50 * 2 + 26	; set start address
+	ld de, $5000+$50 * 2 + 28	; set start address
 .nextprogram:
 	ld a,COL_YELLOW
 	ld (de),a
@@ -379,6 +372,51 @@ showfilelengths:
 	jp .nextprogram			; go to next program if not zero
 
 ;-------------------------------------------------------------------------------
+; Clear all pointers
+;-------------------------------------------------------------------------------
+clearpointers:
+	ld b,20
+	ld a,0
+	ld hl, $5000 + $50 * 2
+.nextline:
+	ld (hl),a
+	inc hl
+	ld (hl),a
+	ld de,$50 - 1
+	add hl,de
+	dec b
+	ret z
+	jr .nextline
+
+;-------------------------------------------------------------------------------
+; Show pointer for currently selected program
+;-------------------------------------------------------------------------------
+showpointer:
+	ld bc,(FILESTART)			; set bc as program counter
+	ld ixh,20					; number of files on screen
+	ld de, $5000+$50 * 2		; set start address
+.nextline:
+	ld hl,(PRGPOINTER)
+	or a
+	sbc hl,bc
+	jr nz,.cont
+	ld a,93
+	ld (de),a
+.cont:
+	inc bc					; increment program counter
+	ld hl,(MAXFILES)		; load maximum number of files
+	or a					; reset carry flag
+	sbc hl,bc				; subtract bc from hl, check if zero flag is set
+	ret z					; return if max files is reached
+	dec ixh					; decrement program per page counter
+	ret z					; check if zero, if so, return
+	ex de,hl				; swap de,hl
+	ld de,$50				; load next line increment
+	add hl,de				; add increment to video ram
+	ex de,hl				; swap hl and de
+	jp .nextline			; go to next line if not zero
+
+;-------------------------------------------------------------------------------
 ; Loop waiting for user input
 ;-------------------------------------------------------------------------------
 showfilesuserinput:
@@ -395,10 +433,10 @@ showfilesuserinput:
 	call z,filesnextpage		; call routine next page
 	cp 53						; compare to 'p'
 	call z,filesprevpage		; call routine to previous page
-	cp 70						; compare to 'i'
-	call z,fileinc		; call routine next page
+	cp 38						; compare to 'u'
+	call z,pointerdec			; call routine increment pointer position
 	cp 12						; compare to 'd'
-	call z,filedec
+	call z,pointerinc			; call routine pointer decrement
 .getkeycont:
 	ld hl,KEYBUF
 	ld d,0
@@ -453,20 +491,37 @@ filesnextpage:
 	ld (FILESTART),hl
 	jp filekeyreturn			; clean return when parsing keys
 
-fileinc:
-	ld hl,(FILESTART)
+;-------------------------------------------------------------------------------
+; Increment pointer position
+;-------------------------------------------------------------------------------
+pointerinc:
+	ld hl,(PRGPOINTER)
 	inc hl
-	ld (FILESTART),hl
-	jp filekeyreturn
+	ld (PRGPOINTER),hl
+	jp pointerexit
 
-filedec:
-	ld hl,(FILESTART)
+;-------------------------------------------------------------------------------
+; Decrement pointer position
+;-------------------------------------------------------------------------------
+pointerdec:
+	ld hl,(PRGPOINTER)
 	dec hl
-	ld (FILESTART),hl
-	jp filekeyreturn
+	ld (PRGPOINTER),hl
+	jp pointerexit
+
+;-------------------------------------------------------------------------------
+; Exit rountine for pointers
+;-------------------------------------------------------------------------------
+pointerexit:
+	call clearpointers
+	call showpointer
+	jp exitkeys
 
 filekeyreturn:
 	call filesdraw
+	jp exitkeys
+
+exitkeys:
 	ld a,0						; set zero in key buffer
 	ld (KEYBUF),a
 	ret

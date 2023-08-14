@@ -75,6 +75,58 @@ printdec:
 	ret
 
 ;-------------------------------------------------------------------------------
+; printdec routine for 16 bit value, prints trailing zeros
+;
+; input: hl - number to convert
+;        de - video memory address
+; uses:  a,bc
+;-------------------------------------------------------------------------------
+printdec16:
+	ld	bc,-10000			; check for 10,000's
+	call .num1				; repetitively decrement to build value
+	ld	bc,-1000			; check for 1,000's
+	call .num1				; repetitively decrement to build value
+	ld	bc,-100				; check for 100's
+	call .num1				; repetitively decrement to build value
+	ld	c,-10				; check for 10's
+	call .num1				; repetitively decrement to build value
+	ld	c,b					; remaining value are 1's
+.num1:
+	ld	a,'0'-1				; start with ascii value one lower than '0'
+.num2:
+	inc	a					; increment a
+	add	hl,bc				; add bc to hl
+	jr c,.num2				; if carry, try to add once more
+	sbc	hl,bc				; correct value when no carry is found
+	ld (de),a				; load result into memory addr
+	inc	de					; go to next position in memory
+	ret
+
+;-------------------------------------------------------------------------------
+; printdec routine for 16 bit value, but only three digits
+;
+; input: hl - number to convert
+;        de - video memory address
+; uses:  a,bc
+;-------------------------------------------------------------------------------
+printdec16_3:
+	ld	bc,-100				; check for 100's
+	call .num1				; repetitively decrement to build value
+	ld	c,-10				; check for 10's
+	call .num1				; repetitively decrement to build value
+	ld	c,b					; remaining value are 1's
+.num1:
+	ld	a,'0'-1				; start with ascii value one lower than '0'
+.num2:
+	inc	a					; increment a
+	add	hl,bc				; add bc to hl
+	jr c,.num2				; if carry, try to add once more
+	sbc	hl,bc				; correct value when no carry is found
+	ld (de),a				; load result into memory addr
+	inc	de					; go to next position in memory
+	ret
+
+;-------------------------------------------------------------------------------
 ; Clear screen
 ; uses: a,bc,de,hl
 ;-------------------------------------------------------------------------------
