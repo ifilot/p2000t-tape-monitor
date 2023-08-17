@@ -149,7 +149,7 @@ calcromaddr:
 ;-------------------------------------------------------------------------------
 calcmetaaddr:
 	ld a,(FREEBLOCK)
-	call calcheader
+	call calccasheader
 	ld (HEADERADDR),hl
 	ld de,24
 	or a				; reset carry flag
@@ -163,34 +163,60 @@ calcmetaaddr:
 ; This routine effectively multiplies the value in a with 40 and adds 
 ; $0120 to it to find the starting byte of the CAS header.
 ;
-; input:  a - block number
+; input:  a - block number (retained)
 ; output: hl - cartridge header start address
 ;
 ; uses: de,i
-; fixed: a
 ;-------------------------------------------------------------------------------
-calcheader:
+calccasheader:
+	ld de,$0120
+	call calcheaderaddr
+	ret
+
+;-------------------------------------------------------------------------------
+; calculate header offset using block address and offset index
+;
+; input: a  - block number (retained)
+;        de - header offset	(retained)
+;
+; uses: ixl
+;
+; return: hl - (a * $40) + de
+;-------------------------------------------------------------------------------
+calcheaderaddr:
+	call amul40hl		; have a multiplied by 40 in hl
+	add hl,de			; add de offset to hl
+	ret
+
+;-------------------------------------------------------------------------------
+; Multiply value in a by 40 and store in hl
+;
+; input:  a  - value to be multiplied (retained)
+; output: hl - a * 40
+;
+; uses: ixl
+;-------------------------------------------------------------------------------
+amul40hl:
 	rla					; rotate left two times
 	rla
 	and $FC				; set two LSB to zero
-	ld i,a
+	ld ixl,a
 	rra					; rotate right four times
 	rra
 	rra
 	rra
 	and $0F				; place center 4 bits at right end
 	ld h,a				; store upper byte
-	ld a,i
+	ld a,ixl
 	rla
 	rla
 	rla
 	rla
 	and $F0				; clears lower nibble
 	ld l,a				; store lower byte
-	ld de,$0120
-	add hl,de
-	ld a,i
+	ld a,ixl			; ensure value of a is retained
 	ret
+
 ;-------------------------------------------------------------------------------
 ; copies block from buffer to rom, uses fixed positions in memory 
 ; for location data
@@ -390,6 +416,66 @@ writestring:
 	inc de
 	inc hl
 	jp writestring
+
+;-------------------------------------------------------------------------------
+; Delete a file from the external ROM
+; input: b - starting bank of file
+;        c - starting block of file
+;-------------------------------------------------------------------------------
+deletefile:
+	call createchain	; create list in RAM
+	ret
+
+;-------------------------------------------------------------------------------
+; Create a list of all the blocks the file resides on
+;
+; input: b - starting bank of file (retained)
+;        c - starting block of file (retained)
+;
+;-------------------------------------------------------------------------------
+createchain:
+	ld ix,$6000			; start location of blocklist
+	ld a,b
+	ld (ix),a			; store first bank
+	inc ix
+	ld a,c
+	ld (ix),a			; store first block
+	inc ix
+.nextblock:
+	call getnextblock	; grab next bank/block (clobbers hl)
+	ld a,d
+	ld (ix),a			; store subsequent bank
+	inc ix
+	ld a,e
+	ld (ix),a			; store subsequent block
+	inc ix
+	cp $FF
+	ret z
+	jr .nextblock
+
+;-------------------------------------------------------------------------------
+; Get next bank and block of file
+; 
+; input: b - starting bank of file (retained)
+;        c - starting block of file (retained)
+;
+; uses: hl
+;
+; return d - next bank number
+;        e - next block number
+;-------------------------------------------------------------------------------
+getnextblock:
+	ld a,b					; load bank number
+	out (O_ROM_BANK),a		; set bank
+	ld a,c					; load block number
+	ld de,$103 				; next bank offset
+	call calcheaderaddr		; get address in hl from (a * 40) + de
+	call sst39sfrecvextromhl; receive next bank in a
+	ld d,a
+	inc hl
+	call sst39sfrecvextromhl; receive next block in a
+	ld e,a
+	ret
 
 ;-------------------------------------------------------------------------------
 ; erase chip

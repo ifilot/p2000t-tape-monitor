@@ -118,9 +118,9 @@ sst39sfrecvintromhl:
 
 ;-------------------------------------------------------------------------------
 ; Receive a byte from internal SST39SF0x0 chip
-; input: de - chip address
+; input: hl - chip address
 ; output: a - byte at address
-;		 de - chip address
+;		 hl - chip address
 ;-------------------------------------------------------------------------------
 sst39sfrecvextromhl:
 	ld a,l

@@ -69,9 +69,8 @@ copydesceroera:
 	inc hl					; next program address
 	push hl					; push block index addr to stack
 	ld a,ixh				; recover block number
-	call calcheader			; determine start header addr, result stored in hl
-	ld de,$0006				; add 6 to get to start descriptor
-	add hl,de
+	ld de,$0126				; descriptor offset
+	call calcheaderaddr		; get address in hl from (a * $40) + de
 	ex de,hl				; de is set to start of RAM descriptor
 	ld h,8					; use h as byte counter
 .nextbyte1:
@@ -116,9 +115,8 @@ copyfileext:
 	inc hl					; next program address
 	push hl					; push block index addr to stack
 	ld a,ixh				; recover block number
-	call calcheader			; determine start header addr, result stored in hl
-	ld de,$000E				; add $000E to get to start extension
-	add hl,de
+	ld de,$012E				; extension offset
+	call calcheaderaddr		; get address in hl from (a * $40) + de
 	ex de,hl				; de is set to start of RAM descriptor
 	ld h,3					; use h as byte counter
 .nextbyte:
@@ -151,9 +149,8 @@ copyfilelengths:
 	inc hl					; next program address
 	push hl					; push block index addr to stack
 	ld a,ixh				; recover block number
-	call calcheader			; determine start header addr, result stored in hl
-	ld de,$0002				; add 2 to get to start of file lengths
-	add hl,de
+	ld de,$0122				; file length offset
+	call calcheaderaddr		; get address in hl from (a * $40) + de
 	ex de,hl				; de is set to start of RAM descriptor
 	ld h,2					; use h as byte counter
 .nextbyte:
@@ -437,6 +434,8 @@ showfilesuserinput:
 	call z,pointerdec			; call routine increment pointer position
 	cp 12						; compare to 'd'
 	call z,pointerinc			; call routine pointer decrement
+	cp 52 						; compare to 'ENTER'
+	call z,showfileinfo			; call show info of single file routine
 .getkeycont:
 	ld hl,KEYBUF
 	ld d,0
@@ -510,7 +509,7 @@ pointerdec:
 	jp pointerexit
 
 ;-------------------------------------------------------------------------------
-; Exit rountine for pointers
+; Exit routine for pointers
 ;-------------------------------------------------------------------------------
 pointerexit:
 	call clearpointers
@@ -523,5 +522,52 @@ filekeyreturn:
 
 exitkeys:
 	ld a,0						; set zero in key buffer
+	ld (KEYBUF),a
+	ret
+
+;-------------------------------------------------------------------------------
+; Show info for single file
+;-------------------------------------------------------------------------------
+showfileinfo:
+	call clearscreen
+	ld de,$5000 + 23*$50
+	ld hl,.instructions2
+	call printstring
+	call showfileuserinput
+	call filesdraw				; redraw file screen
+	ret
+
+.instructions2:
+	DB COL_MAG,"b - back to monitor",255
+
+;-------------------------------------------------------------------------------
+; User input routine for single file
+;-------------------------------------------------------------------------------
+showfileuserinput:
+.userinput:
+	ld a,(NKEYBUF)
+	cp 0
+	jp z,.userinput
+	ld de,KEYBUF
+.nextkey:
+	ld a,(de)					; load key from buffer
+	cp 29 						; compare to 'b'
+	jr z,.exitloop
+.getkeycont:
+	ld hl,KEYBUF
+	ld d,0
+	ld a,(NKEYBUF)
+	ld e,a
+	add hl,de
+	ex de,hl
+	inc de						; next position in key buffer
+	ld a,(NKEYBUF)
+	dec a						; decrement number of keys to print
+	ld (NKEYBUF),a				; store this number in nkeybuf
+	cp 0						; zero keys reached, return
+	jp z,.userinput
+	jp .nextkey					; else parse next key
+.exitloop:
+	ld a,0
 	ld (KEYBUF),a
 	ret
