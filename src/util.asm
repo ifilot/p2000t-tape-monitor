@@ -262,4 +262,4 @@ printstring:
 	ld (de),a
 	inc de
 	inc hl
-	jp printstring
+	jr printstring

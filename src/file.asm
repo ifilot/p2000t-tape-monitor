@@ -125,6 +125,7 @@ findfreeblock:
 ;-------------------------------------------------------------------------------
 calcromaddr:
 	ld a,(FREEBLOCK)
+	or a
 	rla
 	rla
 	and $FC
@@ -171,7 +172,7 @@ calcmetaaddr:
 calcheader:
 	rla					; rotate left two times
 	rla
-	and $FC
+	and $FC				; set two LSB to zero
 	ld i,a
 	rra					; rotate right four times
 	rra
@@ -184,7 +185,7 @@ calcheader:
 	rla
 	rla
 	rla
-	and $F0
+	and $F0				; clears lower nibble
 	ld l,a				; store lower byte
 	ld de,$0120
 	add hl,de

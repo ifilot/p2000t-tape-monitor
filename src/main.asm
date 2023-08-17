@@ -167,10 +167,10 @@ parsecmd:
 .strformat:		DB "format",255			; 6
 .strfindblk:	DB "findblk",255		; 7
 .strversion:	DB "version",255		; 7
-.strmonrami:	DB "monrami",255		; 7
-.strmonrame:	DB "monrame",255		; 7
-.strmonromi:	DB "monromi",255		; 7
-.strmonrome:	DB "monrome",255		; 7
+.strsetrami:	DB "setrami",255		; 7
+.strsetrame:	DB "setrame",255		; 7
+.strsetromi:	DB "setromi",255		; 7
+.strsetrome:	DB "setrome",255		; 7
 .strtestram:	DB "testram",255		; 7
 .strlist:		DB "list",255			; 4
 
@@ -215,7 +215,7 @@ cmdversion:
 	call printmessage
 	ret
 
-.message: DB "TAPEMONITOR v.0.1.0.1",255
+.message: DB "TAPEMONITOR v.0.1.1.0",255
 
 ;-------------------------------------------------------------------------------
 ; Set monitor to internal RAM
@@ -251,7 +251,7 @@ cmdmonromi:
 ; Set monitor to external ROM
 ;-------------------------------------------------------------------------------
 cmdmonrome:
-	ld a,RAMFLAGRAMEXT
+	ld a,RAMFLAGROMEXT
 	ld hl,.message
 	jp cmdmonswitchend
 
@@ -391,57 +391,6 @@ cmdshowboot:
 	ret
 
 .message: DB "Copying boot sector to $9400",255
-
-;-------------------------------------------------------------------------------
-; Change monitor address and read from that address
-; Uses: all registers
-;-------------------------------------------------------------------------------
-cmdreadmon:
-	ld a,(NCMDBUF)
-	cp 5
-	jp c,cmderror
-	inc de			; get second character
-	ld a,(de)
-	ld b,a			; store into b
-	inc de			; get third character
-	ld a,(de)	
-	ld c,a			; store into c
-	push bc
-	call atoi		; convert to int, store in a
-	pop bc
-	push af
-	or b
-	or c
-	jp z,cmderror	; check for errors
-	pop af
-	ld (TEMP1),a	; store upper address
-	inc de			; get fourth character
-	ld a,(de)
-	ld b,a			; store into b
-	inc de			; get fifth character
-	ld a,(de)	
-	ld c,a			; store into c
-	push bc
-	call atoi		; convert to int, store in a
-	pop bc
-	push af
-	or b
-	or c
-	jp z,cmderror	; check for errors
-	pop af
-	ld l,a
-	ld a,(TEMP1)
-	ld h,a			; address is not set in hl
-	ld a,(RAMFLAG)	; read RAM flag
-	cp 0
-	jr nz,.setexramaddr
-	ld (MONADDR),hl
-	jr .end
-.setexramaddr:
-	ld (EXTRAMADDR),hl
-.end:
-	call printblock
-	ret
 
 ;-------------------------------------------------------------------------------
 ; Perform a complete copy of the cassette to the ROM chip.
@@ -663,51 +612,7 @@ printromaddr:
 	ret
 
 ;-------------------------------------------------------------------------------
-; Show next block in monitor
-; Uses: de,hl
-;-------------------------------------------------------------------------------
-cmdnext:
-	ld de,BLOCKSIZE
-	ld a,(RAMFLAG)	; read RAM flag
-	cp 0
-	jr nz,.setexramaddr
-	ld hl,(MONADDR)
-	add hl,de
-	ld (MONADDR),hl
-	jr .end
-.setexramaddr:
-	ld hl,(EXTRAMADDR)
-	add hl,de
-	ld (EXTRAMADDR),hl
-	call printblock
-.end:
-	ret
-
-;-------------------------------------------------------------------------------
-; Show previous block in monitor
-; Uses: de,hl
-;-------------------------------------------------------------------------------
-cmdprev:
-	ld de,BLOCKSIZE
-	ld a,(RAMFLAG)	; read RAM flag
-	cp 0
-	jr nz,.setexramaddr
-	ld hl,(MONADDR)
-	or a
-	sbc hl,de
-	ld (MONADDR),hl
-	jr .end
-.setexramaddr:
-	ld hl,(EXTRAMADDR)
-	or a
-	sbc hl,de
-	ld (EXTRAMADDR),hl
-	call printblock
-.end:
-	ret
-
-;-------------------------------------------------------------------------------
-; Show next block in monitor
+; Rewind tape
 ;-------------------------------------------------------------------------------
 cmdrewind:
 	call taperewind
@@ -1516,13 +1421,13 @@ resetarchivepointers:
 ; clear the block occupied by the monitor
 ;-------------------------------------------------------------------------------
 clearinterface:
-	ld a,0 ; load 0 into first byte
+	ld a,0 				; load 0 into first byte
 	ld (IFCSCRN),a
 	ld de,IFCSCRN+1
 	ld bc,$50*14
 	dec bc
 	ld hl,IFCSCRN
-	ldir ; copy next byte from previous
+	ldir 				; copy next byte from previous
 	ret
 
 ;-------------------------------------------------------------------------------

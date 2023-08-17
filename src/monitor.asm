@@ -14,13 +14,8 @@
 printblock:
 	call clearinterface
 	call prtmonloc			; show memory location
-	ld a,(RAMFLAG)			; read RAMFLAG to determine printblock routine
-	rla						; rotate left = multiply by 2
-	ld e,a
-	ld d,0
-	ld ix,MONADDR			; load base address
-	add ix,de				; add offset to base, ix points now to addr location
-	ld l,(ix)				; load instruction address via ix pointer into hl
+	call loadmemaddr
+	ld l,(ix)				; load address pointer via ix pointer into hl
 	ld h,(ix+1)
 	ld b,NUMROWS			; load number of rows to print
 	ld de,BLKSCRN			; load video address
@@ -104,29 +99,30 @@ printascii:
 
 ;-------------------------------------------------------------------------------
 ; fetch byte for monitor function
-; input: hl - memory location
-; uses:  de
+; input: hl - memory location (fixed)
 ; 
 ; returns: a - value to be read
 ;-------------------------------------------------------------------------------
 readbytemon:
 	ld a,(RAMFLAG)
-	cp RAMFLAGRAMINT
+	cp RAMFLAGRAMINT	; will always reset carry, so no 'or a' is necessary
 	jr nz,.cont
 	ld a,(hl)
 	ret
 .cont:
 	dec a
-	rla			; multiply a by two
-	push de
+	rla					; multiply a by two
+	push de				; put de on stack
 	ld e,a
 	ld d,0
-	ld ix,.pointers
-	add ix,de
-	pop de
-	ld h,(ix+1)
-	ld l,(ix)
-	jp (hl)
+	ld ix,.pointers		; point to base of byte retrieval functions
+	add ix,de			; add offset to base
+	pop de				; restore de
+	ld a,(ix+1)
+	ld iyh,a
+	ld a,(ix)
+	ld iyl,a
+	jp (iy)
 
 .pointers:	DW 	ramrecvhl
 			DW	sst39sfrecvintromhl
@@ -137,24 +133,115 @@ readbytemon:
 ;-------------------------------------------------------------------------------
 prtmonloc:
 	ld a,(RAMFLAG)
-	rla							; shift left 3 times (multiply by 8)
+	or a						; clear carry
+	rla							; shift left 4 times (multiply by 16)
+	rla
 	rla
 	rla
 	ld e,a
 	ld d,0
-	ld hl,.message1				; set base message address
+	ld hl,.messages				; set base message address
 	add hl,de					; add offset to it, message now in hl
 	ld de,$5000+2*$50			; set memory address
-	ld a,COL_GREEN
-	ld (de),a
-	inc de
+	push hl
 	call printstring
-	ld a,COL_WHITE
-	ld (de),a
+	pop hl
+	ld de,$5000+15*$50
+	call printstring
 	ret
 
-; note that the strings below are exactly 8 bytes
-.message1: DB "INT RAM",255
-.message2: DB "EXT RAM",255
-.message3: DB "INT ROM",255
-.message4: DB "EXT ROM",255
+; note that the strings below are exactly 16 bytes
+.messages: DB COL_GREEN,"INTERNAL RAM  ",255
+		   DB COL_GREEN,"EXTERNAL RAM  ",255
+		   DB COL_GREEN,"INTERNAL ROM  ",255
+		   DB COL_GREEN,"EXTERNAL ROM  ",255
+
+;-------------------------------------------------------------------------------
+; Show next block in monitor
+; Uses: de,hl
+;-------------------------------------------------------------------------------
+cmdnext:
+	call loadmemaddr		; load memory address location into ix
+	ld l,(ix)				; load address pointer via ix pointer into hl
+	ld h,(ix+1)
+	ld de,BLOCKSIZE
+	add hl,de
+	ld (ix),l
+	ld (ix+1),h
+	call printblock
+	ret
+
+;-------------------------------------------------------------------------------
+; Show previous block in monitor
+; Uses: de,hl
+;-------------------------------------------------------------------------------
+cmdprev:
+	call loadmemaddr		; load memory address location into ix
+	ld l,(ix)				; load address pointer via ix pointer into hl
+	ld h,(ix+1)
+	ld de,BLOCKSIZE
+	or a
+	sbc hl,de
+	ld (ix),l
+	ld (ix+1),h
+	call printblock
+	ret
+
+;-------------------------------------------------------------------------------
+; Load memory address location in IX
+;-------------------------------------------------------------------------------
+loadmemaddr:
+	ld a,(RAMFLAG)			; read RAMFLAG to determine printblock routine
+	or a
+	rla						; rotate left = multiply by 2
+	ld e,a
+	ld d,0
+	ld ix,MONADDR			; load base address
+	add ix,de				; add offset to base, ix points now to addr location
+	ret
+
+;-------------------------------------------------------------------------------
+; Change monitor address and read from that address
+; Uses: all registers
+;-------------------------------------------------------------------------------
+cmdreadmon:
+	ld a,(NCMDBUF)
+	cp 5
+	jp c,cmderror
+	inc de					; get second character
+	ld a,(de)
+	ld b,a					; store into b
+	inc de					; get third character
+	ld a,(de)	
+	ld c,a					; store into c
+	push bc
+	call atoi				; convert to int, store in a
+	pop bc
+	push af
+	or b
+	or c
+	jp z,cmderror			; check for errors
+	pop af
+	ld (TEMP1),a			; store upper address
+	inc de					; get fourth character
+	ld a,(de)
+	ld b,a					; store into b
+	inc de					; get fifth character
+	ld a,(de)	
+	ld c,a					; store into c
+	push bc
+	call atoi				; convert to int, store in a
+	pop bc
+	push af
+	or b
+	or c
+	jp z,cmderror			; check for errors
+	pop af
+	ld l,a
+	ld a,(TEMP1)
+	ld h,a					; new address is set in hl
+	call loadmemaddr		; load memory address location into ix
+	ld (ix),l
+	ld (ix+1),h				; place memory address location into memory
+	call printblock
+	ret
