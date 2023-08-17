@@ -87,6 +87,22 @@ sst39sfsend:
 	ret
 
 ;-------------------------------------------------------------------------------
+; Send a byte to SST39SF0x0 chip
+; input: a  - byte to send (retained)
+;		 de - chip address (retained)
+; uses:  iyh
+;-------------------------------------------------------------------------------
+sst39sfsendde:
+	ld iyh,a
+	ld a,e
+	out (O_ROM_LA),a
+	ld a,d
+	out (O_ROM_UA),a
+	ld a,iyh
+	out (O_ROM_EXT),a
+	ret
+
+;-------------------------------------------------------------------------------
 ; Receive a byte from SST39SF0x0 chip
 ; input:  c - port number
 ;		 de - chip address

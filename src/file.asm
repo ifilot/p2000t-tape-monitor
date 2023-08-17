@@ -70,7 +70,10 @@ formatbank:
 	jp .nextblock
 
 ;-------------------------------------------------------------------------------
-; find the first free available block to put new data into
+; Find the first free available block to put new data into.
+;
+; Loops over the $40 byte sections until a free section is found. The bank
+; and block are stored in (FREEBANK) and (FREEBLOCK) memory locations.
 ;
 ; uses: all
 ;-------------------------------------------------------------------------------
@@ -273,7 +276,8 @@ copyheader:
 	ret
 
 ;-------------------------------------------------------------------------------
-; mark a block in the metadata as being used
+; mark byte $08 in the metadata section to indicate that this block
+; of $100 bytes is used
 ;
 ; input: MARKERADDR - rom address of markerbyte
 ;        ROMPORT    - which chip to use
@@ -418,12 +422,129 @@ writestring:
 	jp writestring
 
 ;-------------------------------------------------------------------------------
-; Delete a file from the external ROM
-; input: b - starting bank of file
-;        c - starting block of file
+; Delete a file from the external ROM as pointed by the file linked list at
+; external memory $6000
 ;-------------------------------------------------------------------------------
 deletefile:
-	call createchain	; create list in RAM
+	ld hl,FILEBLADDR
+	call ramrecvhl
+	ld iyl,a				; set bank counter
+.nextbank:
+	; set the bank
+	ld a,iyl
+	out (O_ROM_BANK),a		; set starting bank
+	; copy bank data
+	ld bc,$1000				; number of bytes
+	ld de,$0000				; external rom start addr
+	ld hl,FILEIOBUF			; external ram start addr
+	call copysectorrora		; copy metadata section from rom to ram
+	ld hl,FILEBLADDR
+	call ramrecvhl			; get first bank from external ram
+	cp iyl
+	jp nz,.skipstartblocks
+	call rebuildstartblocks	; rebuild the starting blocks for this bank
+.skipstartblocks:
+	call formatblocks		; format $40 header blocks that are no longer in use
+	ret ; early exit for debugging
+	; erase metadata sector on external rom
+	ld de,$0000
+	ld b,iyl
+	ld c,(O_ROM_EXT)
+	call sst39sferase
+	; copy external ram data back to internal rom
+	ld bc,$1000				; number of bytes
+	ld de,$0000				; external rom start addr
+	ld hl,FILEIOBUF			; external ram start addr
+	call copysectorraro		; copy metadata section from rom to ram
+	inc iyl					; increment bank counter
+	ld a,iyl
+	cp 8					; check for last bank
+	ret z
+	jp .nextbank			; go to next bank
+
+;-------------------------------------------------------------------------------
+; When a file is deleted, the starting block should be removed from the
+; metadata sector $0000-$00FF and all remaining programs should be shifted to
+; the left
+;
+;-------------------------------------------------------------------------------
+rebuildstartblocks:
+	ld hl,FILEBLADDR+1		; set address starting block
+	call ramrecvhl			; load starting block in a
+	ld c,a					; store in c
+	ld hl,FILEIOBUF			; set starting address
+.nextblock:
+	call ramrecvhl			; read bank
+	inc hl					; increment address
+	cp c					; compare retrieved block with c
+	jp nz,.nextblock		; if not the same, try next block
+.nextbyte:
+	call ramrecvhl			; receive next block
+	dec hl
+	call ramsendhl			; overwrite block
+	cp $FF					; verify if this was the last block
+	ret z					; return if so
+	inc hl					; move addr two steps
+	inc hl
+	jr .nextbyte			; overwrite block
+
+;-------------------------------------------------------------------------------
+; Format all blocks 
+;
+; input: ixl - current bank
+;-------------------------------------------------------------------------------
+formatblocks:
+	ld hl,FILEBLADDR		; set starting address linked list
+	ld de,$5000+$50*6
+.nextblock:
+	call ramrecvhl			; receive bank
+	ld b,a					; store bank into b
+	inc hl
+	call ramrecvhl			; receive block
+	inc hl
+	push hl					; push current position linked list on stack
+	ld c,a					; store block into c
+	; --- debug --- 
+	call printhex
+	inc de
+	push de
+ 	; --- end debug ---
+	ld a,b					; store bank into a
+	cp iyl					; check if bank matches
+	jr nz,.exit				; return if not
+	cp $FF					; check if terminating character is found
+	jr z,.exit				; return if so
+	; calculate block metadata start addr
+	ld a,c
+	ld de,FILEIOBUF+$100	; load offset (as seen from external ram)
+	call calcheaderaddr		; calculate hl = (a * $40) + de
+	; set first three bytes (formatting)
+	ld a,b					; get bank
+	call ramsendhl
+	inc hl					; increment memory position
+	ld a,$00				; set lower byte of rom start address
+	call ramsendhl
+	inc hl					; increment memory position
+	ld a,c					; get block
+	or a					; reset carry
+	rla						; rotate left twice (multiply by 4)
+	rla
+	add $10					; add upper byte of $1000
+	call ramsendhl
+	inc hl
+	; wipe the remaining bytes
+	ld b,$40-3
+	ld a,$FF
+.wipenextbyte:
+	call ramsendhl
+	inc hl
+	djnz .wipenextbyte
+	pop de					; get next video memory position
+	pop hl					; retrieve current position linked list from stack
+	jp .nextblock
+.exit:						; exit routine, fix stack
+	pop de
+	pop hl
 	ret
 
 ;-------------------------------------------------------------------------------

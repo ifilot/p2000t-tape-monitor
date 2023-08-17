@@ -579,6 +579,8 @@ showfileuserinput:
 	ld a,(de)					; load key from buffer
 	cp 29 						; compare to 'b'
 	jr z,.exitloop
+	cp 12						; compare to 'd'
+	call z,deletefile
 .getkeycont:
 	ld hl,KEYBUF
 	ld d,0
