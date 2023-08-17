@@ -103,12 +103,40 @@ sst39sfrecv:
 	ret
 
 ;-------------------------------------------------------------------------------
+; Receive a byte from internal SST39SF0x0 chip
+; input: de - chip address
+; output: a - byte at address
+;		 de - chip address
+;-------------------------------------------------------------------------------
+sst39sfrecvintromhl:
+	ld a,l
+	out (O_ROM_LA),a
+	ld a,h
+	out (O_ROM_UA),a
+	in a,(O_ROM_RW)
+	ret
+
+;-------------------------------------------------------------------------------
+; Receive a byte from internal SST39SF0x0 chip
+; input: de - chip address
+; output: a - byte at address
+;		 de - chip address
+;-------------------------------------------------------------------------------
+sst39sfrecvextromhl:
+	ld a,l
+	out (O_ROM_LA),a
+	ld a,h
+	out (O_ROM_UA),a
+	in a,(O_ROM_EXT)
+	ret
+
+;-------------------------------------------------------------------------------
 ; Receive a byte from external SST39SF0x0 chip
 ; input: de - chip address
 ; output: a - byte at address
 ;		 de - chip address
 ;-------------------------------------------------------------------------------
-sst39sfrecvexrom:
+sst39sfrecvextrom:
 	ld a,e
 	out (O_ROM_LA),a
 	ld a,d

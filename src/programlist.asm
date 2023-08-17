@@ -18,7 +18,7 @@ copyprogblocks:
 	out (O_ROM_BANK),a		; set bank
 	ld de,0					; first address on the bank
 .nextbyte:
-	call sst39sfrecvexrom	; read start block from external rom
+	call sst39sfrecvextrom	; read start block from external rom
 	cp $FF					; check if end of bank
 	jr z,.endbank			; if so, end reading of this bank
 	jr .storebytes			; if not, store data in ram
@@ -75,7 +75,7 @@ copydesceroera:
 	ex de,hl				; de is set to start of RAM descriptor
 	ld h,8					; use h as byte counter
 .nextbyte1:
-	call sst39sfrecvexrom	; read descriptor byte from ext rom
+	call sst39sfrecvextrom	; read descriptor byte from ext rom
 	call ramsendbc			; send to external ram
 	inc de					; next byte from external rom
 	inc bc					; next byte in external ram
@@ -87,7 +87,7 @@ copydesceroera:
 	ex de,hl				; set rom address back into de
 	ld h,8					; set byte counter
 .nextbyte2:
-	call sst39sfrecvexrom	; read descriptor byte from ext rom
+	call sst39sfrecvextrom	; read descriptor byte from ext rom
 	call ramsendbc			; send to external ram
 	inc de					; next byte from external rom
 	inc bc					; next byte in external ram
@@ -122,7 +122,7 @@ copyfileext:
 	ex de,hl				; de is set to start of RAM descriptor
 	ld h,3					; use h as byte counter
 .nextbyte:
-	call sst39sfrecvexrom	; read descriptor byte from ext rom
+	call sst39sfrecvextrom	; read descriptor byte from ext rom
 	call ramsendbc			; send to external ram
 	inc de					; next byte from external rom
 	inc bc					; next byte in external ram
@@ -157,7 +157,7 @@ copyfilelengths:
 	ex de,hl				; de is set to start of RAM descriptor
 	ld h,2					; use h as byte counter
 .nextbyte:
-	call sst39sfrecvexrom	; read descriptor byte from ext rom
+	call sst39sfrecvextrom	; read descriptor byte from ext rom
 	call ramsendbc			; send to external ram
 	inc de					; next byte from external rom
 	inc bc					; next byte in external ram

@@ -3,7 +3,6 @@
 ;-------------------------------------------------------------------------------
 TAPE: 		equ $0018   ; address of the "tape" function
 BUFFER: 	equ $9400   ; position to store tape data
-MONADDR: 	equ $9000	; address for monitor (word)
 
 ; variables for command buffer
 CMDSCRN:	equ $5000+23*$50+1
@@ -64,10 +63,21 @@ CHIPID:		equ $9144	; chip id
 CMDPTR:		equ $9146	; command pointer
 STRPTR:		equ $9148	; string pointer
 CRC:		equ $9150	; used to store intermediary CRC result (2 bytes)
-EXRAMADDR:	equ $9152	; current address in external RAM to monitor (2 bytes)
-RAMFLAG:	equ $9154	; byte which RAM should be shown
-MAXFILES:	equ $9156	; how many files are on the external ROM (2 bytes)
-FILESTART:	equ $9158   ; which file to look at (2 bytes)
+RAMFLAG:	equ $9152	; byte which RAM should be shown
+
+; MONITOR RAM FLAG constants
+RAMFLAGRAMINT: equ $00
+RAMFLAGRAMEXT: equ $01
+RAMFLAGROMINT: equ $02
+RAMFLAGROMEXT: equ $03
+
+; MONITOR STARTIN ADDRESS LOCATIONS
+MONADDR: 	equ $9154	; address for monitor (word)
+EXTRAMADDR:	equ $9156	; current address in external RAM for monitor (2 bytes)
+INTROMADDR:	equ $9158	; current address in internal ROM for monitor (2 bytes)
+EXTROMADDR:	equ $915A	; current address in external ROM for monitor (2 bytes)
+MAXFILES:	equ $915C	; how many files are on the external ROM (2 bytes)
+FILESTART:	equ $915E   ; which file to look at (2 bytes)
 PRGPOINTER: equ $9160	; currently selected program
 
 ; variables for keyboard interface

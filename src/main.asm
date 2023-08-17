@@ -48,7 +48,9 @@ init:
 	call setrombank
 	ld hl,0						; set rom address to 0
 	ld (ROMADDR),hl
-	ld (EXRAMADDR),hl			; set external ram address to 0
+	ld (EXTRAMADDR),hl			; set external ram address to 0
+	ld (EXTROMADDR),hl			; set external ram address to 0
+	ld (INTROMADDR),hl			; set external ram address to 0
 	ld a,0						; point monitor to internal RAM
 	ld (RAMFLAG),a
 	ld a,$FF
@@ -162,15 +164,17 @@ parsecmd:
 .strbootload:	DB "bootload",255
 .strchip:   	DB "chip",255
 .strmodal:		DB "modal",255
-.strformat:		DB "format",255
-.strfindblk:	DB "findblk",255
-.strversion:	DB "version",255
-.strsetramint:	DB "sri",255
-.strsetramext:	DB "sre",255
-.strstairram:	DB "srs",255
-.strlist:		DB "list",255
+.strformat:		DB "format",255			; 6
+.strfindblk:	DB "findblk",255		; 7
+.strversion:	DB "version",255		; 7
+.strmonrami:	DB "monrami",255		; 7
+.strmonrame:	DB "monrame",255		; 7
+.strmonromi:	DB "monromi",255		; 7
+.strmonrome:	DB "monrome",255		; 7
+.strtestram:	DB "testram",255		; 7
+.strlist:		DB "list",255			; 4
 
-.cmdlengths: 	DB 7,7,4,8,8,4,5,6,7,7,3,3,3,4
+.cmdlengths: 	DB 7,7,4,8,8,4,5,6,7,7,7,7,7,7,7,4
 
 .cmdptrs:		DW cmdcopyram
 				DW cmdcopybuf
@@ -182,9 +186,11 @@ parsecmd:
 				DW cmdformat
 				DW cmdfindblk
 				DW cmdversion
-				DW cmdsri
-				DW cmdsre
-				DW cmdstairram
+				DW cmdmonrami
+				DW cmdmonrame
+				DW cmdmonromi
+				DW cmdmonrome
+				DW cmdtestram
 				DW cmdlist
 
 .msgunknown: 	DB 3,"Unknown command",0,255
@@ -214,33 +220,57 @@ cmdversion:
 ;-------------------------------------------------------------------------------
 ; Set monitor to internal RAM
 ;-------------------------------------------------------------------------------
-cmdsri:
-	ld a,0
-	ld (RAMFLAG),a
+cmdmonrami:
+	ld a,RAMFLAGRAMINT
 	ld hl,.message
-	call printmessage
-	call printblock
-	ret
+	jp cmdmonswitchend
 
 .message: DB "Monitor set to *INTERNAL* RAM",255
 
 ;-------------------------------------------------------------------------------
 ; Set monitor to external RAM
 ;-------------------------------------------------------------------------------
-cmdsre:
-	ld a,1
-	ld (RAMFLAG),a
+cmdmonrame:
+	ld a,RAMFLAGRAMEXT
 	ld hl,.message
-	call printmessage
-	call printblock
-	ret
+	jp cmdmonswitchend
 
 .message: DB "Monitor set to *EXTERNAL* RAM",255
 
 ;-------------------------------------------------------------------------------
+; Set monitor to internal ROM
+;-------------------------------------------------------------------------------
+cmdmonromi:
+	ld a,RAMFLAGROMINT
+	ld hl,.message
+	jp cmdmonswitchend
+
+.message: DB "Monitor set to *INTERNAL* ROM",255
+
+;-------------------------------------------------------------------------------
+; Set monitor to external ROM
+;-------------------------------------------------------------------------------
+cmdmonrome:
+	ld a,RAMFLAGRAMEXT
+	ld hl,.message
+	jp cmdmonswitchend
+
+.message: DB "Monitor set to *EXTERNAL* ROM",255
+
+;-------------------------------------------------------------------------------
+; End of monitor target routines
+;-------------------------------------------------------------------------------
+
+cmdmonswitchend:
+	ld (RAMFLAG),a
+	call printmessage
+	call printblock
+	ret
+
+;-------------------------------------------------------------------------------
 ; Set incrementing values for addresses in RAM
 ;-------------------------------------------------------------------------------
-cmdstairram:
+cmdtestram:
 	ld hl,.message
 	call printmessage
 	call stairram
@@ -408,7 +438,7 @@ cmdreadmon:
 	ld (MONADDR),hl
 	jr .end
 .setexramaddr:
-	ld (EXRAMADDR),hl
+	ld (EXTRAMADDR),hl
 .end:
 	call printblock
 	ret
@@ -637,11 +667,20 @@ printromaddr:
 ; Uses: de,hl
 ;-------------------------------------------------------------------------------
 cmdnext:
-	ld hl,(MONADDR)
 	ld de,BLOCKSIZE
+	ld a,(RAMFLAG)	; read RAM flag
+	cp 0
+	jr nz,.setexramaddr
+	ld hl,(MONADDR)
 	add hl,de
 	ld (MONADDR),hl
+	jr .end
+.setexramaddr:
+	ld hl,(EXTRAMADDR)
+	add hl,de
+	ld (EXTRAMADDR),hl
 	call printblock
+.end:
 	ret
 
 ;-------------------------------------------------------------------------------
@@ -649,12 +688,22 @@ cmdnext:
 ; Uses: de,hl
 ;-------------------------------------------------------------------------------
 cmdprev:
-	ld hl,(MONADDR)
 	ld de,BLOCKSIZE
-	or a					; reset carry flag
+	ld a,(RAMFLAG)	; read RAM flag
+	cp 0
+	jr nz,.setexramaddr
+	ld hl,(MONADDR)
+	or a
 	sbc hl,de
 	ld (MONADDR),hl
+	jr .end
+.setexramaddr:
+	ld hl,(EXTRAMADDR)
+	or a
+	sbc hl,de
+	ld (EXTRAMADDR),hl
 	call printblock
+.end:
 	ret
 
 ;-------------------------------------------------------------------------------

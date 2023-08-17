@@ -12,93 +12,44 @@
 ; RAM or part of the external RAM is printed
 ;-------------------------------------------------------------------------------
 printblock:
-	; initialize some variables
 	call clearinterface
-	ld de,BLKSCRN			; load video address
+	call prtmonloc			; show memory location
+	ld a,(RAMFLAG)			; read RAMFLAG to determine printblock routine
+	rla						; rotate left = multiply by 2
+	ld e,a
+	ld d,0
+	ld ix,MONADDR			; load base address
+	add ix,de				; add offset to base, ix points now to addr location
+	ld l,(ix)				; load instruction address via ix pointer into hl
+	ld h,(ix+1)
 	ld b,NUMROWS			; load number of rows to print
-	; check whether to print internal or external RAM
-	ld a,(RAMFLAG)			; read RAMFLAG
-	cp 0					; 0 -> internal ram, external ram otherwise
-	jr nz,printblockexram	; jump to external ram printing routine
-	jr printblockintram		; jump to internal ram printing routine
-
-;-------------------------------------------------------------------------------
-; show block of internal RAM on the monitor
-;
-; input: de - video address
-;        MONADDR - monitor address
-;
-; register 'b' contains the number of rows to write
-;
-; uses:  all
-;-------------------------------------------------------------------------------
-printblockintram:
-	ld hl,(MONADDR)		; load monitor address from RAM
+	ld de,BLKSCRN			; load video address
 .nextline:
 	call printaddrline
-	ld c,8				; number of bytes per row
+	ld c,8					; number of bytes per row
 .nextbyte:
-	ld a,(hl)			; load byte from memory
-	call printhex		; print hex representation of byte
-	inc de				; next video address (giving a blank)
-	inc hl				; next memory address
-	dec c				; decrement byte counter
-	jr nz,.nextbyte		; zero? if not, next byte
-	push de				; put video address on stack
-	ld de,8				; load number 8 into de register
-	or a				; reset carry flag (does not affect a)
-	sbc hl,de			; rewind memory address to beginning of line
-	pop de				; restore video ram address
-	dec de				; decrement video position
-	call printascii		; print ascii characters
-	push hl				; put memory address on stack
-	ex de,hl			; swap de,hl
-	ld de,42			; put 42 into de register
-	add hl,de			; increment video memory by 42 positions
-	ex de,hl			; swap de,hl again
-	pop hl				; restore memory adress
-	dec b				; decrement line counter
-	ret z				; return on zero
-	jr .nextline		; if not zero, go to next line
-
-;-------------------------------------------------------------------------------
-; show block of external RAM on the monitor
-;
-; input: de - video address
-;        EXRAMADDR - monitor address
-;
-; register 'b' contains the number of rows to write
-;
-; uses:  all
-;-------------------------------------------------------------------------------
-printblockexram:
-	ld hl,(EXRAMADDR)	; load monitor address from RAM
-.nextline:
-	call printaddrline
-	ld c,8				; number of bytes per row
-.nextbyte:
-	call ramrecvhl		; receive external ram byte into a
-	call printhex		; print hex representation of byte
-	inc de				; next video address (giving a blank)
-	inc hl				; next memory address
-	dec c				; decrement byte counter
-	jr nz,.nextbyte		; zero? if not, next byte
-	push de				; put video address on stack
-	ld de,8				; load number 8 into de register
-	or a				; reset carry flag (does not affect a)
-	sbc hl,de			; rewind memory address to beginning of line
-	pop de				; restore video ram address
-	dec de				; decrement video position
-	call printasciiexram; print ascii characters
-	push hl				; put memory address on stack
-	ex de,hl			; swap de,hl
-	ld de,42			; put 42 into de register
-	add hl,de			; increment video memory by 42 positions
-	ex de,hl			; swap de,hl again
-	pop hl				; restore memory adress
-	dec b				; decrement line counter
-	ret z				; return on zero
-	jr .nextline		; if not zero, go to next line
+	call readbytemon		; fetch byte for monitor
+	call printhex			; print hex representation of byte
+	inc de					; next video address (giving a blank)
+	inc hl					; next memory address
+	dec c					; decrement byte counter
+	jr nz,.nextbyte			; zero? if not, next byte
+	push de					; put video address on stack
+	ld de,8					; load number 8 into de register
+	or a					; reset carry flag (does not affect a)
+	sbc hl,de				; rewind memory address to beginning of line
+	pop de					; restore video ram address
+	dec de					; decrement video position
+	call printascii			; print ascii characters
+	push hl					; put memory address on stack
+	ex de,hl				; swap de,hl
+	ld de,42				; put 42 into de register
+	add hl,de				; increment video memory by 42 positions
+	ex de,hl				; swap de,hl again
+	pop hl					; restore memory adress
+	dec b					; decrement line counter
+	ret z					; return on zero
+	jr .nextline			; if not zero, go to next line
 
 ;-------------------------------------------------------------------------------
 ; print the address line
@@ -135,7 +86,7 @@ printascii:
 	inc de				; increment memory position
 	ld c,8				; set byte counter
 .next:
-	ld a,(hl)			; get character from internal ram
+	call readbytemon
 	cp $21				; check if smaller than $21?
 	jr c,.printdot		; write a dot if so
 	cp $7E				; check if smaller than $7E?
@@ -152,28 +103,58 @@ printascii:
 	jr .next			; and go to next byte
 
 ;-------------------------------------------------------------------------------
-; print ASCII characters from external memory
-; de - video address
-; hl - memory address
+; fetch byte for monitor function
+; input: hl - memory location
+; uses:  de
+; 
+; returns: a - value to be read
 ;-------------------------------------------------------------------------------
-printasciiexram:
-	ld a,COL_CYAN		; print ascii in cyan
-	ld (de),a			; put cyan marker in video ram
-	inc de				; increment memory position
-	ld c,8				; set byte counter
-.next:
-	call ramrecvhl		; get character from external ram (leaves hl untouched)
-	cp $21				; check if smaller than $21?
-	jr c,.printdot		; write a dot if so
-	cp $7E				; check if smaller than $7E?
-	jr nc,.printdot		; if not, also write a dot
-	jr .printchar		; else write a regular character
-.printdot:
-	ld a,$2E			; load 'dot' character
-.printchar:
-	ld (de),a			; write character in a to video memory
-	inc hl				; increment memory address
-	dec c				; decrement byte counter
-	ret z				; return on zero
-	inc de				; if not zero, increment memory position
-	jr .next			; and go to next byte
+readbytemon:
+	ld a,(RAMFLAG)
+	cp RAMFLAGRAMINT
+	jr nz,.cont
+	ld a,(hl)
+	ret
+.cont:
+	dec a
+	rla			; multiply a by two
+	push de
+	ld e,a
+	ld d,0
+	ld ix,.pointers
+	add ix,de
+	pop de
+	ld h,(ix+1)
+	ld l,(ix)
+	jp (hl)
+
+.pointers:	DW 	ramrecvhl
+			DW	sst39sfrecvintromhl
+			DW	sst39sfrecvextromhl
+
+;-------------------------------------------------------------------------------
+; print monitor location (internal/external rom/ram)
+;-------------------------------------------------------------------------------
+prtmonloc:
+	ld a,(RAMFLAG)
+	rla							; shift left 3 times (multiply by 8)
+	rla
+	rla
+	ld e,a
+	ld d,0
+	ld hl,.message1				; set base message address
+	add hl,de					; add offset to it, message now in hl
+	ld de,$5000+2*$50			; set memory address
+	ld a,COL_GREEN
+	ld (de),a
+	inc de
+	call printstring
+	ld a,COL_WHITE
+	ld (de),a
+	ret
+
+; note that the strings below are exactly 8 bytes
+.message1: DB "INT RAM",255
+.message2: DB "EXT RAM",255
+.message3: DB "INT ROM",255
+.message4: DB "EXT ROM",255
