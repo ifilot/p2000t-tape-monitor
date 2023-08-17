@@ -78,7 +78,10 @@ INTROMADDR:	equ $9158	; current address in internal ROM for monitor (2 bytes)
 EXTROMADDR:	equ $915A	; current address in external ROM for monitor (2 bytes)
 MAXFILES:	equ $915C	; how many files are on the external ROM (2 bytes)
 FILESTART:	equ $915E   ; which file to look at (2 bytes)
-PRGPOINTER: equ $9160	; currently selected program
+PRGPOINTER: equ $9160	; currently selected program (2 bytes)
+
+; addresses for file I/O
+FILEBLADDR: equ $6000
 
 ; variables for keyboard interface
 KEYBUF:		equ $6000	; start of key buffer

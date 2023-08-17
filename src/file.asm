@@ -432,25 +432,32 @@ deletefile:
 ; input: b - starting bank of file (retained)
 ;        c - starting block of file (retained)
 ;
+; uses: all
+;
+; Note that getnextblock uses calcheaderaddr which in turn uses the ix register
 ;-------------------------------------------------------------------------------
 createchain:
-	ld ix,$6000			; start location of blocklist
+	ld hl,FILEBLADDR	; start location of blocklist
 	ld a,b
-	ld (ix),a			; store first bank
-	inc ix
+	call ramsendhl		; store first bank
+	inc hl
 	ld a,c
-	ld (ix),a			; store first block
-	inc ix
+	call ramsendhl		; store first block
+	inc hl
 .nextblock:
-	call getnextblock	; grab next bank/block (clobbers hl)
+	push hl				; put external ram address on the stack
+	call getnextblock	; grab next bank/block in de (clobbers hl)
+	pop hl				; retrieve external ram addr
 	ld a,d
-	ld (ix),a			; store subsequent bank
-	inc ix
+	call ramsendhl		; store subsequent bank
+	inc hl
 	ld a,e
-	ld (ix),a			; store subsequent block
-	inc ix
+	call ramsendhl		; store subsequent block
+	inc hl
 	cp $FF
 	ret z
+	ld b,d				; update current bank
+	ld c,e				; update current block
 	jr .nextblock
 
 ;-------------------------------------------------------------------------------
@@ -459,7 +466,7 @@ createchain:
 ; input: b - starting bank of file (retained)
 ;        c - starting block of file (retained)
 ;
-; uses: hl
+; uses: hl,ixl
 ;
 ; return d - next bank number
 ;        e - next block number

@@ -1,14 +1,13 @@
 ;-------------------------------------------------------------------------------
 ; Copy starting blocks from external rom to external ram
 ;
-; Programs (files) are indicated by two bytes, the first byte is the first block
-; of the file on the bank and the second byte is the bank number. This
-; information can at most cover 2*8*60 = 960 bytes of data, for which
-; $0000-$0400 in RAM is allocated.
+; Programs (files) are indicated by two bytes corresponding to the starting
+; bank and block. This information can at most cover 2*8*60 = 960 bytes of data, 
+; for which $0000-$0400 in RAM is allocated.
 ;
 ;-------------------------------------------------------------------------------
 copyprogblocks:
-	ld hl,0
+	ld hl,$0000
 	ld (MAXFILES),hl		; set file counter to 0
 	ld b,8					; set bank counter
 	ld c,0					; current bank
@@ -17,7 +16,7 @@ copyprogblocks:
 	ld a,c
 	out (O_ROM_BANK),a		; set bank
 	ld de,0					; first address on the bank
-.nextbyte:
+.nextblock:
 	call sst39sfrecvextrom	; read start block from external rom
 	cp $FF					; check if end of bank
 	jr z,.endbank			; if so, end reading of this bank
@@ -28,19 +27,20 @@ copyprogblocks:
 	inc c
 	jr .nextbank
 .storebytes:
-	call ramsendhl			; store current block (still in a)
-	inc a
-	ld a,c					; load current bank in a
+	ld ixh,a				; put block in ixh
+	ld a,c					; load current bank
+	call ramsendhl			; store current bank
+	inc hl
+	ld a,ixh				; retrieve current block
+	call ramsendhl			; store current block in ext ram
 	inc hl					; increment ext ram addr
-	call ramsendhl			; store current bank in ext ram
-	inc hl					; increment ext ram addr (for next program)
 	inc de					; increment rom addr
 	push hl					; put current ram addr on stack
 	ld hl,(MAXFILES)		; load number of files in hl
 	inc hl					; increment number of files
 	ld (MAXFILES),hl		; store back
 	pop hl					; retrieve current ram addr from stack
-	jr .nextbyte
+	jr .nextblock
 .done:
 	ld a,(ROMBANK)			; restore rom bank
 	out (O_ROM_BANK),a
@@ -59,16 +59,10 @@ copydesceroera:
 	ld hl,0					; start at first program
 	ld bc,$400				; start of string locations
 .nextprog:
-	call ramrecvhl			; load block number in accumulator
+	call retrievebankblock
 	cp $FF					; check if this is the last block
 	ret z					; return if so
-	ld ixh,a				; store temporarily in i
-	inc hl
-	call ramrecvhl			; load bank number in accumulator
-	out (O_ROM_BANK),a		; set external rom bank
-	inc hl					; next program address
-	push hl					; push block index addr to stack
-	ld a,ixh				; recover block number
+	push hl					; push external ram addr to stack
 	ld de,$0126				; descriptor offset
 	call calcheaderaddr		; get address in hl from (a * $40) + de
 	ex de,hl				; de is set to start of RAM descriptor
@@ -92,7 +86,7 @@ copydesceroera:
 	inc bc					; next byte in external ram
 	dec h					; decrement counter
 	jr nz,.nextbyte2		; check if zero, if not, next byte
-	pop hl					; recover hl
+	pop hl					; retrieve external ram addr to stack
 	jp .nextprog			; try to grab next program
 
 ;-------------------------------------------------------------------------------
@@ -105,15 +99,10 @@ copyfileext:
 	ld hl,0					; start at first program
 	ld bc,$2200				; start of string locations
 .nextprog:
-	call ramrecvhl			; load block number in accumulator
+	call retrievebankblock
 	cp $FF					; check if this is the last block
 	ret z					; return if so
-	ld ixh,a				; store temporarily in i
-	inc hl
-	call ramrecvhl			; load bank number in accumulator
-	out (O_ROM_BANK),a		; set external rom bank
-	inc hl					; next program address
-	push hl					; push block index addr to stack
+	push hl					; push external ram addr to stack
 	ld a,ixh				; recover block number
 	ld de,$012E				; extension offset
 	call calcheaderaddr		; get address in hl from (a * $40) + de
@@ -139,16 +128,10 @@ copyfilelengths:
 	ld hl,0					; start at first program
 	ld bc,$2800				; start of string locations
 .nextprog:
-	call ramrecvhl			; load block number in accumulator
+	call retrievebankblock
 	cp $FF					; check if this is the last block
 	ret z					; return if so
-	ld ixh,a				; store temporarily in i
-	inc hl
-	call ramrecvhl			; load bank number in accumulator
-	out (O_ROM_BANK),a		; set external rom bank
-	inc hl					; next program address
-	push hl					; push block index addr to stack
-	ld a,ixh				; recover block number
+	push hl					; push external ram addr to stack
 	ld de,$0122				; file length offset
 	call calcheaderaddr		; get address in hl from (a * $40) + de
 	ex de,hl				; de is set to start of RAM descriptor
@@ -162,6 +145,22 @@ copyfilelengths:
 	jr nz,.nextbyte			; check if zero, if not, next byte
 	pop hl					; recover hl
 	jp .nextprog			; try to grab next program
+
+;-------------------------------------------------------------------------------
+; Retrieve bank and block from external RAM
+;
+; input: hl - external ram address
+;
+; return: a  - block number
+;		  hl - external ram address incremented by 2
+;-------------------------------------------------------------------------------
+retrievebankblock:
+	call ramrecvhl			; load bank number in accumulator
+	out (O_ROM_BANK),a		; set external rom bank
+	inc hl
+	call ramrecvhl			; load block number in accumulator
+	inc hl					; next program address
+	ret
 
 ;-------------------------------------------------------------------------------
 ; Show all files on the ROM
@@ -530,6 +529,33 @@ exitkeys:
 ;-------------------------------------------------------------------------------
 showfileinfo:
 	call clearscreen
+	ld hl,(PRGPOINTER)			; load current program pointer
+	ld de,$5000
+	ld a,h
+	call printhex
+	ld a,l
+	call printhex
+	add hl,hl					; multiply by 2
+	call ramrecvhl				; get bank
+	ld b,a
+	inc hl
+	call ramrecvhl				; get block
+	ld c,a
+	ld de,$5000+$50
+	ld a,b
+	call printhex
+	ld a,c
+	call printhex
+	call createchain			; build chain of blocks
+	ld b,12
+	ld hl,FILEBLADDR
+	ld de,$5000+3*$50
+.nextbyte:
+	call ramrecvhl
+	call printhex
+	inc de
+	inc hl
+	djnz .nextbyte
 	ld de,$5000 + 23*$50
 	ld hl,.instructions2
 	call printstring

@@ -19,7 +19,7 @@ ramsend:
 ; Send a byte to RAM chip
 ; input: hl - chip address
 ;         a - byte to write
-; uses: ixh
+; uses: iyh
 ; fixed: de
 ;-------------------------------------------------------------------------------
 ramsendhl:
