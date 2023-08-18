@@ -1,3 +1,4 @@
+;# MAIN="main.asm"
 ;-------------------------------------------------------------------------------
 ; Copy starting blocks from external rom to external ram
 ;

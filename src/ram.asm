@@ -1,3 +1,4 @@
+;# MAIN="main.asm"
 ;-------------------------------------------------------------------------------
 ; Send a byte to RAM chip
 ; input: de - chip address
