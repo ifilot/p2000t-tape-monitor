@@ -431,32 +431,33 @@ deletefile:
 	call ramrecvhl
 	ld iyl,a				; set bank counter
 .nextbank:
-	; set the bank
+;-- set the bank --
 	ld a,iyl
 	out (O_ROM_BANK),a		; set starting bank
-	; copy bank data
+;-- copy bank data --
 	ld bc,$1000				; number of bytes
 	ld de,$0000				; external rom start addr
 	ld hl,FILEIOBUF			; external ram start addr
 	call copysectorrora		; copy metadata section from rom to ram
 	ld hl,FILEBLADDR
 	call ramrecvhl			; get first bank from external ram
-	cp iyl
-	jp nz,.skipstartblocks
-	call rebuildstartblocks	; rebuild the starting blocks for this bank
+	cp iyl					; compare with current bank counter
+	jp nz,.skipstartblocks	; if not the same, skip rebuilding starting blocks
+	call rebuildstartblocks	; else, rebuild the starting blocks for this bank
 .skipstartblocks:
-	call formatblocks		; format $40 header blocks that are no longer in use
-	ret ; early exit for debugging
-	; erase metadata sector on external rom
+	call formatheader		; format $40 header blocks that are no longer in use
 	ld de,$0000
-	ld b,iyl
-	ld c,(O_ROM_EXT)
-	call sst39sferase
+	ld b,iyl				; put current bank number in b
+	ld c,(O_ROM_EXT)		; set port to external rom chip
+	;call sst39sferase		; erase the first sector (4kb)
 	; copy external ram data back to internal rom
 	ld bc,$1000				; number of bytes
 	ld de,$0000				; external rom start addr
 	ld hl,FILEIOBUF			; external ram start addr
-	call copysectorraro		; copy metadata section from rom to ram
+	; call copysectorraro		; copy metadata section from ram to rom
+;-- loop over the remaining 15 sectors and reset the 1kb blocks --
+	;call buildblockwipelist
+	ret
 	inc iyl					; increment bank counter
 	ld a,iyl
 	cp 8					; check for last bank
@@ -490,32 +491,42 @@ rebuildstartblocks:
 	jr .nextbyte			; overwrite block
 
 ;-------------------------------------------------------------------------------
-; Format all blocks 
+; Format all block headers that are no longer in use on this bank
 ;
-; input: ixl - current bank
+; This function essentially loops over all the bank/block of the linked list.
+; This function assumes that all bank/block pairs are in ascending order and
+; that the headers are already copied to external RAM. 
+;
+; If a non-matching bank is encountered, this function automatically skips
+; towards the next block. The function stops when a terminating character 
+; ($FF) is encountered.
+;
+; input: iyl - current bank
 ;-------------------------------------------------------------------------------
-formatblocks:
+formatheader:
 	ld hl,FILEBLADDR		; set starting address linked list
-	ld de,$5000+$50*6
+	ld de,$5000+$50*6		; screen print position
 .nextblock:
 	call ramrecvhl			; receive bank
 	ld b,a					; store bank into b
 	inc hl
 	call ramrecvhl			; receive block
-	inc hl
-	push hl					; push current position linked list on stack
 	ld c,a					; store block into c
-	; --- debug --- 
-	call printhex
+	inc hl					; increment external ram addr
+	push hl					; push current addr position linked list on stack
+	ld a,b					; store bank into a
+	cp iyl					; check if current bank matches
+	jr nz,.continuenextblock; if not, go to next block
+	cp $FF					; else check if terminating character is found
+	jr z,.exit				; if not, return functions, else
+;-- print to be deleted bank / block on screen --
+	call printhex			; print current bank
+	inc de
+	ld a,c
+	call printhex			; print current block
 	inc de
 	push de
- 	; --- end debug ---
-	ld a,b					; store bank into a
-	cp iyl					; check if bank matches
-	jr nz,.exit				; return if not
-	cp $FF					; check if terminating character is found
-	jr z,.exit				; return if so
-	; calculate block metadata start addr
+;-- calculate block metadata start addr --
 	ld a,c
 	ld de,FILEIOBUF+$100	; load offset (as seen from external ram)
 	call calcheaderaddr		; calculate hl = (a * $40) + de
@@ -534,18 +545,88 @@ formatblocks:
 	call ramsendhl
 	inc hl
 	; wipe the remaining bytes
-	ld b,$40-3
-	ld a,$FF
+	ld b,$40-3				; set number of bytes
+	ld a,$FF				; set 'wipe' character
 .wipenextbyte:
-	call ramsendhl
-	inc hl
-	djnz .wipenextbyte
-	pop de					; get next video memory position
+	call ramsendhl			; write to external ram
+	inc hl					; increment memory position
+	djnz .wipenextbyte		; loop until b = 0
+;-- restore stack and go to next block --
+	pop de					; retrieve next video memory position from stack
 	pop hl					; retrieve current position linked list from stack
 	jp .nextblock
+.continuenextblock:
+	pop hl					; retrieve memory position from stack
+	jp .nextblock
 .exit:						; exit routine, fix stack
-	pop de
 	pop hl
+	ret
+
+;-------------------------------------------------------------------------------
+; Build a list of wipe operations that need to be conducted over the current
+; bank
+;
+; input: iyl - current bank
+;-------------------------------------------------------------------------------
+buildblockwipelist:
+	ld ixl,0				; overall block counter
+	ld ixh,15				; number of sectors to check
+	ld de,FILEOPLIST ; needs to be migrated down1
+.nextsector: 			; loop over sectors
+	ld b,4					; sector-block counter
+.nextblock:  			; loop over blocks
+	ld hl,FILEBLADDR		; set starting address linked list
+	
+.nextlink:   			; loop over linked list
+	call ramrecvhl			; receive bank
+	inc hl
+	cp $FF					; compare to end marker
+	jp z,.endblock
+	cp iyl					; check if current bank matches
+	jp nz,.contnextlink		; go to next block
+	call ramrecvhl			; receive block
+	inc hl
+	cp ixl					; compare to current block
+	jp nz,.nextlink
+; -- block matches counter --
+	call ramsendde
+	inc de
+.contnextlink:			; end loop linked list
+	inc hl
+	jr .nextlink	
+.endblock:    			; end loop block
+	dec b
+	inc ixl
+	jr nz,.nextblock
+	dec ixh				; end loop sector
+	call deletefilesector
+	jp nz,.nextsector
+; -- end of routine --
+	ret
+
+;-------------------------------------------------------------------------------
+; Delete blocks from sector as indicated by FILEOPLIST
+;-------------------------------------------------------------------------------
+deletefilesector:
+	di
+	exx
+	ld de,FILEOPLIST
+	call ramrecvde
+	cp $FF
+	jr z,.end
+; -- load block from external memory --
+.nextblock:
+	call ramrecvde
+	inc hl
+	cp $FF
+	jr z,.writeend
+; -- do something with memory --
+	jr .nextblock
+.writeend:
+; -- write sector back to external rom --
+.end:
+	exx
+	ei
 	ret
 
 ;-------------------------------------------------------------------------------

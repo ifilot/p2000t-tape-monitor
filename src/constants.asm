@@ -83,6 +83,7 @@ PRGPOINTER: equ $9160	; currently selected program (2 bytes)
 
 ; addresses for file I/O
 FILEBLADDR: equ $6000
+FILEOPLIST:	equ $6400
 FILEIOBUF:	equ $7000
 
 ; variables for keyboard interface

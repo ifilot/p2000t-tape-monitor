@@ -7,6 +7,7 @@
 ; fixed: de
 ;-------------------------------------------------------------------------------
 ramsend:
+ramsendde:
 	ld iyh,a				; temporarily store a in i
 	ld a,e
 	out (O_ROM_LA),a		; set lower address
