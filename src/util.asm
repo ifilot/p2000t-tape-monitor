@@ -25,7 +25,7 @@ printhex:
 ;
 ; input: a  - value to print
 ;        de - video memory address
-; uses:  a,b
+; uses:  a
 ; output: de - new cursor position of video address
 ;-------------------------------------------------------------------------------
 printnibble:

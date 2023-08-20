@@ -72,7 +72,7 @@ RAMFLAGRAMEXT: equ $01
 RAMFLAGROMINT: equ $02
 RAMFLAGROMEXT: equ $03
 
-; MONITOR STARTIN ADDRESS LOCATIONS
+; MONITOR STARTING ADDRESS LOCATIONS
 MONADDR: 	equ $9154	; address for monitor (word)
 EXTRAMADDR:	equ $9156	; current address in external RAM for monitor (2 bytes)
 INTROMADDR:	equ $9158	; current address in internal ROM for monitor (2 bytes)
@@ -80,8 +80,9 @@ EXTROMADDR:	equ $915A	; current address in external ROM for monitor (2 bytes)
 MAXFILES:	equ $915C	; how many files are on the external ROM (2 bytes)
 FILESTART:	equ $915E   ; which file to look at (2 bytes)
 PRGPOINTER: equ $9160	; currently selected program (2 bytes)
+TEMPCURSEC: equ $9162
 
-; addresses for file I/O
+; addresses for file I/O (external RAM)
 FILEBLADDR: equ $6000
 FILEOPLIST:	equ $6400
 FILEIOBUF:	equ $7000
