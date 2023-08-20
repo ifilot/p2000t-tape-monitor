@@ -170,7 +170,7 @@ calcmetaaddr:
 ; input:  a - block number (retained)
 ; output: hl - cartridge header start address
 ;
-; uses: de,i
+; uses: de,ixl
 ;-------------------------------------------------------------------------------
 calccasheader:
 	ld de,$0120
@@ -429,10 +429,10 @@ writestring:
 deletefile:
 	ld hl,FILEBLADDR
 	call ramrecvhl
-	ld iyl,a				; set bank counter
+	ld (CURBANK),a			; set bank counter
 .nextbank:
 ;-- set the bank --
-	ld a,iyl
+	ld a,(CURBANK)
 	out (O_ROM_BANK),a		; set starting bank
 ;-- copy bank data --
 	ld bc,$1000				; number of bytes
@@ -441,13 +441,16 @@ deletefile:
 	call copysectorrora		; copy metadata section from rom to ram
 	ld hl,FILEBLADDR
 	call ramrecvhl			; get first bank from external ram
-	cp iyl					; compare with current bank counter
+	ld b,a
+	ld a,(CURBANK)
+	cp b
 	jp nz,.skipstartblocks	; if not the same, skip rebuilding starting blocks
 	call rebuildstartblocks	; else, rebuild the starting blocks for this bank
 .skipstartblocks:
 	call formatheader		; format $40 header blocks that are no longer in use
 	ld de,$0000
-	ld b,iyl				; put current bank number in b
+	ld a,(CURBANK)			; load current bank and store in b
+	ld b,a
 	ld c,(O_ROM_EXT)		; set port to external rom chip
 	;call sst39sferase		; erase the first sector (4kb)
 	; copy external ram data back to internal rom
@@ -456,9 +459,11 @@ deletefile:
 	ld hl,FILEIOBUF			; external ram start addr
 	; call copysectorraro		; copy metadata section from ram to rom
 ;-- loop over the remaining 15 sectors and reset the 1kb blocks --
-	call buildblockwipelist
-	inc iyl					; increment bank counter
-	ld a,iyl
+	;call buildblockwipelist
+	ret
+	ld a,(CURBANK)
+	inc a
+	ld (CURBANK),a
 	cp 8					; check for last bank
 	ret z
 	jp .nextbank			; go to next bank
@@ -500,31 +505,34 @@ rebuildstartblocks:
 ; towards the next block. The function stops when a terminating character 
 ; ($FF) is encountered.
 ;
-; input: iyl - current bank
+; input: CURBANK - current bank
 ;-------------------------------------------------------------------------------
 formatheader:
 	ld hl,FILEBLADDR		; set starting address linked list
+	ld (FEXTRAMPTR),hl
 	ld de,$5000+$50*6		; screen print position
+	ld (FVIDPOS),de
 .nextblock:
+	ld hl,(FEXTRAMPTR)
 	call ramrecvhl			; receive bank
 	ld b,a					; store bank into b
 	inc hl
 	call ramrecvhl			; receive block
 	ld c,a					; store block into c
 	inc hl					; increment external ram addr
-	push hl					; push current addr position linked list on stack
-	ld a,b					; store bank into a
+	ld (CURBANKBLOCK),bc	; store current bank and block
+	ld (FEXTRAMPTR),hl
+	ld a,b					; load bank into a
 	cp $FF					; else check if terminating character is found
-	jr z,.exit				; if so, return functions, else
-	cp iyl					; check if current bank matches
+	ret z					; if so, return functions, else
+	ld a,(CURBANK)			; load current bank into a
+	cp b
 	jr nz,.continuenextblock; if not, go to next block
 ;-- print to be deleted bank / block on screen --
-	call printhex			; print current bank; garbles iyh
-	inc de
-	ld a,c
+	ld de,(FVIDPOS)
 	call printhex			; print current block; garbles iyh
 	inc de
-	push de					; push video addr on stack
+	ld (FVIDPOS),de
 ;-- calculate block metadata start addr --
 	ld a,c
 	ld de,FILEIOBUF+$100	; load offset (as seen from external ram)
@@ -551,15 +559,8 @@ formatheader:
 	inc hl					; increment memory position
 	djnz .wipenextbyte		; loop until b = 0
 ;-- restore stack and go to next block --
-	pop de					; retrieve next video memory position from stack
-	pop hl					; retrieve current position linked list from stack
-	jp .nextblock
 .continuenextblock:
-	pop hl					; retrieve memory position from stack
 	jp .nextblock
-.exit:						; exit routine, fix stack
-	pop hl
-	ret
 
 ;-------------------------------------------------------------------------------
 ; Build a list of wipe operations that need to be conducted over the current
