@@ -89,17 +89,17 @@ sst39sfsend:
 
 ;-------------------------------------------------------------------------------
 ; Send a byte to SST39SF0x0 chip
-; input: a  - byte to send (retained)
-;		 de - chip address (retained)
-; uses:  iyh
+; input: de - chip address
+;         b - byte to send
+; uses: a
+; fixed: c,de
 ;-------------------------------------------------------------------------------
-sst39sfsendde:
-	ld iyh,a
+sst39sfsendexrom:
 	ld a,e
 	out (O_ROM_LA),a
 	ld a,d
 	out (O_ROM_UA),a
-	ld a,iyh
+	ld a,b
 	out (O_ROM_EXT),a
 	ret
 
@@ -252,6 +252,35 @@ sst39sfwrbyteacc:
 	pop af				; retrieve byte to be written
 	ld b,a				; set byte in b
 	call sst39sfsend
+	ret
+
+;-------------------------------------------------------------------------------
+; Write a single byte from accumulator
+; input:  de - chip address
+;		   a - byte to write
+; output:  a - byte to write
+;		  de - rom address
+; uses: iyh
+;-------------------------------------------------------------------------------
+sst39sfwrbyteaccde:
+	di
+	ld iyh,a			; store byte to be written in a
+	push de				; store rom address
+	exx
+	ld de,$5555
+	ld b,$AA
+	call sst39sfsendexrom
+	ld de,$2AAA
+	ld b,$55
+	call sst39sfsendexrom
+	ld de,$5555
+	ld b,$A0
+	call sst39sfsendexrom
+	pop de				; retrieve rom address
+	ld b,iyh			; set byte in b
+	call sst39sfsendexrom
+	exx
+	ei
 	ret
 
 ;-------------------------------------------------------------------------------

@@ -152,9 +152,11 @@ copysectorrora:
 copysectorraro:
 .nextbyte:
 	call ramrecvhl				; read byte from external RAM
-	call sst39sfsendde			; write byte to external ROM
+	call sst39sfwrbyteaccde		; write byte from a to to external ROM de
 	inc de						; increment rom addr
 	inc hl						; increment ram addr
 	dec bc						; decrement counter
+	ld a,b
+	or c
 	ret z
 	jr .nextbyte

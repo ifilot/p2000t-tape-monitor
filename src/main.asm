@@ -34,7 +34,7 @@ start:
 ; initialization routine
 ;-------------------------------------------------------------------------------
 init:
-	;call initlog
+	call initlog
 	call clearscreen
 	call clearcmd
 	call prttitle
@@ -543,7 +543,6 @@ copyramrom:
 	pop de
 	call printromaddr		; print rom address
 	push de
-	;call copyramromlog		; store data in log
 	di
 	call markblock          ; write $00 to metadata byte $08
 	call copyheader         ; copy header from RAM to ROM
@@ -1513,6 +1512,7 @@ include "crc16.asm"
 include "copy.asm"
 include "ram.asm"
 include "programlist.asm"
+include "log.asm"
 
 ;-------------------------------------------------------------------------------
 ; ascii conversion table

@@ -452,14 +452,15 @@ deletefile:
 	ld a,(CURBANK)			; load current bank and store in b
 	ld b,a
 	ld c,(O_ROM_EXT)		; set port to external rom chip
-	;call sst39sferase		; erase the first sector (4kb)
+	; --
+	call sst39sferase		; erase the first sector (4kb)
 	; copy external ram data back to internal rom
 	ld bc,$1000				; number of bytes
 	ld de,$0000				; external rom start addr
 	ld hl,FILEIOBUF			; external ram start addr
-	; call copysectorraro		; copy metadata section from ram to rom
+	call copysectorraro		; copy metadata section from ram to rom
 ;-- loop over the remaining 15 sectors and reset the 1kb blocks --
-	;call buildblockwipelist
+	call buildblockwipelist
 	ret
 	ld a,(CURBANK)
 	inc a
@@ -566,46 +567,47 @@ formatheader:
 ; Build a list of wipe operations that need to be conducted over the current
 ; bank
 ;
-; input: iyl - current bank
-; uses: ixl
+; input: CURBANK - current bank
 ;-------------------------------------------------------------------------------
 buildblockwipelist:
-	ld ixl,0				; set sector counter
-	ld de,$5000+8*$50
+	ld a,0
+	ld (CURSECTOR),a		; set sector counter
 .nextsector:
-	push de
 	call findblocksdelete
 	pop de
 	push de
-	ld a,ixl
-	call printhex			; garbles iyh
+	ld a,(CURSECTOR)
+	call printhex			; print current sector
 	inc de
-	call printopts
+	call printopts			; print blocks to be cleared for that sector
 	pop de
-	ex de,hl
+	ex de,hl				; set video pointer to next line
 	ld de,$50
 	add hl,de
 	ex de,hl
-	ld hl,FILEOPLIST
-	cp $FF
-	jr z,.donesector
-	call reformatsector		; execute wipe operations for this sector
+	ld hl,FILEOPLIST		; set pointer to operations list
+	call ramrecvhl
+	cp $FF					; check if first character is terminating string
+	jr z,.donesector		; bail out if so
+	push de
+	call reformatsector		; else, execute wipe operations for this sector
+	pop de
 .donesector:
-	inc ixl
-	ld a,ixl
+	ld a,(CURSECTOR)
+	inc a
+	ld (CURSECTOR),a
 	cp 15
 	ret z
 	jr .nextsector
 
 ;-------------------------------------------------------------------------------
-; Investigate if any blocks need to be deleted and place in FILEOPLIST which
-; blocks that will be
+; Investigate if any blocks need to be deleted for the current sector and place
+; these blocks in an array starting at FILEOPLIST.
 ;
-; input: iyl - current bank
-;		 ixl - current sector
+; input: CURSECTOR - current sector
 ;-------------------------------------------------------------------------------
 findblocksdelete:
-	ld a,ixl
+	ld a,(CURSECTOR)
 	or a					; clear carry
 	rla						; rotate left twice, multiply by 2
 	rla
@@ -624,8 +626,8 @@ findblocksdelete:
 	inc hl					; increment external ram addr
 	cp $FF					; check end of block
 	jr z,.exit
-	ld a,b					; load bank
-	cp iyl
+	ld a,(CURBANK)			; load bank
+	cp b
 	jp nz,.contnextblock
 	ld a,c					; load block
 	cp e					; check if bank is larger or equal to lower bound
@@ -645,18 +647,38 @@ findblocksdelete:
 	ld a,$FF
 	call ramsendbc			; set terminating byte
 	ret
-	
+
+;-------------------------------------------------------------------------------
+; Print the delete sector operations for each block on the screen at memory
+; address de
+;-------------------------------------------------------------------------------
+printopts:
+	ld hl,FILEOPLIST
+.nextop:
+	call ramrecvhl
+	cp $FF
+	ret z
+	call printhex
+	inc de
+	inc hl
+	jr .nextop	
 
 ;-------------------------------------------------------------------------------
 ; Delete blocks from sector as indicated by FILEOPLIST
 ;
-; input: iyl - current bank
-;        ixl - current sector
+; input: CURBANK   - current bank
+;        CURSECTOR - current sector
 ;-------------------------------------------------------------------------------
 reformatsector:
-	ld bc,$1000				; number of bytes
-	ld a,ixl
-	inc a
+	ld hl,.msg1
+	call writelogstring
+	ld a,(CURSECTOR)
+	call writeloghex
+	ld hl,.msg2
+	call writelogstring
+; -- calculate address of current sector --
+	ld a,(CURSECTOR)
+	inc a					; increment by one to take header offset into account
 	or a					; clear carry
 	rla
 	rla
@@ -666,28 +688,32 @@ reformatsector:
 	ld e,$00
 	ld (TEMPCURSEC),de		; store absolute ROM addr in memory
 	ld hl,FILEIOBUF			; external ram start addr
-	;call copysectorrora	; copy metadata section from rom to ram
+	ld bc,$1000				; number of bytes
+	; --
+	call copysectorrora	; copy metadata section from rom to ram
+	call logreadsector
+	; --
 	ld hl,FILEOPLIST
 .nextopt:
 	push hl
 	call ramrecvhl			; call operation
 	cp $FF					; check if terminating character
 	jp z,.finalize
+	call writeloghex		; print the value
 	or a					; clear carry
 	rla
 	rla
-	ld h,a					; multiply a by $400 and store in hl
+	add $10
+	ld h,a					; multiply a by $400 and add $1000 and store in hl
 	ld l,$00
-	ld de,$1000				; add offset
-	add hl,de				; hl holds the ROM memory addr
 	ld de,(TEMPCURSEC)		; load absolute ROM addr of sector
 	or a
 	sbc hl,de				; get addr relative to sector
 	ld de,FILEIOBUF
 	add hl,de				; get relative addr in buffer
 	ld bc,$400				; set number of bytes to wipe
-	ld a,$FF				; set wipe character
 .nextbyte:
+	ld a,$FF				; set wipe character
 	call ramsendhl			; wipe
 	inc hl					; next memory position
 	dec bc					; decrement counter
@@ -699,41 +725,112 @@ reformatsector:
 	jp .nextopt				; try next operation
 .finalize:
 	pop hl
-
-	ld de,$0000
-	ld b,iyl				; put current bank number in b
-	ld c,(O_ROM_EXT)		; set port to external rom chip
-	ld bc,$1000				; number of bytes
-	ld a,ixl
-	or a					; clear carry
-	rla
-	rla
-	rla
-	rla
-	ld d,a					; load in d
-	ld e,$00
+; -- done with all operations, now write back --
 	; -- erase sector --
-	ld b,iyl				; put current bank number in b
+	ld a,(CURBANK)			; call writeloghexput current bank number in b
+	ld b,a
 	ld c,(O_ROM_EXT)		; set port to external rom chi
-	;call sst39sferase		; erase the first sector (4kb)
+	ld de,(TEMPCURSEC)
+	; --
+	call sst39sferase		; erase the first sector (4kb)
+	call logwipesector
+	; --
 	ld bc,$1000				; number of bytes
 	ld hl,FILEIOBUF			; external ram start addr
-	;call copysectorraro
+	; --
+	call copysectorraro
+	call logwritesector
+	; --
+	ld hl,.msg3
+	call writelogstring
 	ret
 
+.msg1: DB "Sector:",255
+.msg2: DB "Blk:",255
+.msg3: DB "OK",10,255
+
 ;-------------------------------------------------------------------------------
-; Print the delete sector operations for each block
+; Logging for reading sector
+; input: bc - number of bytes
+;        de - rom address
+;        hl - ram address
 ;-------------------------------------------------------------------------------
-printopts:
-	ld hl,FILEOPLIST
-.nextop:
-	call ramrecvhl
-	cp $FF
-	ret z
-	call printhex
-	inc de
-	inc hl
-	jr .nextop
+logreadsector:
+	di
+	exx
+	ld hl,.msg1
+	call writelogstring
+	exx
+	call logwriteaddr
+	exx
+	ld hl,.msg2
+	call writelogstring
+	exx
+	ei
+	ret
+
+.msg1: DB "RDSEC",255
+.msg2: DB "OK",255
+
+;-------------------------------------------------------------------------------
+; Logging for wiping sector
+;-------------------------------------------------------------------------------
+logwipesector:
+	di
+	exx
+	ld hl,.msg1
+	call writelogstring
+	exx
+	call logwriteaddr
+	exx
+	ld hl,.msg2
+	call writelogstring
+	exx
+	ei
+	ret
+
+.msg1: DB "WPSEC",255
+.msg2: DB "OK",255
+
+;-------------------------------------------------------------------------------
+; Logging for writing sector
+;-------------------------------------------------------------------------------
+logwritesector:
+	di
+	exx
+	ld hl,.msg1
+	call writelogstring
+	exx
+	call logwriteaddr
+	exx
+	ld hl,.msg2
+	call writelogstring
+	exx
+	ei
+	ret
+
+.msg1: DB "WRSEC",255
+.msg2: DB "OK",255
+
+;-------------------------------------------------------------------------------
+; Write addr to log
+;-------------------------------------------------------------------------------
+logwriteaddr:
+	ld a,b
+	call writeloghex
+	ld a,c
+	call writeloghex
+	ld a,d
+	call writeloghex
+	ld a,e
+	call writeloghex
+	ld a,h
+	call writeloghex
+	ld a,l
+	call writeloghex
+	ret
+
+.msg: DB "WRSEC",255
 
 ;-------------------------------------------------------------------------------
 ; Create a list of all the blocks the file resides on

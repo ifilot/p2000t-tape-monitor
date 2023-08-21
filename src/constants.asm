@@ -72,6 +72,7 @@ CURBLOCK: 		equ $9153	; counter to keep track of which block we are in
 CURBANKBLOCK:	equ $9154	; current bank and block holder in linked list
 FVIDPOS:		equ $9156   ; current video position
 FEXTRAMPTR:		equ $9158	; pointer to external ram address
+CURSECTOR:		equ $9160	; current sector
 
 ; MONITOR RAM FLAG constants
 RAMFLAGRAMINT: equ $00
