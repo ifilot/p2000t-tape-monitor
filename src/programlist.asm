@@ -7,6 +7,7 @@ loadfiles:
 	call copydesceroera
 	call copyfileext
 	call copyfilelengths
+	call copyblocktokens
 	ret
 
 ;-------------------------------------------------------------------------------
@@ -18,11 +19,10 @@ loadfiles:
 ;
 ;-------------------------------------------------------------------------------
 copyprogblocks:
-	ld hl,$0000
 	ld (MAXFILES),hl		; set file counter to 0
 	ld b,8					; set bank counter
 	ld c,0					; current bank
-	ld hl,0					; set start ram storage location
+	ld hl,$0000				; set start ram storage location
 .nextbank:
 	ld a,c
 	out (O_ROM_BANK),a		; set bank
@@ -156,6 +156,43 @@ copyfilelengths:
 	jr nz,.nextbyte			; check if zero, if not, next byte
 	pop hl					; recover hl
 	jp .nextprog			; try to grab next program
+
+;-------------------------------------------------------------------------------
+; Copy block tokens
+;
+; Copy the block tokens to indicate which block is in use and which block is
+; free. To store this information, at most 60 * 8 = 480 bytes of data is needed.
+; Memory locations $2C00 - $2E00 is reserved for this
+;-------------------------------------------------------------------------------
+copyblocktokens:
+	ld hl,$2C00				; set ram storage location
+	ld (FEXTRAMPTR),hl
+	ld c,0					; current bank
+.nextbank:
+	ld a,c
+	out (O_ROM_BANK),a		; set bank
+	ld de,$0108				; first address on the bank
+	ld b,60					; number of blocks
+.nextblock:
+	ld hl,(FEXTRAMPTR)
+	call sst39sfrecvextrom	; read block token from external rom
+	call ramsendhl
+	inc hl
+	ld (FEXTRAMPTR),hl
+	ld hl,$0040
+	add hl,de
+	ex de,hl
+	djnz .nextblock
+.donebank:
+	ld hl,(FEXTRAMPTR)
+	ld de,$0004
+	add hl,de
+	ld (FEXTRAMPTR),hl
+	inc c
+	ld a,c
+	cp 8
+	jp nz,.nextbank
+	ret
 
 ;-------------------------------------------------------------------------------
 ; Retrieve bank and block from external RAM
@@ -444,6 +481,8 @@ showfilesuserinput:
 	call z,pointerdec			; call routine increment pointer position
 	cp 12						; compare to 'd'
 	call z,pointerinc			; call routine pointer decrement
+	cp 49						; compare to 'o'
+	call z,showoverview			; call routine to show overview
 	cp 52 						; compare to 'ENTER'
 	call z,showfileinfo			; call show info of single file routine
 .getkeycont:
@@ -534,6 +573,99 @@ exitkeys:
 	ld a,0						; set zero in key buffer
 	ld (KEYBUF),a
 	ret
+
+;-------------------------------------------------------------------------------
+; Show overview
+;-------------------------------------------------------------------------------
+showoverview:
+	call clearscreen
+	call showusedblocks
+	ld de,$5000 + 23*$50
+	ld hl,.instructions
+	call printstring
+.userinput:
+	ld a,(NKEYBUF)
+	cp 0
+	jp z,.userinput
+	ld de,KEYBUF
+.nextkey:
+	ld a,(de)					; load key from buffer
+	cp 29 						; compare to 'b'
+	jr z,.exitloop
+.getkeycont:
+	ld hl,KEYBUF
+	ld d,0
+	ld a,(NKEYBUF)
+	ld e,a
+	add hl,de
+	ex de,hl
+	inc de						; next position in key buffer
+	ld a,(NKEYBUF)
+	dec a						; decrement number of keys to print
+	ld (NKEYBUF),a				; store this number in nkeybuf
+	cp 0						; zero keys reached, return
+	jp z,.userinput
+	jp .nextkey					; else parse next key
+.exitloop:
+	ld a,0
+	ld (KEYBUF),a
+	ret
+
+.instructions:
+	DB COL_MAG,"b - back to monitor",255
+
+;-------------------------------------------------------------------------------
+; Show used blocks on screen
+;-------------------------------------------------------------------------------
+showusedblocks:
+	ld hl,$2C00
+	ld b,8						; bank counter
+	ld de,$5000+4*$50			; set video position
+.nextbank:
+	ld hl,.str
+	call printstring
+	ld a,8
+	sub b
+	call printhex
+	ld a,COL_WHITE
+	ld (de),a
+	inc de
+	ld c,60
+.nextblock:
+	call ramrecvhl
+	jp z,.printdot				; occupied
+	jp .printsquare
+.cont:
+	dec c
+	jp z,.gonextbank
+	ld a,c
+	cp 30
+	jp nz,.nextblock
+	push hl
+	ld hl,$50-31
+	add hl,de
+	ex de,hl
+	pop hl
+	inc de
+	jp .nextblock
+.gonextbank:
+	dec b
+	ret z
+	ld hl,$50-39
+	add hl,de
+	ex de,hl
+	jp .nextbank
+.printdot:
+	ld a,'.'
+	jr .print
+.printsquare:
+.print:
+	ld a,127
+	ld (de),a
+	inc de
+	jp .cont
+
+.str: DB "Bank:",COL_GREEN,255
 
 ;-------------------------------------------------------------------------------
 ; Show info for single file

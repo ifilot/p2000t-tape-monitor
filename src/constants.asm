@@ -66,7 +66,7 @@ STRPTR:		equ $9148	; string pointer
 CRC:		equ $9150	; used to store intermediary CRC result (2 bytes)
 RAMFLAG:	equ $9152	; byte which RAM should be shown
 
-; variables for file deletion
+; variables for file deletion and program monitor
 CURBANK:		equ $9152	; counter to keep track of which bank we are in
 CURBLOCK: 		equ $9153	; counter to keep track of which block we are in
 CURBANKBLOCK:	equ $9154	; current bank and block holder in linked list
