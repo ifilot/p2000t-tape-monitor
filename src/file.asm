@@ -461,7 +461,6 @@ deletefile:
 	call copysectorraro		; copy metadata section from ram to rom
 ;-- loop over the remaining 15 sectors and reset the 1kb blocks --
 	call buildblockwipelist
-	ret
 	ld a,(CURBANK)
 	inc a
 	ld (CURBANK),a
@@ -511,8 +510,6 @@ rebuildstartblocks:
 formatheader:
 	ld hl,FILEBLADDR		; set starting address linked list
 	ld (FEXTRAMPTR),hl
-	ld de,$5000+$50*6		; screen print position
-	ld (FVIDPOS),de
 .nextblock:
 	ld hl,(FEXTRAMPTR)
 	call ramrecvhl			; receive bank
@@ -529,11 +526,6 @@ formatheader:
 	ld a,(CURBANK)			; load current bank into a
 	cp b
 	jr nz,.continuenextblock; if not, go to next block
-;-- print to be deleted bank / block on screen --
-	ld de,(FVIDPOS)
-	call printhex			; print current block; garbles iyh
-	inc de
-	ld (FVIDPOS),de
 ;-- calculate block metadata start addr --
 	ld a,c
 	ld de,FILEIOBUF+$100	; load offset (as seen from external ram)
@@ -573,18 +565,7 @@ buildblockwipelist:
 	ld a,0
 	ld (CURSECTOR),a		; set sector counter
 .nextsector:
-	call findblocksdelete
-	pop de
-	push de
-	ld a,(CURSECTOR)
-	call printhex			; print current sector
-	inc de
-	call printopts			; print blocks to be cleared for that sector
-	pop de
-	ex de,hl				; set video pointer to next line
-	ld de,$50
-	add hl,de
-	ex de,hl
+	call findblocksdelete	; populate FILEOPLIST with operations
 	ld hl,FILEOPLIST		; set pointer to operations list
 	call ramrecvhl
 	cp $FF					; check if first character is terminating string
@@ -670,12 +651,6 @@ printopts:
 ;        CURSECTOR - current sector
 ;-------------------------------------------------------------------------------
 reformatsector:
-	ld hl,.msg1
-	call writelogstring
-	ld a,(CURSECTOR)
-	call writeloghex
-	ld hl,.msg2
-	call writelogstring
 ; -- calculate address of current sector --
 	ld a,(CURSECTOR)
 	inc a					; increment by one to take header offset into account
@@ -686,12 +661,11 @@ reformatsector:
 	rla
 	ld d,a					; load in d
 	ld e,$00
+	; --
 	ld (TEMPCURSEC),de		; store absolute ROM addr in memory
 	ld hl,FILEIOBUF			; external ram start addr
 	ld bc,$1000				; number of bytes
-	; --
 	call copysectorrora	; copy metadata section from rom to ram
-	call logreadsector
 	; --
 	ld hl,FILEOPLIST
 .nextopt:
@@ -731,106 +705,13 @@ reformatsector:
 	ld b,a
 	ld c,(O_ROM_EXT)		; set port to external rom chi
 	ld de,(TEMPCURSEC)
-	; --
 	call sst39sferase		; erase the first sector (4kb)
-	call logwipesector
-	; --
+	; -- write back --
 	ld bc,$1000				; number of bytes
+	ld de,(TEMPCURSEC)
 	ld hl,FILEIOBUF			; external ram start addr
-	; --
 	call copysectorraro
-	call logwritesector
-	; --
-	ld hl,.msg3
-	call writelogstring
 	ret
-
-.msg1: DB "Sector:",255
-.msg2: DB "Blk:",255
-.msg3: DB "OK",10,255
-
-;-------------------------------------------------------------------------------
-; Logging for reading sector
-; input: bc - number of bytes
-;        de - rom address
-;        hl - ram address
-;-------------------------------------------------------------------------------
-logreadsector:
-	di
-	exx
-	ld hl,.msg1
-	call writelogstring
-	exx
-	call logwriteaddr
-	exx
-	ld hl,.msg2
-	call writelogstring
-	exx
-	ei
-	ret
-
-.msg1: DB "RDSEC",255
-.msg2: DB "OK",255
-
-;-------------------------------------------------------------------------------
-; Logging for wiping sector
-;-------------------------------------------------------------------------------
-logwipesector:
-	di
-	exx
-	ld hl,.msg1
-	call writelogstring
-	exx
-	call logwriteaddr
-	exx
-	ld hl,.msg2
-	call writelogstring
-	exx
-	ei
-	ret
-
-.msg1: DB "WPSEC",255
-.msg2: DB "OK",255
-
-;-------------------------------------------------------------------------------
-; Logging for writing sector
-;-------------------------------------------------------------------------------
-logwritesector:
-	di
-	exx
-	ld hl,.msg1
-	call writelogstring
-	exx
-	call logwriteaddr
-	exx
-	ld hl,.msg2
-	call writelogstring
-	exx
-	ei
-	ret
-
-.msg1: DB "WRSEC",255
-.msg2: DB "OK",255
-
-;-------------------------------------------------------------------------------
-; Write addr to log
-;-------------------------------------------------------------------------------
-logwriteaddr:
-	ld a,b
-	call writeloghex
-	ld a,c
-	call writeloghex
-	ld a,d
-	call writeloghex
-	ld a,e
-	call writeloghex
-	ld a,h
-	call writeloghex
-	ld a,l
-	call writeloghex
-	ret
-
-.msg: DB "WRSEC",255
 
 ;-------------------------------------------------------------------------------
 ; Create a list of all the blocks the file resides on

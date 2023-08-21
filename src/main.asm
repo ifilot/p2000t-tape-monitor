@@ -287,10 +287,7 @@ cmdtestram:
 ;
 ;-------------------------------------------------------------------------------
 cmdlist:
-	call copyprogblocks
-	call copydesceroera
-	call copyfileext
-	call copyfilelengths
+	call loadfiles
 	call showfiles
 	call init 					; go back to monitor
 	ret

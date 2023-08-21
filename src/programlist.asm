@@ -1,5 +1,15 @@
 ;# MAIN="main.asm"
 ;-------------------------------------------------------------------------------
+; Load all files from external ROM
+;-------------------------------------------------------------------------------
+loadfiles:
+	call copyprogblocks
+	call copydesceroera
+	call copyfileext
+	call copyfilelengths
+	ret
+
+;-------------------------------------------------------------------------------
 ; Copy starting blocks from external rom to external ram
 ;
 ; Programs (files) are indicated by two bytes corresponding to the starting
@@ -560,7 +570,8 @@ showfileinfo:
 	ld de,$5000 + 23*$50
 	ld hl,.instructions2
 	call printstring
-	call showfileuserinput
+	call showfileuserinput		; wait for user input, repeat on screen
+	call loadfiles
 	call filesdraw				; redraw file screen
 	ret
 
