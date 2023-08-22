@@ -19,6 +19,7 @@ loadfiles:
 ;
 ;-------------------------------------------------------------------------------
 copyprogblocks:
+	ld hl,0
 	ld (MAXFILES),hl		; set file counter to 0
 	ld b,8					; set bank counter
 	ld c,0					; current bank
@@ -575,7 +576,8 @@ exitkeys:
 	ret
 
 ;-------------------------------------------------------------------------------
-; Show overview
+; Show overview of used blocks and enter an infinite loop waiting on user
+; input. Leave the infinite loop on a press of 'b'
 ;-------------------------------------------------------------------------------
 showoverview:
 	call clearscreen
@@ -607,65 +609,109 @@ showoverview:
 	jp z,.userinput
 	jp .nextkey					; else parse next key
 .exitloop:
+	call filesdraw
 	ld a,0
 	ld (KEYBUF),a
 	ret
 
 .instructions:
-	DB COL_MAG,"b - back to monitor",255
+	DB COL_MAG,"b - back to program list",255
 
 ;-------------------------------------------------------------------------------
 ; Show used blocks on screen
 ;-------------------------------------------------------------------------------
 showusedblocks:
+	ld hl,.title
+	ld de,$5000
+	call printstring
+	ld hl,0
+	ld (BLOCKSUSED),hl
 	ld hl,$2C00
 	ld b,8						; bank counter
-	ld de,$5000+4*$50			; set video position
+	ld de,$5000+2*$50			; set video position
 .nextbank:
+	push hl
 	ld hl,.str
 	call printstring
+	pop hl
 	ld a,8
 	sub b
 	call printhex
-	ld a,COL_WHITE
+	ld a,COL_CYAN
 	ld (de),a
 	inc de
 	ld c,60
 .nextblock:
-	call ramrecvhl
-	jp z,.printdot				; occupied
-	jp .printsquare
+	call ramrecvhl				; receive byte
+	inc hl						; progress ram pointer
+	cp $00						; check if block is used
+	jp z,.printdot				; occupied, so print a dot
+	jp .printsquare				; else, print a square
 .cont:
-	dec c
-	jp z,.gonextbank
+	dec c						; decrement block counter
+	jp z,.gonextbank			; go to next bank
 	ld a,c
-	cp 30
-	jp nz,.nextblock
-	push hl
-	ld hl,$50-31
+	cp 30						; check if 30 blocks have been printed
+	jp nz,.nextblock			; if not, go to next block
+	push hl						; else, go to next row in video
+	ld hl,$50-30
 	add hl,de
 	ex de,hl
-	pop hl
-	inc de
+	pop hl						; retrieve ram pointer
 	jp .nextblock
 .gonextbank:
 	dec b
-	ret z
+	jp z,.exit
+	push hl
 	ld hl,$50-39
 	add hl,de
 	ex de,hl
+	pop hl
+	inc hl
+	inc hl
+	inc hl
+	inc hl
 	jp .nextbank
-.printdot:
+.printdot:						; print occupied char
+	ld ix,(BLOCKSUSED)
+	inc ix
+	ld (BLOCKSUSED),ix
 	ld a,'.'
 	jr .print
 .printsquare:
-.print:
 	ld a,127
+.print:
 	ld (de),a
 	inc de
 	jp .cont
+.exit:
+	ld de,$5000 + 19*$50
+	ld hl,.str2
+	call printstring
+	push de
+	ld de,(BLOCKSUSED)
+	ld hl,60*8
+	or a
+	sbc hl,de
+	pop de
+	call printdec16
+	ld a,'/'
+	ld (de),a
+	inc de
+	ld hl,60*8
+	call printdec16
+	ld de,$5000 + 21 * $50
+	ld hl,.str3
+	call printstring
+	ret
 
-.str: DB "Bank:",COL_GREEN,255
+.str: DB "Bank:",COL_YELLOW,255
+.title: DB COL_CYAN,150,127,127
+		DB 127,127,127,127,127,127,127,00
+		DB "STORAGE CAPACITY"
+		DB 00,127,127,127,127,127,127,127,127,127,135,255
+.str2: DB "Free blocks: ",255
+.str3: DB COL_MAG,CHAR_SQUARE," = available, . = in use",255
 
 ;-------------------------------------------------------------------------------
 ; Show info for single file
@@ -703,7 +749,7 @@ showfileinfo:
 	ld hl,.instructions2
 	call printstring
 	call showfileuserinput		; wait for user input, repeat on screen
-	call loadfiles
+	call loadfiles				; reload file information
 	call filesdraw				; redraw file screen
 	ret
 
