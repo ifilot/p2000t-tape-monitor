@@ -264,3 +264,20 @@ printstring:
 	inc de
 	inc hl
 	jr printstring
+
+;-------------------------------------------------------------------------------
+; Multiply 8-bit values
+; input: h,e
+; output: hl
+;-------------------------------------------------------------------------------
+mult8hehl:
+    ld d,0
+    ld l,d
+    ld b,8
+.mult8loop:
+    add hl,hl
+    jr nc,.mult8add
+    add hl,de
+.mult8add:
+    djnz .mult8loop
+    ret

@@ -736,15 +736,8 @@ showfileinfo:
 	ld a,c
 	call printhex
 	call createchain			; build chain of blocks
-	ld b,12
-	ld hl,FILEBLADDR
-	ld de,$5000+3*$50
-.nextbyte:
-	call ramrecvhl
-	call printhex
-	inc de
-	inc hl
-	djnz .nextbyte
+	call printallocatedblocks
+; -- print instructions on screen
 	ld de,$5000 + 23*$50
 	ld hl,.instructions2
 	call printstring
@@ -755,6 +748,82 @@ showfileinfo:
 
 .instructions2:
 	DB COL_MAG,"b - back to monitor",255
+
+;-------------------------------------------------------------------------------
+; Print an overview of the blocks allocated by the file
+;-------------------------------------------------------------------------------
+printallocatedblocks:
+;-- First print an overview containing only dots
+	ld b,8						; bank counter
+	ld de,$5000+2*$50			; set video position
+.nextbank:
+	ld hl,.str
+	call printstring
+	ld a,8
+	sub b
+	call printhex
+	ld a,COL_CYAN
+	ld (de),a
+	inc de
+	ld c,60
+.nextblock:
+	ld a,"."
+	ld (de),a
+	inc de
+.cont:
+	dec c						; decrement block counter
+	jp z,.gonextbank			; go to next bank
+	ld a,c
+	cp 30						; check if 30 blocks have been printed
+	jp nz,.nextblock			; if not, go to next block
+	ld hl,$50-30
+	add hl,de
+	ex de,hl
+	jp .nextblock
+.gonextbank:
+	dec b
+	jp z,.exit
+	ld hl,$50-39
+	add hl,de
+	ex de,hl
+	jp .nextbank
+.exit:
+; -- next fill out squares for the blocks that the file is using
+	ld hl,FILEBLADDR
+.nextbankblock:
+	call ramrecvhl
+	inc hl
+	ld b,a						; store bank in b
+	cp $FF
+	ret z
+	call ramrecvhl
+	inc hl
+	push hl
+	ld c,a						; store block in c
+	ld a,b						; load bank counter in a
+	add a						; multiply by 2 (number of rows)
+	ld e,a
+	ld h,$50					; number of bytes per row
+	call mult8hehl				; perform multiplication, store in hl
+	ld de,$5000+2*$50+9 		; set starting position
+	add hl,de					; screen position in hl
+	ld a,c
+	cp 30
+	jr c,.goprint
+	ld de,$50
+	add hl,de					; print in next row
+	ld a,c
+	sub 30						; decrement a by 30
+.goprint:
+	ld d,0
+	ld e,a
+	add hl,de					; jump c positions in the row
+	ld a,CHAR_SQUARE
+	ld (hl),a
+	pop hl
+	jp .nextbankblock
+	
+.str: DB "Bank:",COL_YELLOW,255
 
 ;-------------------------------------------------------------------------------
 ; User input routine for single file
@@ -770,7 +839,7 @@ showfileuserinput:
 	cp 29 						; compare to 'b'
 	jr z,.exitloop
 	cp 12						; compare to 'd'
-	call z,deletefile
+	jp z,.checkdeletefile
 .getkeycont:
 	ld hl,KEYBUF
 	ld d,0
@@ -789,3 +858,13 @@ showfileuserinput:
 	ld a,0
 	ld (KEYBUF),a
 	ret
+.checkdeletefile:
+	ld hl,.str1
+	ld de,.str2
+	call confirmmodal
+	cp 0
+	call z,deletefile
+	jp .getkeycont
+
+.str1: DB "Are you sure you want to",255
+.str2: DB "delete this file? (Y/N)",255
