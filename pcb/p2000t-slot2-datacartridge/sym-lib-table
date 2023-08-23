@@ -1,3 +1,0 @@
-(sym_lib_table
-  (lib (name "slot2-cartridge-rescue")(type "Legacy")(uri "${KIPRJMOD}/p2000t-slot2-datacartridge-rescue.lib")(options "")(descr ""))
-)

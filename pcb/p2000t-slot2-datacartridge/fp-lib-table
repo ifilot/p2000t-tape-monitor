@@ -1,5 +1,0 @@
-(fp_lib_table
-  (lib (name "p2000t_cartridge")(type "KiCad")(uri "${KIPRJMOD}/p2000t_cartridge.pretty")(options "")(descr ""))
-  (lib (name "logos")(type "KiCad")(uri "${KIPRJMOD}/logos")(options "")(descr ""))
-  (lib (name "components")(type "KiCad")(uri "${KIPRJMOD}/components")(options "")(descr ""))
-)
