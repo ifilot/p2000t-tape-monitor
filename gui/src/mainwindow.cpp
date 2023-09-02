@@ -1,6 +1,6 @@
 /****************************************************************************
  *                                                                          *
- *   PICO-SST39SF0x0-FLASHER                                                *
+ *   P2000T-FAT-READER                                                      *
  *   Copyright (C) 2023 Ivo Filot <ivo@ivofilot.nl>                         *
  *                                                                          *
  *   This program is free software: you can redistribute it and/or modify   *
@@ -38,6 +38,11 @@ MainWindow::MainWindow(QWidget *parent)
     this->hex_widget->setMaximumWidth(680);
     layout->addWidget(this->hex_widget);
 
+    // add widget for containing files
+    this->filelist = new QListWidget();
+    layout->addWidget(this->filelist);
+    connect(this->filelist, SIGNAL(currentRowChanged(int)), this, SLOT(slot_select_file(int)));
+
     // create widget for writing data
     QWidget* right_container = new QWidget();
     QVBoxLayout* right_layout = new QVBoxLayout();
@@ -47,6 +52,7 @@ MainWindow::MainWindow(QWidget *parent)
     // build interfaces
     this->build_serial_interface_menu(right_layout);
     this->build_operations_menu(right_layout);
+    this->build_filedata_interface(right_layout);
 
     // add padding frame on RHS
     QFrame* padding_frame = new QFrame();
@@ -88,16 +94,16 @@ void MainWindow::create_dropdown_menu() {
     QMenu *menu_help = menubar->addMenu(tr("&Help"));
 
     // actions for file menu
-    QAction *action_open = new QAction(menu_file);
+    //QAction *action_open = new QAction(menu_file);
     QAction *action_save = new QAction(menu_file);
     QAction *action_quit = new QAction(menu_file);
-    action_open->setText(tr("Open"));
-    action_open->setShortcuts(QKeySequence::Open);
+    //action_open->setText(tr("Open"));
+    //action_open->setShortcuts(QKeySequence::Open);
     action_save->setText(tr("Save"));
     action_save->setShortcuts(QKeySequence::Save);
     action_quit->setText(tr("Quit"));
     action_quit->setShortcuts(QKeySequence::Quit);
-    menu_file->addAction(action_open);
+    //menu_file->addAction(action_open);
     menu_file->addAction(action_save);
     menu_file->addAction(action_quit);
 
@@ -107,7 +113,7 @@ void MainWindow::create_dropdown_menu() {
     menu_help->addAction(action_about);
 
     // connect actions file menu
-    connect(action_open, &QAction::triggered, this, &MainWindow::slot_open);
+    //connect(action_open, &QAction::triggered, this, &MainWindow::slot_open);
     connect(action_save, &QAction::triggered, this, &MainWindow::slot_save);
     connect(action_about, &QAction::triggered, this, &MainWindow::slot_about);
     connect(action_quit, &QAction::triggered, this, &MainWindow::exit);
@@ -182,6 +188,30 @@ void MainWindow::build_operations_menu(QVBoxLayout* target_layout) {
     target_layout->addWidget(container);
     this->progress_bar_load = new QProgressBar();
     target_layout->addWidget(this->progress_bar_load);
+}
+
+/**
+ * @brief Build filedata interface
+ * @param layout position where to put this part of the GUI
+ */
+void MainWindow::build_filedata_interface(QVBoxLayout* target_layout) {
+    // placeholder for file information
+    QGroupBox* file_groupbox = new QGroupBox("File information");
+    target_layout->addWidget(file_groupbox);
+    this->label_filename = new QLabel("");
+    this->label_extension = new QLabel("");
+    this->label_filesize = new QLabel("");
+    this->label_startbank = new QLabel("");
+    this->label_startblock = new QLabel("");
+    this->label_blocklist = new QLabel("");
+    QVBoxLayout* layout_files = new QVBoxLayout();
+    file_groupbox->setLayout(layout_files);
+    layout_files->addWidget(this->label_filename);
+    layout_files->addWidget(this->label_extension);
+    layout_files->addWidget(this->label_filesize);
+    layout_files->addWidget(this->label_startbank);
+    layout_files->addWidget(this->label_startblock);
+    layout_files->addWidget(this->label_blocklist);
 }
 
 /**
@@ -533,11 +563,43 @@ void MainWindow::read_result_ready() {
     statusBar()->showMessage(QString("Done reading chip in %1 seconds.").arg(this->timer1.elapsed() / 1000.f));
 }
 
+/****************************************************************************
+ *  SIGNALS :: FAT ROUTINES
+ ****************************************************************************/
+
 /**
  * @brief Access chip and parse file system
  */
 void MainWindow::slot_access_fat() {
     this->button_read_rom->setEnabled(false);
+    this->fat = FileAllocationTable();  // recreate
     this->fat.set_serial_interface(this->serial_interface);
     this->fat.read_files();
+    this->filelist->clear();
+    this->filelist->insertItems(0, this->fat.get_files());
+}
+
+/**
+ * @brief Select a new file
+ */
+void MainWindow::slot_select_file(int row) {
+    qDebug() << "Selecting file: " << row << " / " << this->fat.get_num_files();
+    if(row >= 0 && row < this->fat.get_num_files()) {
+        auto file = this->fat.get_file(row);
+
+        this->label_filename->setText("Filename: " + QString::fromUtf8(file.filename, 16));
+        this->label_extension->setText("Extension: " + QString::fromUtf8(file.extension, 3));
+        this->label_filesize->setText(tr("Filesize: %1 bytes").arg(file.size));
+        this->label_startbank->setText(tr("Startbank: %1").arg(file.startbank));
+        this->label_startblock->setText(tr("Startblock: %1").arg(file.startblock));
+
+        QString blocklist;
+        for(const auto& p : file.blocks) {
+            blocklist += QString("%1.%2,").arg(p.first).arg(p.second);
+        }
+
+        this->label_blocklist->setText("Blocks: " + blocklist);
+
+        this->hex_widget->setData(new QHexView::DataStorageArray(file.data));
+    }
 }

@@ -1,6 +1,6 @@
 /****************************************************************************
  *                                                                          *
- *   PICO-SST39SF0x0-FLASHER                                                *
+ *   P2000T-FAT-READER                                                      *
  *   Copyright (C) 2023 Ivo Filot <ivo@ivofilot.nl>                         *
  *                                                                          *
  *   This program is free software: you can redistribute it and/or modify   *
@@ -38,6 +38,7 @@
 #include <QElapsedTimer>
 #include <QFrame>
 #include <QFileDialog>
+#include <QListWidget>
 
 #include "config.h"
 #include "qhexview.h"
@@ -84,7 +85,15 @@ private:
 
     QLabel* label_compile_data;
 
+    // for FAT
     FileAllocationTable fat;
+    QListWidget* filelist;
+    QLabel* label_filename;
+    QLabel* label_extension;
+    QLabel* label_filesize;
+    QLabel* label_startbank;
+    QLabel* label_startblock;
+    QLabel* label_blocklist;
 
 public:
     /**
@@ -115,6 +124,12 @@ private:
      * @param layout position where to put this part of the GUI
      */
     void build_operations_menu(QVBoxLayout* target_layout);
+
+    /**
+     * @brief Build filedata interface
+     * @param layout position where to put this part of the GUI
+     */
+    void build_filedata_interface(QVBoxLayout* target_layout);
 
     /**
      * @brief Verify whether the chip is correct before flashing
@@ -200,5 +215,14 @@ private slots:
      * @brief Access chip and parse file system
      */
     void slot_access_fat();
+
+    /****************************************************************************
+     *  SIGNALS :: FILES
+     ****************************************************************************/
+
+    /**
+     * @brief Select a new file
+     */
+    void slot_select_file(int row);
 };
 #endif // MAINWINDOW_H
