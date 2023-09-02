@@ -39,6 +39,7 @@
 #include <QFrame>
 #include <QFileDialog>
 #include <QListWidget>
+#include <QImage>
 
 #include "config.h"
 #include "qhexview.h"

@@ -592,13 +592,9 @@ void MainWindow::slot_select_file(int row) {
         this->label_filesize->setText(tr("Filesize: %1 bytes").arg(file.size));
         this->label_startbank->setText(tr("Startbank: %1").arg(file.startbank));
         this->label_startblock->setText(tr("Startblock: %1").arg(file.startblock));
-
-        QString blocklist;
-        for(const auto& p : file.blocks) {
-            blocklist += QString("%1.%2,").arg(p.first).arg(p.second);
-        }
-
-        this->label_blocklist->setText("Blocks: " + blocklist);
+        QImage img(&this->fat.create_bitmap_locations(row)[0], 60*5, 8*5, QImage::Format_RGB888);
+        QPixmap pm = QPixmap::fromImage(img);
+        this->label_blocklist->setPixmap(pm);
 
         this->hex_widget->setData(new QHexView::DataStorageArray(file.data));
     }

@@ -63,6 +63,8 @@ public:
 
     const File& get_file(unsigned int id);
 
+    std::vector<uint8_t> create_bitmap_locations(unsigned int id);
+
 private:
     QByteArray read_block(unsigned int address);
 
