@@ -12,6 +12,7 @@ struct Program {
 	char progname[16];
 	char extension[3];
 	uint16_t size;
+	uint8_t padding;
 };
 
 void read_programs(void);

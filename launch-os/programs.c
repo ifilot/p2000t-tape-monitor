@@ -42,14 +42,12 @@ void read_programs(void) {
 			}
 			prg.size = sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x24) + 
 			           (sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x25) << 8);
+			prg.padding = '.';
 
 			numprogs++;
 
-			for(uint16_t i=0; i<16; i++) {
-				write_ram(ram_ptr++, prg.progname[i]);
-			}
-			for(uint16_t i=0; i<5; i++) {
-				write_ram(ram_ptr++, '.');
+			for(uint16_t i=0; i<24; i++) {
+				write_ram(ram_ptr++, ((char*)&prg)[i]);
 			}
 		}
 	}
