@@ -36,7 +36,8 @@ public:
     uint8_t startblock;
     uint8_t startbank;
     std::vector<std::pair<uint8_t, uint8_t>> blocks;
-    std::vector<uint16_t> checksums;
+    std::vector<uint16_t> metachecksums;    // checksums as supplied in metadata
+    std::vector<uint16_t> checksums;        // checksums from data
     QByteArray data;
 };
 
@@ -93,6 +94,12 @@ public:
      * @return file (meta-)data
      */
     const File& get_file(unsigned int id);
+
+    /**
+     * @brief Get checksums
+     * @return
+     */
+    std::vector<std::pair<uint16_t, uint16_t>> get_checksum_pairs(unsigned int id);
 
 signals:
     /**

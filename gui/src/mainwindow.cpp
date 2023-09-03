@@ -201,16 +201,16 @@ void MainWindow::build_filedata_interface(QVBoxLayout* target_layout) {
     this->label_filename = new QLabel("");
     this->label_extension = new QLabel("");
     this->label_filesize = new QLabel("");
-    this->label_startbank = new QLabel("");
-    this->label_startblock = new QLabel("");
+    this->label_startlocation = new QLabel("");
+    this->label_checksums = new QLabel("");
     this->blockmap = new BlockMap();
     QVBoxLayout* layout_files = new QVBoxLayout();
     file_groupbox->setLayout(layout_files);
     layout_files->addWidget(this->label_filename);
     layout_files->addWidget(this->label_extension);
     layout_files->addWidget(this->label_filesize);
-    layout_files->addWidget(this->label_startbank);
-    layout_files->addWidget(this->label_startblock);
+    layout_files->addWidget(this->label_startlocation);
+    layout_files->addWidget(this->label_checksums);
     layout_files->addWidget(this->blockmap);
 }
 
@@ -567,8 +567,20 @@ void MainWindow::slot_select_file(int row) {
         this->label_filename->setText("Filename: " + QString::fromUtf8(file.filename, 16));
         this->label_extension->setText("Extension: " + QString::fromUtf8(file.extension, 3));
         this->label_filesize->setText(tr("Filesize: %1 bytes").arg(file.size));
-        this->label_startbank->setText(tr("Startbank: %1").arg(file.startbank));
-        this->label_startblock->setText(tr("Startblock: %1").arg(file.startblock));
+        this->label_startlocation->setText(tr("Start location: Bank %1 / Block %2").arg(file.startbank).arg(file.startblock));
+
+        auto checksums = this->fat->get_checksum_pairs(row);
+        QString checksumstr = "Checksums: ";
+        for(const auto& p : checksums) {
+            if(p.first == p.second) {
+                checksumstr += tr("<font color=\"green\">0x%1</font> ").arg(p.first, 4, 16, QLatin1Char('0'));
+            } else {
+                checksumstr += tr("<font color=\"red\">0x%1</font> ").arg(p.second, 4, 16, QLatin1Char('0'));
+            }
+        }
+        this->label_checksums->setText(checksumstr);
+        this->label_checksums->setMaximumWidth(300);
+        this->label_checksums->setWordWrap(true);
 
         // create image of block locations
         this->blockmap->set_blocklist(file.blocks);

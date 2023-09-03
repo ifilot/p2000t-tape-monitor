@@ -97,15 +97,22 @@ const File& FileAllocationTable::get_file(unsigned int id) {
     this->attach_filedata(id);
     emit(this->message(tr("Succesfully loaded %1").arg(QString::fromUtf8(this->files[id].filename, 16))));
 
-    // perform checksums
-    qDebug() << "Performing checksum check";
-    for(unsigned int i=0; i<this->files[id].blocks.size(); i++) {
-        QByteArray block = this->files[id].data.mid(i*0x400, 0x400);
-        uint16_t crc16 = this->crc16_xmodem(block, i+1 != this->files[id].blocks.size() ? 0x400 : this->files[id].size - i * 0x400);
-        qDebug() << tr("0x%1 vs 0x%2").arg(crc16,4,16,QLatin1Char('0')).arg(this->files[id].checksums[i],4,16,QLatin1Char('0'));
+    return this->files[id];
+}
+
+/**
+ * @brief Get checksums
+ * @return
+ */
+std::vector<std::pair<uint16_t, uint16_t>> FileAllocationTable::get_checksum_pairs(unsigned int id) {
+    const auto& file = this->get_file(id);
+    std::vector<std::pair<uint16_t, uint16_t>> checksums;
+
+    for(unsigned int i=0; i<file.checksums.size(); i++) {
+        checksums.emplace_back(file.metachecksums[i], file.checksums[i]);
     }
 
-    return this->files[id];
+    return checksums;
 }
 
 /**
@@ -163,7 +170,7 @@ void FileAllocationTable::build_linked_list(unsigned int id) {
 
         // retrieve and store checksum of current block
         uint16_t checksum = *((uint16_t*)&metadata.data()[0x06]);
-        file.checksums.push_back(checksum);
+        file.metachecksums.push_back(checksum);
     }
 }
 
@@ -191,6 +198,16 @@ void FileAllocationTable::attach_filedata(unsigned int id) {
             QByteArray data = this->read_block(saddr + i);
             file.data.append(data);
         }
+    }
+
+    for(unsigned int i=0; i<file.blocks.size(); i++) {
+        QByteArray block = file.data.mid(i*0x400, 0x400);
+        if(block.size() < 0x400) {
+            block += QByteArray(0x400 - block.size(), 0x00);
+        }
+        uint16_t crc16 = this->crc16_xmodem(block, 0x400);
+        file.checksums.push_back(crc16);
+        //qDebug() << tr("0x%1 vs 0x%2").arg(crc16,4,16,QLatin1Char('0')).arg(file.metachecksums[i],4,16,QLatin1Char('0'));
     }
 
     file.data.resize(file.size);

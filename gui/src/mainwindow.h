@@ -93,8 +93,8 @@ private:
     QLabel* label_filename;
     QLabel* label_extension;
     QLabel* label_filesize;
-    QLabel* label_startbank;
-    QLabel* label_startblock;
+    QLabel* label_startlocation;
+    QLabel* label_checksums;
     BlockMap* blockmap;
 
 public:
