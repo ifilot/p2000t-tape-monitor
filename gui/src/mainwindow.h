@@ -50,6 +50,7 @@
 #include "romsizes.h"
 #include "fileallocationtable.h"
 #include "blockmap.h"
+#include "threadrun.h"
 
 class MainWindow : public QMainWindow
 {
@@ -73,18 +74,13 @@ private:
     QPushButton* button_identify_chip;
     QPushButton* button_read_rom;
 
-    // file data
-    QString current_filename;
-    std::unique_ptr<ReadThread> readerthread;
-    std::unique_ptr<FlashThread> flashthread;
-    QElapsedTimer timer1;
+    // chip data
     int num_blocks = 0;
 
+    // progress bar
     QProgressBar* progress_bar_load;
 
-    QByteArray flash_data;
-    QByteArray save_data;
-
+    // information on compilation time
     QLabel* label_compile_data;
 
     // for FAT
@@ -151,9 +147,9 @@ private slots:
     void exit();
 
     /**
-     * @brief Open a binary file
+     * @brief Run a .cas file
      */
-    void slot_open();
+    void slot_run();
 
     /**
      * @brief Save a binary file

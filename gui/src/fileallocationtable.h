@@ -96,10 +96,24 @@ public:
     const File& get_file(unsigned int id);
 
     /**
+     * @brief Create a CAS file from a file
+     * @param id
+     * @return
+     */
+    QByteArray create_cas_file(unsigned int id);
+
+    /**
      * @brief Get checksums
      * @return
      */
     std::vector<std::pair<uint16_t, uint16_t>> get_checksum_pairs(unsigned int id);
+
+    /**
+     * @brief Construct a filename for a given file
+     * @param id
+     * @return
+     */
+    QString build_filename(unsigned int id);
 
 signals:
     /**

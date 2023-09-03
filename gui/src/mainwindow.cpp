@@ -91,21 +91,23 @@ void MainWindow::create_dropdown_menu() {
 
     // add drop-down menus
     QMenu *menu_file = menubar->addMenu(tr("&File"));
+    QMenu *menu_tools = menubar->addMenu(tr("&Tools"));
     QMenu *menu_help = menubar->addMenu(tr("&Help"));
 
     // actions for file menu
-    //QAction *action_open = new QAction(menu_file);
     QAction *action_save = new QAction(menu_file);
     QAction *action_quit = new QAction(menu_file);
-    //action_open->setText(tr("Open"));
-    //action_open->setShortcuts(QKeySequence::Open);
     action_save->setText(tr("Save"));
     action_save->setShortcuts(QKeySequence::Save);
     action_quit->setText(tr("Quit"));
     action_quit->setShortcuts(QKeySequence::Quit);
-    //menu_file->addAction(action_open);
     menu_file->addAction(action_save);
     menu_file->addAction(action_quit);
+
+    // actions for tools menu
+    QAction *action_run = new QAction(menu_tools);
+    action_run->setText(tr("Run file"));
+    menu_tools->addAction(action_run);
 
     // actions for help menu
     QAction *action_about = new QAction(menu_help);
@@ -113,7 +115,7 @@ void MainWindow::create_dropdown_menu() {
     menu_help->addAction(action_about);
 
     // connect actions file menu
-    //connect(action_open, &QAction::triggered, this, &MainWindow::slot_open);
+    connect(action_run, &QAction::triggered, this, &MainWindow::slot_run);
     connect(action_save, &QAction::triggered, this, &MainWindow::slot_save);
     connect(action_about, &QAction::triggered, this, &MainWindow::slot_about);
     connect(action_quit, &QAction::triggered, this, &MainWindow::exit);
@@ -360,33 +362,20 @@ void MainWindow::select_com_port() {
 }
 
 /**
- * @brief Open a binary file
+ * @brief Run a .cas file
  */
-void MainWindow::slot_open() {
-    QString filename = QFileDialog::getOpenFileName(this, tr("Open File"));
-
-    // do nothing if user has cancelled
-    if(filename.isEmpty()) {
+void MainWindow::slot_run() {
+    qDebug() << "Running machine code as CAS...";
+    if(this->hex_widget->get_data().size() == 0) {
+        qDebug() << "Nothing here, quitting.";
         return;
     }
 
-    QFile file(filename);
-
-    // provide a warning to the user if the file is larger than half a megabyte
-    if(file.size() > (512 * 1024)) {
-        QMessageBox msg_box;
-        msg_box.setIcon(QMessageBox::Warning);
-        msg_box.setText(tr("This file is larger than 512kb. It is most likely not a Z80 binary file."));
-        msg_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
-        msg_box.exec();
-        return;
-    }
-
-    file.open(QIODevice::ReadOnly);
-    if(file.exists()) {
-        QByteArray data = file.readAll();
-        this->hex_widget->setData(new QHexView::DataStorageArray(data));
-    }
+    ThreadRun* runthread = new ThreadRun();
+    runthread->set_mcode(this->fat->create_cas_file(this->filelist->currentRow()));
+    runthread->set_process_configuration(ThreadRun::ProcessConfiguration::MCODE_AS_CAS);
+    connect(runthread, SIGNAL(signal_run_complete(void*)), this, SLOT(slot_run_complete(void*)));
+    runthread->start();
 }
 
 /**
@@ -399,7 +388,8 @@ void MainWindow::slot_save() {
         return;
     }
 
-    QString filename = QFileDialog::getSaveFileName(this, tr("Save File"), tr("roms (*.bin *.rom)"));
+    QString suggested_filename = this->fat->build_filename(this->filelist->currentRow());
+    QString filename = QFileDialog::getSaveFileName(this, tr("Save File"), suggested_filename, tr("roms (*.CAS *.cas)"));
 
     // do nothing if user has cancelled
     if(filename.isEmpty()) {
@@ -409,7 +399,7 @@ void MainWindow::slot_save() {
     QFile file(filename);
 
     file.open(QIODevice::WriteOnly);
-    file.write(this->hex_widget->get_data());
+    file.write(this->fat->create_cas_file(this->filelist->currentRow()));
     file.close();
 }
 
@@ -460,7 +450,6 @@ void MainWindow::load_default_image() {
  */
 void MainWindow::read_chip_id() {
     statusBar()->showMessage("Reading from chip, please wait...");
-    this->timer1.start();
 
     try {
         qDebug() << "Trying to read chip id from: " << this->serial_interface->get_port().c_str();

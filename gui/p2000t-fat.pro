@@ -18,7 +18,8 @@ SOURCES += \
     src/mainwindow.cpp \
     src/qhexview.cpp \
     src/readthread.cpp \
-    src/serial_interface.cpp
+    src/serial_interface.cpp \
+    src/threadrun.cpp
 
 HEADERS += \
     src/blockmap.h \
@@ -31,7 +32,8 @@ HEADERS += \
     src/qhexview.h \
     src/readthread.h \
     src/romsizes.h \
-    src/serial_interface.h
+    src/serial_interface.h \
+    src/threadrun.h
 
 # store Git id
 GIT_HASH="\\\"$$system(git -C \""$$_PRO_FILE_PWD_"\" rev-parse --short HEAD)\\\""

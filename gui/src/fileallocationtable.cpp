@@ -101,6 +101,34 @@ const File& FileAllocationTable::get_file(unsigned int id) {
 }
 
 /**
+ * @brief Create a CAS file from a file
+ * @param id
+ * @return
+ */
+QByteArray FileAllocationTable::create_cas_file(unsigned int id) {
+    qDebug() << "Building CAS file";
+    const auto& file = this->get_file(id);
+
+    QByteArray data = QByteArray(file.blocks.size() * 0x500, 0x00);
+
+    for(unsigned int i=0; i<file.blocks.size(); i++) {
+        unsigned int addr = file.blocks[i].first * 0x10000 + 0x100 + file.blocks[i].second * 0x40;
+        unsigned int saddr = addr / 0x100;
+        unsigned int offset = addr % 0x100;
+
+        QByteArray meta = this->read_block(saddr);
+        QByteArray metadata = meta.mid(offset, 0x40);
+
+        qDebug() << "Copying metadata for block " << i;
+        memcpy(&(data.data()[i*0x500 + 0x30]), &(metadata.data()[0x20]), 0x20);
+        qDebug() << "Copying data for block " << i;
+        memcpy(&(data.data()[i*0x500 + 0x100]), &(file.data.data()[i*0x400]), 0x400);
+    }
+
+    return data;
+}
+
+/**
  * @brief Get checksums
  * @return
  */
@@ -113,6 +141,19 @@ std::vector<std::pair<uint16_t, uint16_t>> FileAllocationTable::get_checksum_pai
     }
 
     return checksums;
+}
+
+/**
+ * @brief Construct a filename for a given file
+ * @param id
+ * @return
+ */
+QString FileAllocationTable::build_filename(unsigned int id) {
+    const auto& file = this->get_file(id);
+    QString base = QString::fromUtf8(file.filename,16).simplified();
+    QString filename = base.toLower() + "_" + QString::fromUtf8(file.extension,3).toLower() + ".cas";
+
+    return filename;
 }
 
 /**
@@ -184,7 +225,7 @@ void FileAllocationTable::attach_filedata(unsigned int id) {
         this->build_linked_list(id);
     }
 
-    if(file.size == file.data.size()) {
+    if(file.blocks.size() * 0x400 == file.data.size()) {
         return;
     }
 
@@ -202,15 +243,10 @@ void FileAllocationTable::attach_filedata(unsigned int id) {
 
     for(unsigned int i=0; i<file.blocks.size(); i++) {
         QByteArray block = file.data.mid(i*0x400, 0x400);
-        if(block.size() < 0x400) {
-            block += QByteArray(0x400 - block.size(), 0x00);
-        }
         uint16_t crc16 = this->crc16_xmodem(block, 0x400);
         file.checksums.push_back(crc16);
         //qDebug() << tr("0x%1 vs 0x%2").arg(crc16,4,16,QLatin1Char('0')).arg(file.metachecksums[i],4,16,QLatin1Char('0'));
     }
-
-    file.data.resize(file.size);
 }
 
 uint16_t FileAllocationTable::crc16_xmodem(const QByteArray& data, uint16_t length) {
