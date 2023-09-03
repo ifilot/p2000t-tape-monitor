@@ -1,5 +1,7 @@
 <RCC>
     <qresource prefix="/">
-        <file>assets/icon/eeprom_icon.ico</file>
+        <file>assets/icon/icon_96px.png</file>
+        <file>assets/icon/icon_128px.png</file>
+        <file>assets/icon/icon_512px.png</file>
     </qresource>
 </RCC>

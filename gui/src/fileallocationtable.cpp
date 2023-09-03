@@ -20,14 +20,22 @@
 
 #include "fileallocationtable.h"
 
+/**
+ * @brief Default constructor
+ */
 FileAllocationTable::FileAllocationTable() {
     this->contents = std::vector<char>(0x10000 * 8, 0x00);
     this->cache_status = std::vector<uint8_t>(0x10000 * 8 / 0x100, 0x00);
 }
 
+/**
+ * @brief Read file metadata from chip
+ */
 void FileAllocationTable::read_files() {
     // loop over all programs and capture starting blocks
+    emit(this->message("Parsing banks..."));
     for(unsigned int bank=0; bank<8; bank++) {
+        emit(this->read_operation(bank,8));
         QByteArray data = this->read_block(bank * 0x100);
         unsigned int ptr = 0x0000;
         while(ptr < 0x100) {
@@ -42,7 +50,10 @@ void FileAllocationTable::read_files() {
     }
 
     // loop over all starting blocks and read file descriptors
+    int ctr = 0;
+    emit(this->message("Parsing file metadata..."));
     for(const auto& loc : this->progblocks) {
+        emit(this->read_operation(ctr++, this->progblocks.size()));
         unsigned int addr = loc.first * 0x10000 + 0x100 + loc.second * 0x40;
         unsigned int saddr = addr / 0x100;
         unsigned int offset = addr % 0x100;
@@ -59,8 +70,13 @@ void FileAllocationTable::read_files() {
         file.size = metadata.data()[0x22] + metadata.data()[0x23] * 256; // big endian
         this->files.push_back(file);
     }
+    emit(this->message("Done loading file metadata."));
 }
 
+/**
+ * @brief Get a list of filenames
+ * @return list of filenames
+ */
 QStringList FileAllocationTable::get_files() const {
     QStringList list;
     for(const auto& file : this->files) {
@@ -70,6 +86,24 @@ QStringList FileAllocationTable::get_files() const {
     return list;
 }
 
+/**
+ * @brief Get a single file
+ * @param file index
+ * @return file (meta-)data
+ */
+const File& FileAllocationTable::get_file(unsigned int id) {
+    emit(this->message("Transferring file from chip..."));
+    this->build_linked_list(id);
+    this->attach_filedata(id);
+    emit(this->message(tr("Succesfully loaded %1").arg(QString::fromUtf8(this->files[id].filename, 16))));
+    return this->files[id];
+}
+
+/**
+ * @brief Read a block (0x100 bytes) from the chip, use caching
+ * @param address
+ * @return datablock
+ */
 QByteArray FileAllocationTable::read_block(unsigned int address) {
     if(address > this->cache_status.size()) {
         std::runtime_error("Attempting to access cache_status element out of bounds.");
@@ -90,12 +124,10 @@ QByteArray FileAllocationTable::read_block(unsigned int address) {
     }
 }
 
-const File& FileAllocationTable::get_file(unsigned int id) {
-    this->build_linked_list(id);
-    this->attach_filedata(id);
-    return this->files[id];
-}
-
+/**
+ * @brief Extract linked list of file
+ * @param vector of bank/block pairs
+ */
 void FileAllocationTable::build_linked_list(unsigned int id) {
     auto& file = this->files[id];
     if(file.blocks.size() != 0) {
@@ -121,6 +153,10 @@ void FileAllocationTable::build_linked_list(unsigned int id) {
     }
 }
 
+/**
+ * @brief Attach file data to file object
+ * @param file id
+ */
 void FileAllocationTable::attach_filedata(unsigned int id) {
     auto& file = this->files[id];
     if(file.blocks.size() == 0) {
@@ -131,11 +167,11 @@ void FileAllocationTable::attach_filedata(unsigned int id) {
         return;
     }
 
+    int ctr = 0;
     for(const auto& p : file.blocks) {
+        emit(this->read_operation(ctr++, file.blocks.size()));
         unsigned int addr = p.first * 0x10000 + 0x1000 + p.second * 0x400;
         unsigned int saddr = addr / 0x100;
-
-        qDebug() << "Reading: " << p.first << "." << p.second;
 
         for(unsigned int i=0; i<4; i++) {
             QByteArray data = this->read_block(saddr + i);

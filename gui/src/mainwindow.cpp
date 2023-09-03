@@ -73,7 +73,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(this->button_select_serial, SIGNAL (released()), this, SLOT (select_com_port()));
 
     // set icon and window title
-    this->setWindowIcon(QIcon(":/assets/icon/eeprom_icon.ico"));
+    this->setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
     this->setWindowTitle(PROGRAM_NAME);
 }
 
@@ -265,7 +265,7 @@ void MainWindow::raise_error_window(QMessageBox::Icon icon, const QString errorm
     QMessageBox msg_box;
     msg_box.setIcon(icon);
     msg_box.setText(errormsg);
-    msg_box.setWindowIcon(QIcon(":/assets/icon/eeprom_icon.ico"));
+    msg_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
     msg_box.exec();
 }
 
@@ -334,13 +334,13 @@ void MainWindow::scan_com_devices() {
               " with the one from the Raspberry Pi Pico. If you have a Raspberry Pi Pico or compatible device plugged in,"
               " take care to unplug it or carefully select the correct port."
         ).arg(port_identifiers.size()));
-        msg_box.setWindowIcon(QIcon(":/assets/icon/eeprom_icon.ico"));
+        msg_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
         msg_box.exec();
     } else {
         QMessageBox msg_box;
         msg_box.setIcon(QMessageBox::Warning);
         msg_box.setText("Could not find a communication port with a matching id. Please make sure the programmer device is plugged in.");
-        msg_box.setWindowIcon(QIcon(":/assets/img/logo.ico"));
+        msg_box.setWindowIcon(QIcon(":/assets/img/icon_128px.png"));
         msg_box.exec();
     }
 }
@@ -377,7 +377,7 @@ void MainWindow::slot_open() {
         QMessageBox msg_box;
         msg_box.setIcon(QMessageBox::Warning);
         msg_box.setText(tr("This file is larger than 512kb. It is most likely not a Z80 binary file."));
-        msg_box.setWindowIcon(QIcon(":/assets/icon/eeprom_icon.ico"));
+        msg_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
         msg_box.exec();
         return;
     }
@@ -427,7 +427,7 @@ void MainWindow::slot_about() {
                             PROGRAM_NAME " is dynamically linked to Qt, which is licensed under LGPLv3.\n");
         message_box.setIcon(QMessageBox::Information);
         message_box.setWindowTitle("About " + tr(PROGRAM_NAME));
-        message_box.setWindowIcon(QIcon(":/assets/icon/eeprom_icon.ico"));
+        message_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
         message_box.exec();
 }
 
@@ -498,69 +498,32 @@ void MainWindow::read_chip_id() {
             throw std::runtime_error("Unknown chip id: " + chip_id_str);
         }
 
+        this->progress_bar_load->reset();
+        this->filelist->clear();
         this->button_read_rom->setEnabled(true);
     } catch (const std::exception& e) {
         QMessageBox msg_box;
         msg_box.setIcon(QMessageBox::Warning);
         msg_box.setText(tr("The chip id does not match the proper value for a SST39SF0x0 chip. Please ensure "
                            "that a correct SST39SF0x0 chip is inserted. If so, resocket the chip and try again.\n\nError message: %1.").arg(e.what()));
-        msg_box.setWindowIcon(QIcon(":/assets/icon/eeprom_icon.ico"));
+        msg_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
         msg_box.exec();
     }
 }
 
 /**
- * @brief Read data from chip
- */
-void MainWindow::read_rom() {
-    // ask where to store file
-    statusBar()->showMessage("Reading from chip, please wait...");
-
-    // disable all buttons so that the user cannot interrupt this task
-    //this->disable_all_buttons();
-
-    // dispatch thread
-    //this->operation = "Reading"; // message for statusbar
-    this->readerthread = std::make_unique<ReadThread>(this->serial_interface);
-    this->readerthread->set_serial_port(this->combobox_serial_ports->currentText().toStdString());
-    connect(this->readerthread.get(), SIGNAL(read_result_ready()), this, SLOT(read_result_ready()));
-    connect(this->readerthread.get(), SIGNAL(read_block_start(uint,uint)), this, SLOT(read_block_start(uint,uint)));
-    connect(this->readerthread.get(), SIGNAL(read_block_done(uint,uint)), this, SLOT(read_block_done(uint,uint)));
-    this->readerthread->start();
-}
-
-
-
-/**
  * @brief Slot to accept when a block is ready
  */
-void MainWindow::read_block_start(unsigned int block_id, unsigned int nr_blocks) {
-    this->progress_bar_load->setValue(block_id);
+void MainWindow::read_operation(int item, int total) {
+    this->progress_bar_load->setValue(item+1);
+    this->progress_bar_load->setRange(0, total);
 }
 
 /**
  * @brief Slot to accept when a block is ready
  */
-void MainWindow::read_block_done(unsigned int block_id, unsigned int nr_blocks) {
-    double seconds_passed = (double)this->timer1.elapsed() / 1000.0;
-    double seconds_per_block = seconds_passed / (double)(block_id+1);
-    double seconds_remaining = seconds_per_block * (nr_blocks - block_id);
-    if(block_id < (this->num_blocks - 1)) {
-        statusBar()->showMessage(QString("%1 block %2 / %3 : %4 seconds remaining.").arg("Reading").arg(block_id+1).arg(nr_blocks).arg(seconds_remaining));
-    }
-    this->progress_bar_load->setValue(block_id+1);
-}
-
-/*
- * @brief Signal that a read operation is finished
- */
-void MainWindow::read_result_ready() {
-    this->progress_bar_load->setValue(this->progress_bar_load->maximum());
-    auto data = this->readerthread->get_data();
-    qDebug() << "Read " << data.size() << " bytes from chip.";
-    this->hex_widget->setData(new QHexView::DataStorageArray(data));
-    this->readerthread.reset(); // delete object
-    statusBar()->showMessage(QString("Done reading chip in %1 seconds.").arg(this->timer1.elapsed() / 1000.f));
+void MainWindow::message(QString str) {
+    statusBar()->showMessage(str);
 }
 
 /****************************************************************************
@@ -572,20 +535,34 @@ void MainWindow::read_result_ready() {
  */
 void MainWindow::slot_access_fat() {
     this->button_read_rom->setEnabled(false);
-    this->fat = FileAllocationTable();  // recreate
-    this->fat.set_serial_interface(this->serial_interface);
-    this->fat.read_files();
+    this->button_identify_chip->setEnabled(false);
+
+    // remove old FAT object if set
+    if(this->fat != nullptr) {
+        delete this->fat;
+    }
+
+    // build new FAT object
+    this->fat = new FileAllocationTable();  // recreate
+    this->fat->set_serial_interface(this->serial_interface);
+
+    // connect signals
+    connect(this->fat, SIGNAL(read_operation(int,int)), this, SLOT(read_operation(int,int)));
+    connect(this->fat, SIGNAL(message(QString)), this, SLOT(message(QString)));
+
+    this->fat->read_files();
     this->filelist->clear();
-    this->filelist->insertItems(0, this->fat.get_files());
+    this->filelist->insertItems(0, this->fat->get_files());
+    this->button_identify_chip->setEnabled(true);
 }
 
 /**
  * @brief Select a new file
  */
 void MainWindow::slot_select_file(int row) {
-    qDebug() << "Selecting file: " << row << " / " << this->fat.get_num_files();
-    if(row >= 0 && row < this->fat.get_num_files()) {
-        auto file = this->fat.get_file(row);
+    qDebug() << "Selecting file: " << row << " / " << this->fat->get_num_files();
+    if(row >= 0 && row < this->fat->get_num_files()) {
+        auto file = this->fat->get_file(row);
 
         this->label_filename->setText("Filename: " + QString::fromUtf8(file.filename, 16));
         this->label_extension->setText("Extension: " + QString::fromUtf8(file.extension, 3));

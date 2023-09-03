@@ -88,7 +88,7 @@ private:
     QLabel* label_compile_data;
 
     // for FAT
-    FileAllocationTable fat;
+    FileAllocationTable* fat = nullptr;
     QListWidget* filelist;
     QLabel* label_filename;
     QLabel* label_extension;
@@ -194,24 +194,15 @@ private slots:
     void read_chip_id();
 
     /**
-     * @brief Read data from chip
-     */
-    void read_rom();
-
-    /**
      * @brief Slot to indicate that a block is about to be read / written
      */
-    void read_block_start(unsigned int block_id, unsigned int nr_blocks);
+    void read_operation(int item, int total);
 
     /**
-     * @brief Slot to accept that a block is read / written
+     * @brief Parse message
+     * @param str
      */
-    void read_block_done(unsigned int block_id, unsigned int nr_blocks);
-
-    /*
-     * @brief Signal that a read operation is finished
-     */
-    void read_result_ready();
+    void message(QString str);
 
     /**
      * @brief Access chip and parse file system

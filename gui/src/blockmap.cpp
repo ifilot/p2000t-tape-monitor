@@ -8,7 +8,6 @@ BlockMap::BlockMap(QWidget *parent) : QWidget(parent) {
 
 void BlockMap::set_blocklist(const std::vector<std::pair<uint8_t, uint8_t>>& _blocks) {
     this->blocks = _blocks;
-    qDebug() << "Set blocklist";
     this->update();
 }
 
