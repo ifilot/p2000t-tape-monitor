@@ -203,7 +203,7 @@ void MainWindow::build_filedata_interface(QVBoxLayout* target_layout) {
     this->label_filesize = new QLabel("");
     this->label_startbank = new QLabel("");
     this->label_startblock = new QLabel("");
-    this->label_blocklist = new QLabel("");
+    this->blockmap = new BlockMap();
     QVBoxLayout* layout_files = new QVBoxLayout();
     file_groupbox->setLayout(layout_files);
     layout_files->addWidget(this->label_filename);
@@ -211,7 +211,7 @@ void MainWindow::build_filedata_interface(QVBoxLayout* target_layout) {
     layout_files->addWidget(this->label_filesize);
     layout_files->addWidget(this->label_startbank);
     layout_files->addWidget(this->label_startblock);
-    layout_files->addWidget(this->label_blocklist);
+    layout_files->addWidget(this->blockmap);
 }
 
 /**
@@ -592,10 +592,11 @@ void MainWindow::slot_select_file(int row) {
         this->label_filesize->setText(tr("Filesize: %1 bytes").arg(file.size));
         this->label_startbank->setText(tr("Startbank: %1").arg(file.startbank));
         this->label_startblock->setText(tr("Startblock: %1").arg(file.startblock));
-        QImage img(&this->fat.create_bitmap_locations(row)[0], 60*5, 8*5, QImage::Format_RGB888);
-        QPixmap pm = QPixmap::fromImage(img);
-        this->label_blocklist->setPixmap(pm);
 
+        // create image of block locations
+        this->blockmap->set_blocklist(file.blocks);
+
+        // set data in hexviewer
         this->hex_widget->setData(new QHexView::DataStorageArray(file.data));
     }
 }

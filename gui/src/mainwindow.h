@@ -49,6 +49,7 @@
 #include "dialogslotselection.h"
 #include "romsizes.h"
 #include "fileallocationtable.h"
+#include "blockmap.h"
 
 class MainWindow : public QMainWindow
 {
@@ -94,7 +95,7 @@ private:
     QLabel* label_filesize;
     QLabel* label_startbank;
     QLabel* label_startblock;
-    QLabel* label_blocklist;
+    BlockMap* blockmap;
 
 public:
     /**

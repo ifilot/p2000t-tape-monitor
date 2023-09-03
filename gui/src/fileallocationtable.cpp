@@ -96,27 +96,6 @@ const File& FileAllocationTable::get_file(unsigned int id) {
     return this->files[id];
 }
 
-std::vector<uint8_t> FileAllocationTable::create_bitmap_locations(unsigned int id) {
-    this->build_linked_list(id);
-    static const unsigned int pixsize = 4;
-    static const unsigned int width = 60 * pixsize;
-    static const unsigned int height = 8 * pixsize;
-    std::vector<uint8_t> bitmap(width * height * 3, 0x00);
-
-    const auto& file = this->files[id];
-    for(const auto& p : file.blocks) {
-        unsigned int sy = p.first * pixsize;
-        unsigned int sx = p.second * pixsize;
-        for(unsigned int y=sy; y<sy+pixsize; y++) {
-            for(unsigned int x=sx; x<sx+pixsize; x++) {
-                bitmap[(y * width + x)*3+1] = 0xFF;
-            }
-        }
-    }
-
-    return bitmap;
-}
-
 void FileAllocationTable::build_linked_list(unsigned int id) {
     auto& file = this->files[id];
     if(file.blocks.size() != 0) {
