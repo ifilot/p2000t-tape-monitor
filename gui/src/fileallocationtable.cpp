@@ -67,7 +67,7 @@ void FileAllocationTable::read_files() {
         memcpy(file.extension, &metadata.data()[0x2E], 3);
         file.startbank = loc.first;
         file.startblock = loc.second;
-        file.size = metadata.data()[0x22] + metadata.data()[0x23] * 256; // big endian
+        file.size = *((uint16_t*)&metadata.data()[0x24]);
         this->files.push_back(file);
     }
     emit(this->message("Done loading file metadata."));
@@ -96,6 +96,15 @@ const File& FileAllocationTable::get_file(unsigned int id) {
     this->build_linked_list(id);
     this->attach_filedata(id);
     emit(this->message(tr("Succesfully loaded %1").arg(QString::fromUtf8(this->files[id].filename, 16))));
+
+    // perform checksums
+    qDebug() << "Performing checksum check";
+    for(unsigned int i=0; i<this->files[id].blocks.size(); i++) {
+        QByteArray block = this->files[id].data.mid(i*0x400, 0x400);
+        uint16_t crc16 = this->crc16_xmodem(block, i+1 != this->files[id].blocks.size() ? 0x400 : this->files[id].size - i * 0x400);
+        qDebug() << tr("0x%1 vs 0x%2").arg(crc16,4,16,QLatin1Char('0')).arg(this->files[id].checksums[i],4,16,QLatin1Char('0'));
+    }
+
     return this->files[id];
 }
 
@@ -110,14 +119,12 @@ QByteArray FileAllocationTable::read_block(unsigned int address) {
     }
 
     if(this->cache_status[address] == 0x01) {
-        qDebug() << "Cache hit: copying";
         QByteArray data(&this->contents[address * 0x100], 0x100);
         return data;
     } else {
         this->serial_interface->open_port();
         QByteArray data = this->serial_interface->read_block(address);
         this->serial_interface->close_port();
-        qDebug() << "Inserting into cache:";
         memcpy((void*)&this->contents[address * 0x100], data.data(), 0x100);
         this->cache_status[address] = 0x01;
         return data;
@@ -141,15 +148,22 @@ void FileAllocationTable::build_linked_list(unsigned int id) {
         // insert into list
         file.blocks.emplace_back(bank, block);
 
+        // set address locations for metadata of current block
         unsigned int addr = bank * 0x10000 + 0x100 + block * 0x40;
         unsigned int saddr = addr / 0x100;
         unsigned int offset = addr % 0x100;
 
+        // read metadata of current block
         QByteArray meta = this->read_block(saddr);
         QByteArray metadata = meta.mid(offset, 0x40);
 
+        // retrieve data of new block
         bank = metadata[0x03];  // next bank
         block = metadata[0x04]; // next block
+
+        // retrieve and store checksum of current block
+        uint16_t checksum = *((uint16_t*)&metadata.data()[0x06]);
+        file.checksums.push_back(checksum);
     }
 }
 
@@ -180,4 +194,21 @@ void FileAllocationTable::attach_filedata(unsigned int id) {
     }
 
     file.data.resize(file.size);
+}
+
+uint16_t FileAllocationTable::crc16_xmodem(const QByteArray& data, uint16_t length) {
+    uint32_t crc = 0;
+    static const uint16_t poly = 0x1021;
+
+    for(uint16_t i=0; i<length; i++) {
+      crc = crc ^ (data[i] << 8);
+      for (uint8_t j=0; j<8; j++) {
+        crc = crc << 1;
+        if (crc & 0x10000) {
+            crc = (crc ^ poly) & 0xFFFF;
+        }
+      }
+    }
+
+    return (uint16_t)crc;
 }

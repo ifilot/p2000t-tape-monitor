@@ -36,6 +36,7 @@ public:
     uint8_t startblock;
     uint8_t startbank;
     std::vector<std::pair<uint8_t, uint8_t>> blocks;
+    std::vector<uint16_t> checksums;
     QByteArray data;
 };
 
@@ -125,6 +126,8 @@ private:
      * @param file id
      */
     void attach_filedata(unsigned int id);
+
+    uint16_t crc16_xmodem(const QByteArray& data, uint16_t length);
 };
 
 #endif // FILEALLOCATIONTABLE_H
