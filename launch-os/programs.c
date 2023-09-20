@@ -15,10 +15,18 @@ void read_programs(void) {
 	numprogs = 0;
 	uint16_t ram_ptr = 0;
 	uint16_t vidmemptr = 0x50 * 10;
+
+	// loop over the rom banks
 	for(uint8_t bank=0; bank<8; bank++) {
+
+		// set rom bank
 		sst39sf_set_bank(bank);
+
+		// set start position on rom bank
 		uint8_t startblock = 0;
 		uint16_t addr = 0x0000;
+
+		// infinite loop until terminating byte is encountered
 		while(1) {
 			startblock = sst39sf_read_byte(addr++);
 
@@ -31,21 +39,33 @@ void read_programs(void) {
 			struct Program prg;
 			prg.bank = bank;
 			prg.block = startblock;
+
+			// read first 8 bytes of program name
 			for(uint8_t i=0; i<8; i++) {
 				prg.progname[i] = sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x26 + i);
 			}
+
+			// read last 8 bytes of program name
 			for(uint8_t i=0; i<8; i++) {
 				prg.progname[i+8] = sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x37 + i);
 			}
+
+			// read program extension
 			for(uint8_t i=0; i<3; i++) {
 				prg.extension[i] = sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x2E + i);
 			}
+
+			// read program size
 			prg.size = sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x24) + 
 			           (sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x25) << 8);
+
+
 			prg.padding = '.';
 
+			// increment number of programs
 			numprogs++;
 
+			// write content to RAM 
 			for(uint16_t i=0; i<24; i++) {
 				write_ram(ram_ptr++, ((char*)&prg)[i]);
 			}
