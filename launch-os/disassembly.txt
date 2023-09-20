@@ -25,7 +25,7 @@ __Restart:
                     defb    $9f                             ;[1016] 9f
 __Restart_2:
                     defb    $21                             ;[1017] 21
-                    defb    $35                             ;[1018] 35
+                    defb    $b7                             ;[1018] b7
                     defb    $15                             ;[1019] 15
                     defb    $11                             ;[101a] 11
                     defb    $00                             ;[101b] 00
@@ -68,7 +68,7 @@ __Restart_2:
                     ld      hl,$6191                        ;[1054] 21 91 61
                     call    asm_heap_init                   ;[1057] cd 64 10
                     ei                                      ;[105a] fb
-                    call    _main                           ;[105b] cd 47 11
+                    call    _main                           ;[105b] cd 52 11
 __Exit:
                     push    hl                              ;[105e] e5
                     di                                      ;[105f] f3
@@ -81,7 +81,7 @@ asm_heap_init:
                     push    hl                              ;[1066] e5
                     push    bc                              ;[1067] c5
                     ld      c,$01                           ;[1068] 0e 01
-                    call    asm_mtx_init                    ;[106a] cd 19 11
+                    call    asm_mtx_init                    ;[106a] cd 24 11
                     jp      c,$10ce                         ;[106d] da ce 10
                     ld      hl,$0006                        ;[1070] 21 06 00
                     add     hl,de                           ;[1073] 19
@@ -231,634 +231,687 @@ asm_memset:
                     pop     hl                              ;[1117] e1
                     ret                                     ;[1118] c9
 
+_strlen_fastcall:
+                    xor     a                               ;[1119] af
+                    ld      c,a                             ;[111a] 4f
+                    ld      b,a                             ;[111b] 47
+                    cpir                                    ;[111c] ed b1
+                    ld      hl,$ffff                        ;[111e] 21 ff ff
+                    sbc     hl,bc                           ;[1121] ed 42
+                    ret                                     ;[1123] c9
+
 asm_mtx_init:
-                    ld      a,c                             ;[1119] 79
-                    and     $f8                             ;[111a] e6 f8
-                    jr      nz,unknown_type                 ;[111c] 20 15
-                    ld      a,c                             ;[111e] 79
-                    and     $07                             ;[111f] e6 07
-                    jr      z,unknown_type                  ;[1121] 28 10
-                    xor     a                               ;[1123] af
-                    call    $10f7                           ;[1124] cd f7 10
-                    dec     hl                              ;[1127] 2b
-                    dec     hl                              ;[1128] 2b
-                    dec     hl                              ;[1129] 2b
-                    ld      (hl),$fe                        ;[112a] 36 fe
-                    dec     hl                              ;[112c] 2b
-                    dec     hl                              ;[112d] 2b
-                    ld      (hl),c                          ;[112e] 71
-                    ld      hl,$0000                        ;[112f] 21 00 00
-                    ret                                     ;[1132] c9
+                    ld      a,c                             ;[1124] 79
+                    and     $f8                             ;[1125] e6 f8
+                    jr      nz,unknown_type                 ;[1127] 20 15
+                    ld      a,c                             ;[1129] 79
+                    and     $07                             ;[112a] e6 07
+                    jr      z,unknown_type                  ;[112c] 28 10
+                    xor     a                               ;[112e] af
+                    call    $10f7                           ;[112f] cd f7 10
+                    dec     hl                              ;[1132] 2b
+                    dec     hl                              ;[1133] 2b
+                    dec     hl                              ;[1134] 2b
+                    ld      (hl),$fe                        ;[1135] 36 fe
+                    dec     hl                              ;[1137] 2b
+                    dec     hl                              ;[1138] 2b
+                    ld      (hl),c                          ;[1139] 71
+                    ld      hl,$0000                        ;[113a] 21 00 00
+                    ret                                     ;[113d] c9
 
 unknown_type:
-                    ld      hl,$0001                        ;[1133] 21 01 00
-                    scf                                     ;[1136] 37
-                    ret                                     ;[1137] c9
+                    ld      hl,$0001                        ;[113e] 21 01 00
+                    scf                                     ;[1141] 37
+                    ret                                     ;[1142] c9
 
 _z80_outp_callee:
-                    pop     af                              ;[1138] f1
-                    pop     bc                              ;[1139] c1
-                    dec     sp                              ;[113a] 3b
-                    pop     hl                              ;[113b] e1
-                    push    af                              ;[113c] f5
-                    out     (c),h                           ;[113d] ed 61
-                    ret                                     ;[113f] c9
+                    pop     af                              ;[1143] f1
+                    pop     bc                              ;[1144] c1
+                    dec     sp                              ;[1145] 3b
+                    pop     hl                              ;[1146] e1
+                    push    af                              ;[1147] f5
+                    out     (c),h                           ;[1148] ed 61
+                    ret                                     ;[114a] c9
 
 _z80_inp_fastcall:
-                    ld      c,l                             ;[1140] 4d
-                    ld      b,h                             ;[1141] 44
-                    in      l,(c)                           ;[1142] ed 68
-                    ld      h,$00                           ;[1144] 26 00
-                    ret                                     ;[1146] c9
+                    ld      c,l                             ;[114b] 4d
+                    ld      b,h                             ;[114c] 44
+                    in      l,(c)                           ;[114d] ed 68
+                    ld      h,$00                           ;[114f] 26 00
+                    ret                                     ;[1151] c9
 
 _main:
-                    push    ix                              ;[1147] dd e5
-                    ld      ix,$0000                        ;[1149] dd 21 00 00
-                    add     ix,sp                           ;[114d] dd 39
-                    ld      hl,$fffa                        ;[114f] 21 fa ff
-                    add     hl,sp                           ;[1152] 39
-                    ld      sp,hl                           ;[1153] f9
-                    xor     a                               ;[1154] af
-                    push    af                              ;[1155] f5
-                    inc     sp                              ;[1156] 33
-                    call    _sst39sf_set_bank               ;[1157] cd fa 12
-                    inc     sp                              ;[115a] 33
-                    ld      bc,$0000                        ;[115b] 01 00 00
-                    xor     a                               ;[115e] af
-                    ld      (ix-$04),a                      ;[115f] dd 77 fc
-                    ld      (ix-$03),a                      ;[1162] dd 77 fd
+                    push    ix                              ;[1152] dd e5
+                    ld      ix,$0000                        ;[1154] dd 21 00 00
+                    add     ix,sp                           ;[1158] dd 39
+                    ld      hl,$fffa                        ;[115a] 21 fa ff
+                    add     hl,sp                           ;[115d] 39
+                    ld      sp,hl                           ;[115e] f9
+                    call    _init                           ;[115f] cd b0 12
+                    xor     a                               ;[1162] af
+                    push    af                              ;[1163] f5
+                    inc     sp                              ;[1164] 33
+                    call    _sst39sf_set_bank               ;[1165] cd 7c 13
+                    inc     sp                              ;[1168] 33
+                    ld      bc,$0000                        ;[1169] 01 00 00
+                    xor     a                               ;[116c] af
+                    ld      (ix-$04),a                      ;[116d] dd 77 fc
+                    ld      (ix-$03),a                      ;[1170] dd 77 fd
 l_main_00109:
-                    ld      a,(ix-$04)                      ;[1165] dd 7e fc
-                    sub     $0a                             ;[1168] d6 0a
-                    ld      a,(ix-$03)                      ;[116a] dd 7e fd
-                    sbc     $00                             ;[116d] de 00
-                    jr      nc,l_main_00102                 ;[116f] 30 55
-                    ld      l,(ix-$04)                      ;[1171] dd 6e fc
-                    ld      h,(ix-$03)                      ;[1174] dd 66 fd
-                    ld      de,$000a                        ;[1177] 11 0a 00
-                    add     hl,de                           ;[117a] 19
-                    ld      e,l                             ;[117b] 5d
-                    ld      d,h                             ;[117c] 54
-                    add     hl,hl                           ;[117d] 29
-                    add     hl,hl                           ;[117e] 29
-                    add     hl,de                           ;[117f] 19
-                    add     hl,hl                           ;[1180] 29
-                    add     hl,hl                           ;[1181] 29
-                    add     hl,hl                           ;[1182] 29
-                    add     hl,hl                           ;[1183] 29
-                    xor     a                               ;[1184] af
-                    ex      de,hl                           ;[1185] eb
-                    ld      (ix-$02),a                      ;[1186] dd 77 fe
-                    ld      (ix-$01),a                      ;[1189] dd 77 ff
+                    ld      a,(ix-$04)                      ;[1173] dd 7e fc
+                    sub     $0a                             ;[1176] d6 0a
+                    ld      a,(ix-$03)                      ;[1178] dd 7e fd
+                    sbc     $00                             ;[117b] de 00
+                    jr      nc,l_main_00102                 ;[117d] 30 55
+                    ld      l,(ix-$04)                      ;[117f] dd 6e fc
+                    ld      h,(ix-$03)                      ;[1182] dd 66 fd
+                    ld      de,$000a                        ;[1185] 11 0a 00
+                    add     hl,de                           ;[1188] 19
+                    ld      e,l                             ;[1189] 5d
+                    ld      d,h                             ;[118a] 54
+                    add     hl,hl                           ;[118b] 29
+                    add     hl,hl                           ;[118c] 29
+                    add     hl,de                           ;[118d] 19
+                    add     hl,hl                           ;[118e] 29
+                    add     hl,hl                           ;[118f] 29
+                    add     hl,hl                           ;[1190] 29
+                    add     hl,hl                           ;[1191] 29
+                    xor     a                               ;[1192] af
+                    ex      de,hl                           ;[1193] eb
+                    ld      (ix-$02),a                      ;[1194] dd 77 fe
+                    ld      (ix-$01),a                      ;[1197] dd 77 ff
 l_main_00106:
-                    ld      a,(ix-$02)                      ;[118c] dd 7e fe
-                    sub     $08                             ;[118f] d6 08
-                    ld      a,(ix-$01)                      ;[1191] dd 7e ff
-                    sbc     $00                             ;[1194] de 00
-                    jr      nc,l_main_00127                 ;[1196] 30 24
-                    ld      l,c                             ;[1198] 69
-                    ld      h,b                             ;[1199] 60
-                    inc     bc                              ;[119a] 03
-                    push    bc                              ;[119b] c5
-                    push    de                              ;[119c] d5
-                    push    hl                              ;[119d] e5
-                    call    _sst39sf_read_byte              ;[119e] cd d1 12
-                    pop     af                              ;[11a1] f1
-                    ld      a,l                             ;[11a2] 7d
-                    pop     de                              ;[11a3] d1
-                    push    de                              ;[11a4] d5
-                    push    af                              ;[11a5] f5
-                    inc     sp                              ;[11a6] 33
-                    push    de                              ;[11a7] d5
-                    call    _printhex                       ;[11a8] cd 33 12
-                    pop     af                              ;[11ab] f1
-                    inc     sp                              ;[11ac] 33
-                    pop     de                              ;[11ad] d1
-                    pop     bc                              ;[11ae] c1
-                    inc     de                              ;[11af] 13
-                    inc     de                              ;[11b0] 13
-                    inc     de                              ;[11b1] 13
-                    inc     (ix-$02)                        ;[11b2] dd 34 fe
-                    jr      nz,l_main_00106                 ;[11b5] 20 d5
-                    inc     (ix-$01)                        ;[11b7] dd 34 ff
-                    jr      l_main_00106                    ;[11ba] 18 d0
+                    ld      a,(ix-$02)                      ;[119a] dd 7e fe
+                    sub     $08                             ;[119d] d6 08
+                    ld      a,(ix-$01)                      ;[119f] dd 7e ff
+                    sbc     $00                             ;[11a2] de 00
+                    jr      nc,l_main_00127                 ;[11a4] 30 24
+                    ld      l,c                             ;[11a6] 69
+                    ld      h,b                             ;[11a7] 60
+                    inc     bc                              ;[11a8] 03
+                    push    bc                              ;[11a9] c5
+                    push    de                              ;[11aa] d5
+                    push    hl                              ;[11ab] e5
+                    call    _sst39sf_read_byte              ;[11ac] cd 53 13
+                    pop     af                              ;[11af] f1
+                    ld      a,l                             ;[11b0] 7d
+                    pop     de                              ;[11b1] d1
+                    push    de                              ;[11b2] d5
+                    push    af                              ;[11b3] f5
+                    inc     sp                              ;[11b4] 33
+                    push    de                              ;[11b5] d5
+                    call    _printhex                       ;[11b6] cd 41 12
+                    pop     af                              ;[11b9] f1
+                    inc     sp                              ;[11ba] 33
+                    pop     de                              ;[11bb] d1
+                    pop     bc                              ;[11bc] c1
+                    inc     de                              ;[11bd] 13
+                    inc     de                              ;[11be] 13
+                    inc     de                              ;[11bf] 13
+                    inc     (ix-$02)                        ;[11c0] dd 34 fe
+                    jr      nz,l_main_00106                 ;[11c3] 20 d5
+                    inc     (ix-$01)                        ;[11c5] dd 34 ff
+                    jr      l_main_00106                    ;[11c8] 18 d0
 l_main_00127:
-                    inc     (ix-$04)                        ;[11bc] dd 34 fc
-                    jr      nz,l_main_00109                 ;[11bf] 20 a4
-                    inc     (ix-$03)                        ;[11c1] dd 34 fd
-                    jr      l_main_00109                    ;[11c4] 18 9f
+                    inc     (ix-$04)                        ;[11ca] dd 34 fc
+                    jr      nz,l_main_00109                 ;[11cd] 20 a4
+                    inc     (ix-$03)                        ;[11cf] dd 34 fd
+                    jr      l_main_00109                    ;[11d2] 18 9f
 l_main_00102:
-                    call    _read_programs                  ;[11c6] cd 11 13
-                    ld      de,$0000                        ;[11c9] 11 00 00
-                    ld      c,e                             ;[11cc] 4b
-                    ld      b,d                             ;[11cd] 42
+                    call    _read_programs                  ;[11d4] cd 93 13
+                    ld      de,$0000                        ;[11d7] 11 00 00
+                    ld      c,e                             ;[11da] 4b
+                    ld      b,d                             ;[11db] 42
 l_main_00115:
-                    ld      a,c                             ;[11ce] 79
-                    sub     $04                             ;[11cf] d6 04
-                    ld      a,b                             ;[11d1] 78
-                    sbc     $00                             ;[11d2] de 00
-                    jr      nc,l_main_00104                 ;[11d4] 30 55
-                    ld      l,c                             ;[11d6] 69
-                    ld      h,b                             ;[11d7] 60
-                    add     hl,hl                           ;[11d8] 29
-                    add     hl,hl                           ;[11d9] 29
-                    add     hl,bc                           ;[11da] 09
-                    add     hl,hl                           ;[11db] 29
-                    add     hl,hl                           ;[11dc] 29
-                    add     hl,hl                           ;[11dd] 29
-                    add     hl,hl                           ;[11de] 29
-                    ex      (sp),hl                         ;[11df] e3
-                    ld      (ix-$02),e                      ;[11e0] dd 73 fe
-                    ld      (ix-$01),d                      ;[11e3] dd 72 ff
-                    ld      de,$0000                        ;[11e6] 11 00 00
+                    ld      a,c                             ;[11dc] 79
+                    sub     $04                             ;[11dd] d6 04
+                    ld      a,b                             ;[11df] 78
+                    sbc     $00                             ;[11e0] de 00
+                    jr      nc,l_main_00104                 ;[11e2] 30 55
+                    ld      l,c                             ;[11e4] 69
+                    ld      h,b                             ;[11e5] 60
+                    add     hl,hl                           ;[11e6] 29
+                    add     hl,hl                           ;[11e7] 29
+                    add     hl,bc                           ;[11e8] 09
+                    add     hl,hl                           ;[11e9] 29
+                    add     hl,hl                           ;[11ea] 29
+                    add     hl,hl                           ;[11eb] 29
+                    add     hl,hl                           ;[11ec] 29
+                    ex      (sp),hl                         ;[11ed] e3
+                    ld      (ix-$02),e                      ;[11ee] dd 73 fe
+                    ld      (ix-$01),d                      ;[11f1] dd 72 ff
+                    ld      de,$0000                        ;[11f4] 11 00 00
 l_main_00112:
-                    ld      a,e                             ;[11e9] 7b
-                    sub     $18                             ;[11ea] d6 18
-                    ld      a,d                             ;[11ec] 7a
-                    sbc     $00                             ;[11ed] de 00
-                    jr      nc,l_main_00128                 ;[11ef] 30 31
-                    pop     hl                              ;[11f1] e1
-                    push    hl                              ;[11f2] e5
-                    add     hl,de                           ;[11f3] 19
-                    ld      a,l                             ;[11f4] 7d
-                    add     $00                             ;[11f5] c6 00
-                    ld      (ix-$04),a                      ;[11f7] dd 77 fc
-                    ld      a,h                             ;[11fa] 7c
-                    adc     $50                             ;[11fb] ce 50
-                    ld      (ix-$03),a                      ;[11fd] dd 77 fd
-                    ld      l,(ix-$02)                      ;[1200] dd 6e fe
-                    ld      h,(ix-$01)                      ;[1203] dd 66 ff
-                    inc     (ix-$02)                        ;[1206] dd 34 fe
-                    jr      nz,l_main_00165                 ;[1209] 20 03
-                    inc     (ix-$01)                        ;[120b] dd 34 ff
+                    ld      a,e                             ;[11f7] 7b
+                    sub     $18                             ;[11f8] d6 18
+                    ld      a,d                             ;[11fa] 7a
+                    sbc     $00                             ;[11fb] de 00
+                    jr      nc,l_main_00128                 ;[11fd] 30 31
+                    pop     hl                              ;[11ff] e1
+                    push    hl                              ;[1200] e5
+                    add     hl,de                           ;[1201] 19
+                    ld      a,l                             ;[1202] 7d
+                    add     $00                             ;[1203] c6 00
+                    ld      (ix-$04),a                      ;[1205] dd 77 fc
+                    ld      a,h                             ;[1208] 7c
+                    adc     $50                             ;[1209] ce 50
+                    ld      (ix-$03),a                      ;[120b] dd 77 fd
+                    ld      l,(ix-$02)                      ;[120e] dd 6e fe
+                    ld      h,(ix-$01)                      ;[1211] dd 66 ff
+                    inc     (ix-$02)                        ;[1214] dd 34 fe
+                    jr      nz,l_main_00165                 ;[1217] 20 03
+                    inc     (ix-$01)                        ;[1219] dd 34 ff
 l_main_00165:
-                    push    bc                              ;[120e] c5
-                    push    de                              ;[120f] d5
-                    push    hl                              ;[1210] e5
-                    call    _read_ram                       ;[1211] cd 0b 15
-                    pop     af                              ;[1214] f1
-                    ld      a,l                             ;[1215] 7d
-                    pop     de                              ;[1216] d1
-                    pop     bc                              ;[1217] c1
-                    ld      l,(ix-$04)                      ;[1218] dd 6e fc
-                    ld      h,(ix-$03)                      ;[121b] dd 66 fd
-                    ld      (hl),a                          ;[121e] 77
-                    inc     de                              ;[121f] 13
-                    jr      l_main_00112                    ;[1220] 18 c7
+                    push    bc                              ;[121c] c5
+                    push    de                              ;[121d] d5
+                    push    hl                              ;[121e] e5
+                    call    _read_ram                       ;[121f] cd 8d 15
+                    pop     af                              ;[1222] f1
+                    ld      a,l                             ;[1223] 7d
+                    pop     de                              ;[1224] d1
+                    pop     bc                              ;[1225] c1
+                    ld      l,(ix-$04)                      ;[1226] dd 6e fc
+                    ld      h,(ix-$03)                      ;[1229] dd 66 fd
+                    ld      (hl),a                          ;[122c] 77
+                    inc     de                              ;[122d] 13
+                    jr      l_main_00112                    ;[122e] 18 c7
 l_main_00128:
-                    ld      e,(ix-$02)                      ;[1222] dd 5e fe
-                    ld      d,(ix-$01)                      ;[1225] dd 56 ff
-                    inc     bc                              ;[1228] 03
-                    jr      l_main_00115                    ;[1229] 18 a3
+                    ld      e,(ix-$02)                      ;[1230] dd 5e fe
+                    ld      d,(ix-$01)                      ;[1233] dd 56 ff
+                    inc     bc                              ;[1236] 03
+                    jr      l_main_00115                    ;[1237] 18 a3
 l_main_00104:
-                    ld      sp,ix                           ;[122b] dd f9
-                    ld      hl,$0000                        ;[122d] 21 00 00
-                    pop     ix                              ;[1230] dd e1
-                    ret                                     ;[1232] c9
+                    ld      sp,ix                           ;[1239] dd f9
+                    ld      hl,$0000                        ;[123b] 21 00 00
+                    pop     ix                              ;[123e] dd e1
+                    ret                                     ;[1240] c9
 
 _printhex:
-                    push    ix                              ;[1233] dd e5
-                    ld      ix,$0000                        ;[1235] dd 21 00 00
-                    add     ix,sp                           ;[1239] dd 39
-                    ld      a,(ix+$06)                      ;[123b] dd 7e 06
-                    rlca                                    ;[123e] 07
-                    rlca                                    ;[123f] 07
-                    rlca                                    ;[1240] 07
-                    rlca                                    ;[1241] 07
-                    and     $0f                             ;[1242] e6 0f
-                    ld      c,a                             ;[1244] 4f
-                    sub     $0a                             ;[1245] d6 0a
-                    jr      nc,l_printhex_00102             ;[1247] 30 12
-                    ld      a,$00                           ;[1249] 3e 00
-                    add     (ix+$04)                        ;[124b] dd 86 04
-                    ld      e,a                             ;[124e] 5f
-                    ld      a,$50                           ;[124f] 3e 50
-                    adc     (ix+$05)                        ;[1251] dd 8e 05
-                    ld      d,a                             ;[1254] 57
-                    ld      a,c                             ;[1255] 79
-                    add     $30                             ;[1256] c6 30
-                    ld      (de),a                          ;[1258] 12
-                    jr      l_printhex_00103                ;[1259] 18 10
+                    push    ix                              ;[1241] dd e5
+                    ld      ix,$0000                        ;[1243] dd 21 00 00
+                    add     ix,sp                           ;[1247] dd 39
+                    ld      a,(ix+$06)                      ;[1249] dd 7e 06
+                    rlca                                    ;[124c] 07
+                    rlca                                    ;[124d] 07
+                    rlca                                    ;[124e] 07
+                    rlca                                    ;[124f] 07
+                    and     $0f                             ;[1250] e6 0f
+                    ld      c,a                             ;[1252] 4f
+                    sub     $0a                             ;[1253] d6 0a
+                    jr      nc,l_printhex_00102             ;[1255] 30 12
+                    ld      a,$00                           ;[1257] 3e 00
+                    add     (ix+$04)                        ;[1259] dd 86 04
+                    ld      e,a                             ;[125c] 5f
+                    ld      a,$50                           ;[125d] 3e 50
+                    adc     (ix+$05)                        ;[125f] dd 8e 05
+                    ld      d,a                             ;[1262] 57
+                    ld      a,c                             ;[1263] 79
+                    add     $30                             ;[1264] c6 30
+                    ld      (de),a                          ;[1266] 12
+                    jr      l_printhex_00103                ;[1267] 18 10
 l_printhex_00102:
-                    ld      a,$00                           ;[125b] 3e 00
-                    add     (ix+$04)                        ;[125d] dd 86 04
-                    ld      e,a                             ;[1260] 5f
-                    ld      a,$50                           ;[1261] 3e 50
-                    adc     (ix+$05)                        ;[1263] dd 8e 05
-                    ld      d,a                             ;[1266] 57
-                    ld      a,c                             ;[1267] 79
-                    add     $37                             ;[1268] c6 37
-                    ld      (de),a                          ;[126a] 12
+                    ld      a,$00                           ;[1269] 3e 00
+                    add     (ix+$04)                        ;[126b] dd 86 04
+                    ld      e,a                             ;[126e] 5f
+                    ld      a,$50                           ;[126f] 3e 50
+                    adc     (ix+$05)                        ;[1271] dd 8e 05
+                    ld      d,a                             ;[1274] 57
+                    ld      a,c                             ;[1275] 79
+                    add     $37                             ;[1276] c6 37
+                    ld      (de),a                          ;[1278] 12
 l_printhex_00103:
-                    inc     (ix+$04)                        ;[126b] dd 34 04
-                    jr      nz,l_printhex_00119             ;[126e] 20 03
-                    inc     (ix+$05)                        ;[1270] dd 34 05
+                    inc     (ix+$04)                        ;[1279] dd 34 04
+                    jr      nz,l_printhex_00119             ;[127c] 20 03
+                    inc     (ix+$05)                        ;[127e] dd 34 05
 l_printhex_00119:
-                    ld      a,(ix+$06)                      ;[1273] dd 7e 06
-                    and     $0f                             ;[1276] e6 0f
-                    ld      c,a                             ;[1278] 4f
-                    sub     $0a                             ;[1279] d6 0a
-                    jr      nc,l_printhex_00105             ;[127b] 30 12
-                    ld      a,$00                           ;[127d] 3e 00
-                    add     (ix+$04)                        ;[127f] dd 86 04
-                    ld      e,a                             ;[1282] 5f
-                    ld      a,$50                           ;[1283] 3e 50
-                    adc     (ix+$05)                        ;[1285] dd 8e 05
-                    ld      d,a                             ;[1288] 57
-                    ld      a,c                             ;[1289] 79
-                    add     $30                             ;[128a] c6 30
-                    ld      (de),a                          ;[128c] 12
-                    jr      l_printhex_00107                ;[128d] 18 10
+                    ld      a,(ix+$06)                      ;[1281] dd 7e 06
+                    and     $0f                             ;[1284] e6 0f
+                    ld      c,a                             ;[1286] 4f
+                    sub     $0a                             ;[1287] d6 0a
+                    jr      nc,l_printhex_00105             ;[1289] 30 12
+                    ld      a,$00                           ;[128b] 3e 00
+                    add     (ix+$04)                        ;[128d] dd 86 04
+                    ld      e,a                             ;[1290] 5f
+                    ld      a,$50                           ;[1291] 3e 50
+                    adc     (ix+$05)                        ;[1293] dd 8e 05
+                    ld      d,a                             ;[1296] 57
+                    ld      a,c                             ;[1297] 79
+                    add     $30                             ;[1298] c6 30
+                    ld      (de),a                          ;[129a] 12
+                    jr      l_printhex_00107                ;[129b] 18 10
 l_printhex_00105:
-                    ld      a,$00                           ;[128f] 3e 00
-                    add     (ix+$04)                        ;[1291] dd 86 04
-                    ld      e,a                             ;[1294] 5f
-                    ld      a,$50                           ;[1295] 3e 50
-                    adc     (ix+$05)                        ;[1297] dd 8e 05
-                    ld      d,a                             ;[129a] 57
-                    ld      a,c                             ;[129b] 79
-                    add     $37                             ;[129c] c6 37
-                    ld      (de),a                          ;[129e] 12
+                    ld      a,$00                           ;[129d] 3e 00
+                    add     (ix+$04)                        ;[129f] dd 86 04
+                    ld      e,a                             ;[12a2] 5f
+                    ld      a,$50                           ;[12a3] 3e 50
+                    adc     (ix+$05)                        ;[12a5] dd 8e 05
+                    ld      d,a                             ;[12a8] 57
+                    ld      a,c                             ;[12a9] 79
+                    add     $37                             ;[12aa] c6 37
+                    ld      (de),a                          ;[12ac] 12
 l_printhex_00107:
-                    pop     ix                              ;[129f] dd e1
-                    ret                                     ;[12a1] c9
+                    pop     ix                              ;[12ad] dd e1
+                    ret                                     ;[12af] c9
+
+_init:
+                    push    ix                              ;[12b0] dd e5
+                    ld      ix,$0000                        ;[12b2] dd 21 00 00
+                    add     ix,sp                           ;[12b6] dd 39
+                    ld      hl,$ffed                        ;[12b8] 21 ed ff
+                    add     hl,sp                           ;[12bb] 39
+                    ld      sp,hl                           ;[12bc] f9
+                    ld      (ix-$13),$44                    ;[12bd] dd 36 ed 44
+                    ld      (ix-$12),$61                    ;[12c1] dd 36 ee 61
+                    ld      (ix-$11),$74                    ;[12c5] dd 36 ef 74
+                    ld      (ix-$10),$61                    ;[12c9] dd 36 f0 61
+                    ld      (ix-$0f),$63                    ;[12cd] dd 36 f1 63
+                    ld      (ix-$0e),$61                    ;[12d1] dd 36 f2 61
+                    ld      (ix-$0d),$72                    ;[12d5] dd 36 f3 72
+                    ld      (ix-$0c),$74                    ;[12d9] dd 36 f4 74
+                    ld      (ix-$0b),$72                    ;[12dd] dd 36 f5 72
+                    ld      (ix-$0a),$69                    ;[12e1] dd 36 f6 69
+                    ld      (ix-$09),$64                    ;[12e5] dd 36 f7 64
+                    ld      (ix-$08),$67                    ;[12e9] dd 36 f8 67
+                    ld      (ix-$07),$65                    ;[12ed] dd 36 f9 65
+                    ld      (ix-$06),$20                    ;[12f1] dd 36 fa 20
+                    ld      (ix-$05),$74                    ;[12f5] dd 36 fb 74
+                    ld      (ix-$04),$65                    ;[12f9] dd 36 fc 65
+                    ld      (ix-$03),$73                    ;[12fd] dd 36 fd 73
+                    ld      (ix-$02),$74                    ;[1301] dd 36 fe 74
+                    ld      (ix-$01),$00                    ;[1305] dd 36 ff 00
+                    ld      de,$5730                        ;[1309] 11 30 57
+                    ld      hl,$0000                        ;[130c] 21 00 00
+                    add     hl,sp                           ;[130f] 39
+                    call    _strlen_fastcall                ;[1310] cd 19 11
+                    ld      c,l                             ;[1313] 4d
+                    ld      b,h                             ;[1314] 44
+                    ld      hl,$0000                        ;[1315] 21 00 00
+                    add     hl,sp                           ;[1318] 39
+                    ld      a,b                             ;[1319] 78
+                    or      c                               ;[131a] b1
+                    jr      z,l_init_00103                  ;[131b] 28 02
+                    ldir                                    ;[131d] ed b0
+l_init_00103:
+                    ld      sp,ix                           ;[131f] dd f9
+                    pop     ix                              ;[1321] dd e1
+                    ret                                     ;[1323] c9
 
 _sst39sf_send_byte:
-                    push    ix                              ;[12a2] dd e5
-                    ld      ix,$0000                        ;[12a4] dd 21 00 00
-                    add     ix,sp                           ;[12a8] dd 39
-                    ld      a,(ix+$04)                      ;[12aa] dd 7e 04
-                    push    af                              ;[12ad] f5
-                    inc     sp                              ;[12ae] 33
-                    ld      hl,$0060                        ;[12af] 21 60 00
-                    push    hl                              ;[12b2] e5
-                    call    _z80_outp_callee                ;[12b3] cd 38 11
-                    ld      a,(ix+$05)                      ;[12b6] dd 7e 05
-                    push    af                              ;[12b9] f5
-                    inc     sp                              ;[12ba] 33
-                    ld      hl,$0061                        ;[12bb] 21 61 00
-                    push    hl                              ;[12be] e5
-                    call    _z80_outp_callee                ;[12bf] cd 38 11
-                    ld      a,(ix+$06)                      ;[12c2] dd 7e 06
-                    push    af                              ;[12c5] f5
-                    inc     sp                              ;[12c6] 33
-                    ld      hl,$0065                        ;[12c7] 21 65 00
-                    push    hl                              ;[12ca] e5
-                    call    _z80_outp_callee                ;[12cb] cd 38 11
-                    pop     ix                              ;[12ce] dd e1
-                    ret                                     ;[12d0] c9
+                    push    ix                              ;[1324] dd e5
+                    ld      ix,$0000                        ;[1326] dd 21 00 00
+                    add     ix,sp                           ;[132a] dd 39
+                    ld      a,(ix+$04)                      ;[132c] dd 7e 04
+                    push    af                              ;[132f] f5
+                    inc     sp                              ;[1330] 33
+                    ld      hl,$0060                        ;[1331] 21 60 00
+                    push    hl                              ;[1334] e5
+                    call    _z80_outp_callee                ;[1335] cd 43 11
+                    ld      a,(ix+$05)                      ;[1338] dd 7e 05
+                    push    af                              ;[133b] f5
+                    inc     sp                              ;[133c] 33
+                    ld      hl,$0061                        ;[133d] 21 61 00
+                    push    hl                              ;[1340] e5
+                    call    _z80_outp_callee                ;[1341] cd 43 11
+                    ld      a,(ix+$06)                      ;[1344] dd 7e 06
+                    push    af                              ;[1347] f5
+                    inc     sp                              ;[1348] 33
+                    ld      hl,$0065                        ;[1349] 21 65 00
+                    push    hl                              ;[134c] e5
+                    call    _z80_outp_callee                ;[134d] cd 43 11
+                    pop     ix                              ;[1350] dd e1
+                    ret                                     ;[1352] c9
 
 _sst39sf_read_byte:
-                    push    ix                              ;[12d1] dd e5
-                    ld      ix,$0000                        ;[12d3] dd 21 00 00
-                    add     ix,sp                           ;[12d7] dd 39
-                    ld      a,(ix+$04)                      ;[12d9] dd 7e 04
-                    push    af                              ;[12dc] f5
-                    inc     sp                              ;[12dd] 33
-                    ld      hl,$0060                        ;[12de] 21 60 00
-                    push    hl                              ;[12e1] e5
-                    call    _z80_outp_callee                ;[12e2] cd 38 11
-                    ld      a,(ix+$05)                      ;[12e5] dd 7e 05
-                    push    af                              ;[12e8] f5
-                    inc     sp                              ;[12e9] 33
-                    ld      hl,$0061                        ;[12ea] 21 61 00
-                    push    hl                              ;[12ed] e5
-                    call    _z80_outp_callee                ;[12ee] cd 38 11
-                    ld      hl,$0065                        ;[12f1] 21 65 00
-                    call    _z80_inp_fastcall               ;[12f4] cd 40 11
-                    pop     ix                              ;[12f7] dd e1
-                    ret                                     ;[12f9] c9
+                    push    ix                              ;[1353] dd e5
+                    ld      ix,$0000                        ;[1355] dd 21 00 00
+                    add     ix,sp                           ;[1359] dd 39
+                    ld      a,(ix+$04)                      ;[135b] dd 7e 04
+                    push    af                              ;[135e] f5
+                    inc     sp                              ;[135f] 33
+                    ld      hl,$0060                        ;[1360] 21 60 00
+                    push    hl                              ;[1363] e5
+                    call    _z80_outp_callee                ;[1364] cd 43 11
+                    ld      a,(ix+$05)                      ;[1367] dd 7e 05
+                    push    af                              ;[136a] f5
+                    inc     sp                              ;[136b] 33
+                    ld      hl,$0061                        ;[136c] 21 61 00
+                    push    hl                              ;[136f] e5
+                    call    _z80_outp_callee                ;[1370] cd 43 11
+                    ld      hl,$0065                        ;[1373] 21 65 00
+                    call    _z80_inp_fastcall               ;[1376] cd 4b 11
+                    pop     ix                              ;[1379] dd e1
+                    ret                                     ;[137b] c9
 
 _sst39sf_set_bank:
-                    push    ix                              ;[12fa] dd e5
-                    ld      ix,$0000                        ;[12fc] dd 21 00 00
-                    add     ix,sp                           ;[1300] dd 39
-                    ld      a,(ix+$04)                      ;[1302] dd 7e 04
-                    push    af                              ;[1305] f5
-                    inc     sp                              ;[1306] 33
-                    ld      hl,$0063                        ;[1307] 21 63 00
-                    push    hl                              ;[130a] e5
-                    call    _z80_outp_callee                ;[130b] cd 38 11
-                    pop     ix                              ;[130e] dd e1
-                    ret                                     ;[1310] c9
+                    push    ix                              ;[137c] dd e5
+                    ld      ix,$0000                        ;[137e] dd 21 00 00
+                    add     ix,sp                           ;[1382] dd 39
+                    ld      a,(ix+$04)                      ;[1384] dd 7e 04
+                    push    af                              ;[1387] f5
+                    inc     sp                              ;[1388] 33
+                    ld      hl,$0063                        ;[1389] 21 63 00
+                    push    hl                              ;[138c] e5
+                    call    _z80_outp_callee                ;[138d] cd 43 11
+                    pop     ix                              ;[1390] dd e1
+                    ret                                     ;[1392] c9
 
 _read_programs:
-                    push    ix                              ;[1311] dd e5
-                    ld      ix,$0000                        ;[1313] dd 21 00 00
-                    add     ix,sp                           ;[1317] dd 39
-                    ld      hl,$ffdf                        ;[1319] 21 df ff
-                    add     hl,sp                           ;[131c] 39
-                    ld      sp,hl                           ;[131d] f9
-                    ld      hl,$0000                        ;[131e] 21 00 00
-                    ld      (_numprogs),hl                  ;[1321] 22 09 61
-                    ld      de,$0000                        ;[1324] 11 00 00
-                    ld      (ix-$07),$00                    ;[1327] dd 36 f9 00
+                    push    ix                              ;[1393] dd e5
+                    ld      ix,$0000                        ;[1395] dd 21 00 00
+                    add     ix,sp                           ;[1399] dd 39
+                    ld      hl,$ffdf                        ;[139b] 21 df ff
+                    add     hl,sp                           ;[139e] 39
+                    ld      sp,hl                           ;[139f] f9
+                    ld      hl,$0000                        ;[13a0] 21 00 00
+                    ld      (_numprogs),hl                  ;[13a3] 22 09 61
+                    ld      de,$0000                        ;[13a6] 11 00 00
+                    ld      (ix-$07),$00                    ;[13a9] dd 36 f9 00
 l_read_programs_00124:
-                    ld      a,(ix-$07)                      ;[132b] dd 7e f9
-                    sub     $08                             ;[132e] d6 08
-                    jp      nc,l_read_programs_00126        ;[1330] d2 d7 14
-                    push    de                              ;[1333] d5
-                    ld      a,(ix-$07)                      ;[1334] dd 7e f9
-                    push    af                              ;[1337] f5
-                    inc     sp                              ;[1338] 33
-                    call    _sst39sf_set_bank               ;[1339] cd fa 12
-                    inc     sp                              ;[133c] 33
-                    pop     de                              ;[133d] d1
-                    xor     a                               ;[133e] af
-                    ld      (ix-$06),a                      ;[133f] dd 77 fa
-                    ld      (ix-$05),a                      ;[1342] dd 77 fb
+                    ld      a,(ix-$07)                      ;[13ad] dd 7e f9
+                    sub     $08                             ;[13b0] d6 08
+                    jp      nc,l_read_programs_00126        ;[13b2] d2 59 15
+                    push    de                              ;[13b5] d5
+                    ld      a,(ix-$07)                      ;[13b6] dd 7e f9
+                    push    af                              ;[13b9] f5
+                    inc     sp                              ;[13ba] 33
+                    call    _sst39sf_set_bank               ;[13bb] cd 7c 13
+                    inc     sp                              ;[13be] 33
+                    pop     de                              ;[13bf] d1
+                    xor     a                               ;[13c0] af
+                    ld      (ix-$06),a                      ;[13c1] dd 77 fa
+                    ld      (ix-$05),a                      ;[13c4] dd 77 fb
 l_read_programs_00108:
-                    ld      c,(ix-$06)                      ;[1345] dd 4e fa
-                    ld      b,(ix-$05)                      ;[1348] dd 46 fb
-                    inc     (ix-$06)                        ;[134b] dd 34 fa
-                    jr      nz,l_read_programs_00193        ;[134e] 20 03
-                    inc     (ix-$05)                        ;[1350] dd 34 fb
+                    ld      c,(ix-$06)                      ;[13c7] dd 4e fa
+                    ld      b,(ix-$05)                      ;[13ca] dd 46 fb
+                    inc     (ix-$06)                        ;[13cd] dd 34 fa
+                    jr      nz,l_read_programs_00193        ;[13d0] 20 03
+                    inc     (ix-$05)                        ;[13d2] dd 34 fb
 l_read_programs_00193:
-                    push    de                              ;[1353] d5
-                    push    bc                              ;[1354] c5
-                    call    _sst39sf_read_byte              ;[1355] cd d1 12
-                    pop     af                              ;[1358] f1
-                    pop     de                              ;[1359] d1
-                    ld      (ix-$03),l                      ;[135a] dd 75 fd
-                    ld      a,l                             ;[135d] 7d
-                    inc     a                               ;[135e] 3c
-                    jp      z,l_read_programs_00125         ;[135f] ca d1 14
-                    ld      a,(ix-$07)                      ;[1362] dd 7e f9
-                    ld      (ix-$1f),a                      ;[1365] dd 77 e1
-                    ld      a,(ix-$03)                      ;[1368] dd 7e fd
-                    ld      (ix-$1e),a                      ;[136b] dd 77 e2
-                    ld      c,$00                           ;[136e] 0e 00
+                    push    de                              ;[13d5] d5
+                    push    bc                              ;[13d6] c5
+                    call    _sst39sf_read_byte              ;[13d7] cd 53 13
+                    pop     af                              ;[13da] f1
+                    pop     de                              ;[13db] d1
+                    ld      (ix-$03),l                      ;[13dc] dd 75 fd
+                    ld      a,l                             ;[13df] 7d
+                    inc     a                               ;[13e0] 3c
+                    jp      z,l_read_programs_00125         ;[13e1] ca 53 15
+                    ld      a,(ix-$07)                      ;[13e4] dd 7e f9
+                    ld      (ix-$1f),a                      ;[13e7] dd 77 e1
+                    ld      a,(ix-$03)                      ;[13ea] dd 7e fd
+                    ld      (ix-$1e),a                      ;[13ed] dd 77 e2
+                    ld      c,$00                           ;[13f0] 0e 00
 l_read_programs_00112:
-                    ld      l,(ix-$03)                      ;[1370] dd 6e fd
-                    xor     a                               ;[1373] af
-                    ld      h,a                             ;[1374] 67
-                    srl     h                               ;[1375] cb 3c
-                    rr      l                               ;[1377] cb 1d
-                    rra                                     ;[1379] 1f
-                    srl     h                               ;[137a] cb 3c
-                    rr      l                               ;[137c] cb 1d
-                    rra                                     ;[137e] 1f
-                    ld      h,l                             ;[137f] 65
-                    ld      l,a                             ;[1380] 6f
-                    ex      (sp),hl                         ;[1381] e3
-                    ld      a,c                             ;[1382] 79
-                    sub     $08                             ;[1383] d6 08
-                    jr      nc,l_read_programs_00103        ;[1385] 30 38
-                    push    de                              ;[1387] d5
-                    ld      e,c                             ;[1388] 59
-                    ld      d,$00                           ;[1389] 16 00
-                    ld      hl,$0006                        ;[138b] 21 06 00
-                    add     hl,sp                           ;[138e] 39
-                    add     hl,de                           ;[138f] 19
-                    pop     de                              ;[1390] d1
-                    ld      (ix-$02),l                      ;[1391] dd 75 fe
-                    ld      (ix-$01),h                      ;[1394] dd 74 ff
-                    ld      a,(ix-$21)                      ;[1397] dd 7e df
-                    add     $26                             ;[139a] c6 26
-                    ld      l,a                             ;[139c] 6f
-                    ld      a,(ix-$20)                      ;[139d] dd 7e e0
-                    adc     $01                             ;[13a0] ce 01
-                    ld      b,a                             ;[13a2] 47
-                    ld      a,c                             ;[13a3] 79
-                    ld      h,$00                           ;[13a4] 26 00
-                    add     l                               ;[13a6] 85
-                    ld      l,a                             ;[13a7] 6f
-                    ld      a,h                             ;[13a8] 7c
-                    adc     b                               ;[13a9] 88
-                    push    bc                              ;[13aa] c5
-                    push    de                              ;[13ab] d5
-                    ld      h,a                             ;[13ac] 67
-                    push    hl                              ;[13ad] e5
-                    call    _sst39sf_read_byte              ;[13ae] cd d1 12
-                    pop     af                              ;[13b1] f1
-                    ld      a,l                             ;[13b2] 7d
-                    pop     de                              ;[13b3] d1
-                    pop     bc                              ;[13b4] c1
-                    ld      l,(ix-$02)                      ;[13b5] dd 6e fe
-                    ld      h,(ix-$01)                      ;[13b8] dd 66 ff
-                    ld      (hl),a                          ;[13bb] 77
-                    inc     c                               ;[13bc] 0c
-                    jr      l_read_programs_00112           ;[13bd] 18 b1
+                    ld      l,(ix-$03)                      ;[13f2] dd 6e fd
+                    xor     a                               ;[13f5] af
+                    ld      h,a                             ;[13f6] 67
+                    srl     h                               ;[13f7] cb 3c
+                    rr      l                               ;[13f9] cb 1d
+                    rra                                     ;[13fb] 1f
+                    srl     h                               ;[13fc] cb 3c
+                    rr      l                               ;[13fe] cb 1d
+                    rra                                     ;[1400] 1f
+                    ld      h,l                             ;[1401] 65
+                    ld      l,a                             ;[1402] 6f
+                    ex      (sp),hl                         ;[1403] e3
+                    ld      a,c                             ;[1404] 79
+                    sub     $08                             ;[1405] d6 08
+                    jr      nc,l_read_programs_00103        ;[1407] 30 38
+                    push    de                              ;[1409] d5
+                    ld      e,c                             ;[140a] 59
+                    ld      d,$00                           ;[140b] 16 00
+                    ld      hl,$0006                        ;[140d] 21 06 00
+                    add     hl,sp                           ;[1410] 39
+                    add     hl,de                           ;[1411] 19
+                    pop     de                              ;[1412] d1
+                    ld      (ix-$02),l                      ;[1413] dd 75 fe
+                    ld      (ix-$01),h                      ;[1416] dd 74 ff
+                    ld      a,(ix-$21)                      ;[1419] dd 7e df
+                    add     $26                             ;[141c] c6 26
+                    ld      l,a                             ;[141e] 6f
+                    ld      a,(ix-$20)                      ;[141f] dd 7e e0
+                    adc     $01                             ;[1422] ce 01
+                    ld      b,a                             ;[1424] 47
+                    ld      a,c                             ;[1425] 79
+                    ld      h,$00                           ;[1426] 26 00
+                    add     l                               ;[1428] 85
+                    ld      l,a                             ;[1429] 6f
+                    ld      a,h                             ;[142a] 7c
+                    adc     b                               ;[142b] 88
+                    push    bc                              ;[142c] c5
+                    push    de                              ;[142d] d5
+                    ld      h,a                             ;[142e] 67
+                    push    hl                              ;[142f] e5
+                    call    _sst39sf_read_byte              ;[1430] cd 53 13
+                    pop     af                              ;[1433] f1
+                    ld      a,l                             ;[1434] 7d
+                    pop     de                              ;[1435] d1
+                    pop     bc                              ;[1436] c1
+                    ld      l,(ix-$02)                      ;[1437] dd 6e fe
+                    ld      h,(ix-$01)                      ;[143a] dd 66 ff
+                    ld      (hl),a                          ;[143d] 77
+                    inc     c                               ;[143e] 0c
+                    jr      l_read_programs_00112           ;[143f] 18 b1
 l_read_programs_00103:
-                    ld      c,$00                           ;[13bf] 0e 00
+                    ld      c,$00                           ;[1441] 0e 00
 l_read_programs_00115:
-                    ld      a,c                             ;[13c1] 79
-                    cp      $08                             ;[13c2] fe 08
-                    jr      nc,l_read_programs_00104        ;[13c4] 30 3b
-                    add     $08                             ;[13c6] c6 08
-                    ld      b,a                             ;[13c8] 47
-                    push    de                              ;[13c9] d5
-                    ld      e,b                             ;[13ca] 58
-                    ld      d,$00                           ;[13cb] 16 00
-                    ld      hl,$0006                        ;[13cd] 21 06 00
-                    add     hl,sp                           ;[13d0] 39
-                    add     hl,de                           ;[13d1] 19
-                    pop     de                              ;[13d2] d1
-                    ld      (ix-$02),l                      ;[13d3] dd 75 fe
-                    ld      (ix-$01),h                      ;[13d6] dd 74 ff
-                    ld      a,(ix-$21)                      ;[13d9] dd 7e df
-                    add     $37                             ;[13dc] c6 37
-                    ld      l,a                             ;[13de] 6f
-                    ld      a,(ix-$20)                      ;[13df] dd 7e e0
-                    adc     $01                             ;[13e2] ce 01
-                    ld      b,a                             ;[13e4] 47
-                    ld      a,c                             ;[13e5] 79
-                    ld      h,$00                           ;[13e6] 26 00
-                    add     l                               ;[13e8] 85
-                    ld      l,a                             ;[13e9] 6f
-                    ld      a,h                             ;[13ea] 7c
-                    adc     b                               ;[13eb] 88
-                    push    bc                              ;[13ec] c5
-                    push    de                              ;[13ed] d5
-                    ld      h,a                             ;[13ee] 67
-                    push    hl                              ;[13ef] e5
-                    call    _sst39sf_read_byte              ;[13f0] cd d1 12
-                    pop     af                              ;[13f3] f1
-                    ld      a,l                             ;[13f4] 7d
-                    pop     de                              ;[13f5] d1
-                    pop     bc                              ;[13f6] c1
-                    ld      l,(ix-$02)                      ;[13f7] dd 6e fe
-                    ld      h,(ix-$01)                      ;[13fa] dd 66 ff
-                    ld      (hl),a                          ;[13fd] 77
-                    inc     c                               ;[13fe] 0c
-                    jr      l_read_programs_00115           ;[13ff] 18 c0
+                    ld      a,c                             ;[1443] 79
+                    cp      $08                             ;[1444] fe 08
+                    jr      nc,l_read_programs_00104        ;[1446] 30 3b
+                    add     $08                             ;[1448] c6 08
+                    ld      b,a                             ;[144a] 47
+                    push    de                              ;[144b] d5
+                    ld      e,b                             ;[144c] 58
+                    ld      d,$00                           ;[144d] 16 00
+                    ld      hl,$0006                        ;[144f] 21 06 00
+                    add     hl,sp                           ;[1452] 39
+                    add     hl,de                           ;[1453] 19
+                    pop     de                              ;[1454] d1
+                    ld      (ix-$02),l                      ;[1455] dd 75 fe
+                    ld      (ix-$01),h                      ;[1458] dd 74 ff
+                    ld      a,(ix-$21)                      ;[145b] dd 7e df
+                    add     $37                             ;[145e] c6 37
+                    ld      l,a                             ;[1460] 6f
+                    ld      a,(ix-$20)                      ;[1461] dd 7e e0
+                    adc     $01                             ;[1464] ce 01
+                    ld      b,a                             ;[1466] 47
+                    ld      a,c                             ;[1467] 79
+                    ld      h,$00                           ;[1468] 26 00
+                    add     l                               ;[146a] 85
+                    ld      l,a                             ;[146b] 6f
+                    ld      a,h                             ;[146c] 7c
+                    adc     b                               ;[146d] 88
+                    push    bc                              ;[146e] c5
+                    push    de                              ;[146f] d5
+                    ld      h,a                             ;[1470] 67
+                    push    hl                              ;[1471] e5
+                    call    _sst39sf_read_byte              ;[1472] cd 53 13
+                    pop     af                              ;[1475] f1
+                    ld      a,l                             ;[1476] 7d
+                    pop     de                              ;[1477] d1
+                    pop     bc                              ;[1478] c1
+                    ld      l,(ix-$02)                      ;[1479] dd 6e fe
+                    ld      h,(ix-$01)                      ;[147c] dd 66 ff
+                    ld      (hl),a                          ;[147f] 77
+                    inc     c                               ;[1480] 0c
+                    jr      l_read_programs_00115           ;[1481] 18 c0
 l_read_programs_00104:
-                    ld      c,$00                           ;[1401] 0e 00
+                    ld      c,$00                           ;[1483] 0e 00
 l_read_programs_00118:
-                    ld      a,c                             ;[1403] 79
-                    sub     $03                             ;[1404] d6 03
-                    jr      nc,l_read_programs_00105        ;[1406] 30 41
-                    push    de                              ;[1408] d5
-                    ld      e,c                             ;[1409] 59
-                    ld      d,$00                           ;[140a] 16 00
-                    ld      hl,$0016                        ;[140c] 21 16 00
-                    add     hl,sp                           ;[140f] 39
-                    add     hl,de                           ;[1410] 19
-                    pop     de                              ;[1411] d1
-                    ld      a,(ix-$21)                      ;[1412] dd 7e df
-                    add     $2e                             ;[1415] c6 2e
-                    ld      (ix-$04),a                      ;[1417] dd 77 fc
-                    ld      a,(ix-$20)                      ;[141a] dd 7e e0
-                    adc     $01                             ;[141d] ce 01
-                    ld      (ix-$03),a                      ;[141f] dd 77 fd
-                    ld      a,c                             ;[1422] 79
-                    ld      b,$00                           ;[1423] 06 00
-                    add     (ix-$04)                        ;[1425] dd 86 fc
-                    ld      (ix-$02),a                      ;[1428] dd 77 fe
-                    ld      a,b                             ;[142b] 78
-                    adc     (ix-$03)                        ;[142c] dd 8e fd
-                    ld      (ix-$01),a                      ;[142f] dd 77 ff
-                    push    hl                              ;[1432] e5
-                    push    bc                              ;[1433] c5
-                    push    de                              ;[1434] d5
-                    push    hl                              ;[1435] e5
-                    ld      l,(ix-$02)                      ;[1436] dd 6e fe
-                    ld      h,(ix-$01)                      ;[1439] dd 66 ff
-                    ex      (sp),hl                         ;[143c] e3
-                    call    _sst39sf_read_byte              ;[143d] cd d1 12
-                    pop     af                              ;[1440] f1
-                    ld      a,l                             ;[1441] 7d
-                    pop     de                              ;[1442] d1
-                    pop     bc                              ;[1443] c1
-                    pop     hl                              ;[1444] e1
-                    ld      (hl),a                          ;[1445] 77
-                    inc     c                               ;[1446] 0c
-                    jr      l_read_programs_00118           ;[1447] 18 ba
+                    ld      a,c                             ;[1485] 79
+                    sub     $03                             ;[1486] d6 03
+                    jr      nc,l_read_programs_00105        ;[1488] 30 41
+                    push    de                              ;[148a] d5
+                    ld      e,c                             ;[148b] 59
+                    ld      d,$00                           ;[148c] 16 00
+                    ld      hl,$0016                        ;[148e] 21 16 00
+                    add     hl,sp                           ;[1491] 39
+                    add     hl,de                           ;[1492] 19
+                    pop     de                              ;[1493] d1
+                    ld      a,(ix-$21)                      ;[1494] dd 7e df
+                    add     $2e                             ;[1497] c6 2e
+                    ld      (ix-$04),a                      ;[1499] dd 77 fc
+                    ld      a,(ix-$20)                      ;[149c] dd 7e e0
+                    adc     $01                             ;[149f] ce 01
+                    ld      (ix-$03),a                      ;[14a1] dd 77 fd
+                    ld      a,c                             ;[14a4] 79
+                    ld      b,$00                           ;[14a5] 06 00
+                    add     (ix-$04)                        ;[14a7] dd 86 fc
+                    ld      (ix-$02),a                      ;[14aa] dd 77 fe
+                    ld      a,b                             ;[14ad] 78
+                    adc     (ix-$03)                        ;[14ae] dd 8e fd
+                    ld      (ix-$01),a                      ;[14b1] dd 77 ff
+                    push    hl                              ;[14b4] e5
+                    push    bc                              ;[14b5] c5
+                    push    de                              ;[14b6] d5
+                    push    hl                              ;[14b7] e5
+                    ld      l,(ix-$02)                      ;[14b8] dd 6e fe
+                    ld      h,(ix-$01)                      ;[14bb] dd 66 ff
+                    ex      (sp),hl                         ;[14be] e3
+                    call    _sst39sf_read_byte              ;[14bf] cd 53 13
+                    pop     af                              ;[14c2] f1
+                    ld      a,l                             ;[14c3] 7d
+                    pop     de                              ;[14c4] d1
+                    pop     bc                              ;[14c5] c1
+                    pop     hl                              ;[14c6] e1
+                    ld      (hl),a                          ;[14c7] 77
+                    inc     c                               ;[14c8] 0c
+                    jr      l_read_programs_00118           ;[14c9] 18 ba
 l_read_programs_00105:
-                    pop     hl                              ;[1449] e1
-                    push    hl                              ;[144a] e5
-                    ld      bc,$0124                        ;[144b] 01 24 01
-                    add     hl,bc                           ;[144e] 09
-                    push    de                              ;[144f] d5
-                    push    hl                              ;[1450] e5
-                    call    _sst39sf_read_byte              ;[1451] cd d1 12
-                    pop     af                              ;[1454] f1
-                    pop     de                              ;[1455] d1
-                    ld      h,$00                           ;[1456] 26 00
-                    ld      a,(ix-$21)                      ;[1458] dd 7e df
-                    add     $25                             ;[145b] c6 25
-                    ld      c,a                             ;[145d] 4f
-                    ld      a,(ix-$20)                      ;[145e] dd 7e e0
-                    adc     $01                             ;[1461] ce 01
-                    push    hl                              ;[1463] e5
-                    push    de                              ;[1464] d5
-                    ld      b,a                             ;[1465] 47
-                    push    bc                              ;[1466] c5
-                    call    _sst39sf_read_byte              ;[1467] cd d1 12
-                    pop     af                              ;[146a] f1
-                    ld      b,l                             ;[146b] 45
-                    pop     de                              ;[146c] d1
-                    pop     hl                              ;[146d] e1
-                    xor     a                               ;[146e] af
-                    ld      c,$00                           ;[146f] 0e 00
-                    add     hl,bc                           ;[1471] 09
-                    ld      (ix-$0a),l                      ;[1472] dd 75 f6
-                    ld      (ix-$09),h                      ;[1475] dd 74 f7
-                    ld      (ix-$08),$2e                    ;[1478] dd 36 f8 2e
-                    ld      hl,(_numprogs)                  ;[147c] 2a 09 61
-                    inc     hl                              ;[147f] 23
-                    ld      (_numprogs),hl                  ;[1480] 22 09 61
-                    ld      (ix-$04),e                      ;[1483] dd 73 fc
-                    ld      (ix-$03),d                      ;[1486] dd 72 fd
-                    xor     a                               ;[1489] af
-                    ld      (ix-$02),a                      ;[148a] dd 77 fe
-                    ld      (ix-$01),a                      ;[148d] dd 77 ff
+                    pop     hl                              ;[14cb] e1
+                    push    hl                              ;[14cc] e5
+                    ld      bc,$0124                        ;[14cd] 01 24 01
+                    add     hl,bc                           ;[14d0] 09
+                    push    de                              ;[14d1] d5
+                    push    hl                              ;[14d2] e5
+                    call    _sst39sf_read_byte              ;[14d3] cd 53 13
+                    pop     af                              ;[14d6] f1
+                    pop     de                              ;[14d7] d1
+                    ld      h,$00                           ;[14d8] 26 00
+                    ld      a,(ix-$21)                      ;[14da] dd 7e df
+                    add     $25                             ;[14dd] c6 25
+                    ld      c,a                             ;[14df] 4f
+                    ld      a,(ix-$20)                      ;[14e0] dd 7e e0
+                    adc     $01                             ;[14e3] ce 01
+                    push    hl                              ;[14e5] e5
+                    push    de                              ;[14e6] d5
+                    ld      b,a                             ;[14e7] 47
+                    push    bc                              ;[14e8] c5
+                    call    _sst39sf_read_byte              ;[14e9] cd 53 13
+                    pop     af                              ;[14ec] f1
+                    ld      b,l                             ;[14ed] 45
+                    pop     de                              ;[14ee] d1
+                    pop     hl                              ;[14ef] e1
+                    xor     a                               ;[14f0] af
+                    ld      c,$00                           ;[14f1] 0e 00
+                    add     hl,bc                           ;[14f3] 09
+                    ld      (ix-$0a),l                      ;[14f4] dd 75 f6
+                    ld      (ix-$09),h                      ;[14f7] dd 74 f7
+                    ld      (ix-$08),$2e                    ;[14fa] dd 36 f8 2e
+                    ld      hl,(_numprogs)                  ;[14fe] 2a 09 61
+                    inc     hl                              ;[1501] 23
+                    ld      (_numprogs),hl                  ;[1502] 22 09 61
+                    ld      (ix-$04),e                      ;[1505] dd 73 fc
+                    ld      (ix-$03),d                      ;[1508] dd 72 fd
+                    xor     a                               ;[150b] af
+                    ld      (ix-$02),a                      ;[150c] dd 77 fe
+                    ld      (ix-$01),a                      ;[150f] dd 77 ff
 l_read_programs_00121:
-                    ld      a,(ix-$02)                      ;[1490] dd 7e fe
-                    sub     $18                             ;[1493] d6 18
-                    ld      a,(ix-$01)                      ;[1495] dd 7e ff
-                    sbc     $00                             ;[1498] de 00
-                    jp      nc,l_read_programs_00108        ;[149a] d2 45 13
-                    ld      hl,$0002                        ;[149d] 21 02 00
-                    add     hl,sp                           ;[14a0] 39
-                    ld      e,(ix-$02)                      ;[14a1] dd 5e fe
-                    ld      d,(ix-$01)                      ;[14a4] dd 56 ff
-                    add     hl,de                           ;[14a7] 19
-                    ld      a,(hl)                          ;[14a8] 7e
-                    ld      c,(ix-$04)                      ;[14a9] dd 4e fc
-                    ld      b,(ix-$03)                      ;[14ac] dd 46 fd
-                    inc     (ix-$04)                        ;[14af] dd 34 fc
-                    jr      nz,l_read_programs_00195        ;[14b2] 20 03
-                    inc     (ix-$03)                        ;[14b4] dd 34 fd
+                    ld      a,(ix-$02)                      ;[1512] dd 7e fe
+                    sub     $18                             ;[1515] d6 18
+                    ld      a,(ix-$01)                      ;[1517] dd 7e ff
+                    sbc     $00                             ;[151a] de 00
+                    jp      nc,l_read_programs_00108        ;[151c] d2 c7 13
+                    ld      hl,$0002                        ;[151f] 21 02 00
+                    add     hl,sp                           ;[1522] 39
+                    ld      e,(ix-$02)                      ;[1523] dd 5e fe
+                    ld      d,(ix-$01)                      ;[1526] dd 56 ff
+                    add     hl,de                           ;[1529] 19
+                    ld      a,(hl)                          ;[152a] 7e
+                    ld      c,(ix-$04)                      ;[152b] dd 4e fc
+                    ld      b,(ix-$03)                      ;[152e] dd 46 fd
+                    inc     (ix-$04)                        ;[1531] dd 34 fc
+                    jr      nz,l_read_programs_00195        ;[1534] 20 03
+                    inc     (ix-$03)                        ;[1536] dd 34 fd
 l_read_programs_00195:
-                    ld      e,(ix-$04)                      ;[14b7] dd 5e fc
-                    ld      d,(ix-$03)                      ;[14ba] dd 56 fd
-                    push    de                              ;[14bd] d5
-                    push    af                              ;[14be] f5
-                    inc     sp                              ;[14bf] 33
-                    push    bc                              ;[14c0] c5
-                    call    _write_ram                      ;[14c1] cd dc 14
-                    pop     af                              ;[14c4] f1
-                    inc     sp                              ;[14c5] 33
-                    pop     de                              ;[14c6] d1
-                    inc     (ix-$02)                        ;[14c7] dd 34 fe
-                    jr      nz,l_read_programs_00121        ;[14ca] 20 c4
-                    inc     (ix-$01)                        ;[14cc] dd 34 ff
-                    jr      l_read_programs_00121           ;[14cf] 18 bf
+                    ld      e,(ix-$04)                      ;[1539] dd 5e fc
+                    ld      d,(ix-$03)                      ;[153c] dd 56 fd
+                    push    de                              ;[153f] d5
+                    push    af                              ;[1540] f5
+                    inc     sp                              ;[1541] 33
+                    push    bc                              ;[1542] c5
+                    call    _write_ram                      ;[1543] cd 5e 15
+                    pop     af                              ;[1546] f1
+                    inc     sp                              ;[1547] 33
+                    pop     de                              ;[1548] d1
+                    inc     (ix-$02)                        ;[1549] dd 34 fe
+                    jr      nz,l_read_programs_00121        ;[154c] 20 c4
+                    inc     (ix-$01)                        ;[154e] dd 34 ff
+                    jr      l_read_programs_00121           ;[1551] 18 bf
 l_read_programs_00125:
-                    inc     (ix-$07)                        ;[14d1] dd 34 f9
-                    jp      l_read_programs_00124           ;[14d4] c3 2b 13
+                    inc     (ix-$07)                        ;[1553] dd 34 f9
+                    jp      l_read_programs_00124           ;[1556] c3 ad 13
 l_read_programs_00126:
-                    ld      sp,ix                           ;[14d7] dd f9
-                    pop     ix                              ;[14d9] dd e1
-                    ret                                     ;[14db] c9
+                    ld      sp,ix                           ;[1559] dd f9
+                    pop     ix                              ;[155b] dd e1
+                    ret                                     ;[155d] c9
 
 _write_ram:
-                    push    ix                              ;[14dc] dd e5
-                    ld      ix,$0000                        ;[14de] dd 21 00 00
-                    add     ix,sp                           ;[14e2] dd 39
-                    ld      a,(ix+$04)                      ;[14e4] dd 7e 04
-                    push    af                              ;[14e7] f5
-                    inc     sp                              ;[14e8] 33
-                    ld      hl,$0060                        ;[14e9] 21 60 00
-                    push    hl                              ;[14ec] e5
-                    call    _z80_outp_callee                ;[14ed] cd 38 11
-                    ld      a,(ix+$05)                      ;[14f0] dd 7e 05
-                    push    af                              ;[14f3] f5
-                    inc     sp                              ;[14f4] 33
-                    ld      hl,$0061                        ;[14f5] 21 61 00
-                    push    hl                              ;[14f8] e5
-                    call    _z80_outp_callee                ;[14f9] cd 38 11
-                    ld      a,(ix+$06)                      ;[14fc] dd 7e 06
-                    push    af                              ;[14ff] f5
-                    inc     sp                              ;[1500] 33
-                    ld      hl,$0064                        ;[1501] 21 64 00
-                    push    hl                              ;[1504] e5
-                    call    _z80_outp_callee                ;[1505] cd 38 11
-                    pop     ix                              ;[1508] dd e1
-                    ret                                     ;[150a] c9
+                    push    ix                              ;[155e] dd e5
+                    ld      ix,$0000                        ;[1560] dd 21 00 00
+                    add     ix,sp                           ;[1564] dd 39
+                    ld      a,(ix+$04)                      ;[1566] dd 7e 04
+                    push    af                              ;[1569] f5
+                    inc     sp                              ;[156a] 33
+                    ld      hl,$0060                        ;[156b] 21 60 00
+                    push    hl                              ;[156e] e5
+                    call    _z80_outp_callee                ;[156f] cd 43 11
+                    ld      a,(ix+$05)                      ;[1572] dd 7e 05
+                    push    af                              ;[1575] f5
+                    inc     sp                              ;[1576] 33
+                    ld      hl,$0061                        ;[1577] 21 61 00
+                    push    hl                              ;[157a] e5
+                    call    _z80_outp_callee                ;[157b] cd 43 11
+                    ld      a,(ix+$06)                      ;[157e] dd 7e 06
+                    push    af                              ;[1581] f5
+                    inc     sp                              ;[1582] 33
+                    ld      hl,$0064                        ;[1583] 21 64 00
+                    push    hl                              ;[1586] e5
+                    call    _z80_outp_callee                ;[1587] cd 43 11
+                    pop     ix                              ;[158a] dd e1
+                    ret                                     ;[158c] c9
 
 _read_ram:
-                    push    ix                              ;[150b] dd e5
-                    ld      ix,$0000                        ;[150d] dd 21 00 00
-                    add     ix,sp                           ;[1511] dd 39
-                    ld      a,(ix+$04)                      ;[1513] dd 7e 04
-                    push    af                              ;[1516] f5
-                    inc     sp                              ;[1517] 33
-                    ld      hl,$0060                        ;[1518] 21 60 00
-                    push    hl                              ;[151b] e5
-                    call    _z80_outp_callee                ;[151c] cd 38 11
-                    ld      a,(ix+$05)                      ;[151f] dd 7e 05
-                    push    af                              ;[1522] f5
-                    inc     sp                              ;[1523] 33
-                    ld      hl,$0061                        ;[1524] 21 61 00
-                    push    hl                              ;[1527] e5
-                    call    _z80_outp_callee                ;[1528] cd 38 11
-                    ld      hl,$0064                        ;[152b] 21 64 00
-                    call    _z80_inp_fastcall               ;[152e] cd 40 11
-                    pop     ix                              ;[1531] dd e1
-                    ret                                     ;[1533] c9
+                    push    ix                              ;[158d] dd e5
+                    ld      ix,$0000                        ;[158f] dd 21 00 00
+                    add     ix,sp                           ;[1593] dd 39
+                    ld      a,(ix+$04)                      ;[1595] dd 7e 04
+                    push    af                              ;[1598] f5
+                    inc     sp                              ;[1599] 33
+                    ld      hl,$0060                        ;[159a] 21 60 00
+                    push    hl                              ;[159d] e5
+                    call    _z80_outp_callee                ;[159e] cd 43 11
+                    ld      a,(ix+$05)                      ;[15a1] dd 7e 05
+                    push    af                              ;[15a4] f5
+                    inc     sp                              ;[15a5] 33
+                    ld      hl,$0061                        ;[15a6] 21 61 00
+                    push    hl                              ;[15a9] e5
+                    call    _z80_outp_callee                ;[15aa] cd 43 11
+                    ld      hl,$0064                        ;[15ad] 21 64 00
+                    call    _z80_inp_fastcall               ;[15b0] cd 4b 11
+                    pop     ix                              ;[15b3] dd e1
+                    ret                                     ;[15b5] c9
 
-                    defb    $00                             ;[1534] 00
-                    sub     c                               ;[1535] 91
-                    nop                                     ;[1536] 00
-                    ld      h,c                             ;[1537] 61
-                    dec     c                               ;[1538] 0d
-                    ld      h,c                             ;[1539] 61
-                    nop                                     ;[153a] 00
-                    nop                                     ;[153b] 00
-                    inc     b                               ;[153c] 04
-                    ld      h,c                             ;[153d] 61
-                    ld      bc,$04e0                        ;[153e] 01 e0 04
-                    nop                                     ;[1541] 00
-                    djnz    $1544                           ;[1542] 10 00
+                    defb    $00                             ;[15b6] 00
+                    sub     c                               ;[15b7] 91
+                    nop                                     ;[15b8] 00
+                    ld      h,c                             ;[15b9] 61
+                    dec     c                               ;[15ba] 0d
+                    ld      h,c                             ;[15bb] 61
+                    nop                                     ;[15bc] 00
+                    nop                                     ;[15bd] 00
+                    inc     b                               ;[15be] 04
+                    ld      h,c                             ;[15bf] 61
+                    ld      bc,$04e0                        ;[15c0] 01 e0 04
+                    nop                                     ;[15c3] 00
+                    djnz    $15c6                           ;[15c4] 10 00

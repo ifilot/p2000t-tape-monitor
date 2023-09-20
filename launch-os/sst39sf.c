@@ -1,10 +1,5 @@
 #include "sst39sf.h"
 
-#define ADDR_LOW  0x60
-#define ADDR_HIGH 0x61
-#define ROMCHIP   0x65
-#define ROMBANK   0x63
-
 /**
  * Send a byte to the SST39SF0x0
  */

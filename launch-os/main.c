@@ -7,8 +7,11 @@
 
 __at (0x5000) char vidmem[];
 void printhex(uint16_t, uint8_t);
+void init(void);
 
 int main(void) {
+    init();
+
     sst39sf_set_bank(0);
     uint16_t romptr = 0x0000;
     for(uint16_t j=0; j<10; j++) {
@@ -47,4 +50,9 @@ void printhex(uint16_t vidaddr, uint8_t val) {
     } else {
         vidmem[vidaddr] = v + 65 - 10;
     }
+}
+
+void init(void) {
+    const char str[] = "Datacartridge test";
+    memcpy(&vidmem[23*0x50], str, strlen(str));
 }
