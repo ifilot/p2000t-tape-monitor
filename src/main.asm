@@ -34,7 +34,7 @@ start:
 ; initialization routine
 ;-------------------------------------------------------------------------------
 init:
-	;call initlog
+	call initlog
 	call clearscreen
 	call clearcmd
 	call prttitle
@@ -158,7 +158,6 @@ parsecmd:
 
 .strptrs:
 .strcopyram:	DB "copyram",255
-.strcopybuf:	DB "copybuf",255
 .strcopy:		DB "copy",255
 .strshowboot:	DB "showboot",255
 .strbootload:	DB "bootload",255
@@ -174,10 +173,9 @@ parsecmd:
 .strtestram:	DB "testram",255		; 7
 .strlist:		DB "list",255			; 4
 
-.cmdlengths: 	DB 7,7,4,8,8,4,5,6,7,7,7,7,7,7,7,4
+.cmdlengths: 	DB 7,4,8,8,4,5,6,7,7,7,7,7,7,7,4
 
 .cmdptrs:		DW cmdcopyram
-				DW cmdcopybuf
 				DW cmdcopy
 				DW cmdshowboot
 				DW cmdbootload
@@ -289,10 +287,7 @@ cmdtestram:
 ;
 ;-------------------------------------------------------------------------------
 cmdlist:
-	call copyprogblocks
-	call copydesceroera
-	call copyfileext
-	call copyfilelengths
+	call loadfiles
 	call showfiles
 	call init 					; go back to monitor
 	ret
@@ -303,36 +298,6 @@ cmdlist:
 cmdfindblk:
 	call findfreeblock
 	ret
-
-;-------------------------------------------------------------------------------
-; Copy current buffer to ROM chip
-; 
-; !! THIS FUNCTION NEEDS TO BE REMOVED !!
-;-------------------------------------------------------------------------------
-cmdcopybuf:
-	ld a,O_ROM_EXT			; set external rom chip
-	ld (ROMPORT),a
-	ld hl,.message
-	call printmessage
-	push de					; store screen address on stack
-	call findfreeblock		; load first free block and bank in bc
-	call calcromaddr		; calculate rom address in de
-	call calcmetaaddr		; calculate header storage address
-	pop de
-	call printromaddr		; print rom address
-	push de
-	;call copyramromlog		; store data in log
-	call markblock			; indicate that this block has been used
-	call copyheader
-	call copyblock			; copy block from RAM to ROM
-	pop de					; recall screen address
-	ld a,'-'
-	ld (de),a
-	inc de
-	call printromaddr
-	ret
-
-.message: DB "Copy current buffer to ROM:",255
 
 ;-------------------------------------------------------------------------------
 ; Copy $400 bytes from RAM to $9400 and display it
@@ -412,7 +377,7 @@ cmdcopy:
 	cp 0
 	jp nz,prtarchive			; stop on error
 	call prttapedata
-	call storeprogdata			; store program data
+	call storeprogdata			; store program data in memory
 	call prtarchive				; print program archive
 	call copyramrom				; copy to ROM chip
 	ld a,(BLOCKCTR)
@@ -484,8 +449,6 @@ cmdbootload:
 	ld (ROMCHIP),a			; set external chip to read from
 	ld de,0					; start address of copy instruction
 	ld hl,$4000				; number of bytes to copy
-	call ramrinse
-	call ramrinse
 	call copybank_rora
 	;---
 	;ex de,hl
@@ -577,9 +540,8 @@ copyramrom:
 	pop de
 	call printromaddr		; print rom address
 	push de
-	;call copyramromlog		; store data in log
 	di
-	call markblock          ; mark that the block is used
+	call markblock          ; write $00 to metadata byte $08
 	call copyheader         ; copy header from RAM to ROM
 	call copyblock			; copy block from RAM to ROM
 	call calcchecksum		; calculate the checksum from memory
@@ -1547,6 +1509,7 @@ include "crc16.asm"
 include "copy.asm"
 include "ram.asm"
 include "programlist.asm"
+include "log.asm"
 
 ;-------------------------------------------------------------------------------
 ; ascii conversion table

@@ -1,3 +1,4 @@
+;# MAIN="main.asm"
 ;-------------------------------------------------------------------------------
 ; Copies the first X b from ROM bank to RAM chip. Maximum number of bytes
 ; is limited to 32kb due to RAM chip capacity. For full 64kb copy, one needs

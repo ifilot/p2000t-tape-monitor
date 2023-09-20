@@ -1,3 +1,4 @@
+;# MAIN="main.asm"
 ;-------------------------------------------------------------------------------
 ; Send a byte to RAM chip
 ; input: de - chip address
@@ -6,27 +7,11 @@
 ; fixed: de
 ;-------------------------------------------------------------------------------
 ramsend:
+ramsendde:
 	ld iyh,a				; temporarily store a in i
 	ld a,e
 	out (O_ROM_LA),a		; set lower address
 	ld a,d
-	out (O_ROM_UA),a		; set upper address
-	ld a,iyh				; recall a from i
-	out (O_RAM_RW),a		; store byte
-	ret
-
-;-------------------------------------------------------------------------------
-; Send a byte to RAM chip
-; input: hl - chip address
-;         a - byte to write
-; uses: ixh
-; fixed: de
-;-------------------------------------------------------------------------------
-ramsendhl:
-	ld iyh,a				; temporarily store a in i
-	ld a,l
-	out (O_ROM_LA),a		; set lower address
-	ld a,h
 	out (O_ROM_UA),a		; set upper address
 	ld a,iyh				; recall a from i
 	out (O_RAM_RW),a		; store byte
@@ -44,6 +29,23 @@ ramsendbc:
 	ld a,c
 	out (O_ROM_LA),a		; set lower address
 	ld a,b
+	out (O_ROM_UA),a		; set upper address
+	ld a,iyh				; recall a from i
+	out (O_RAM_RW),a		; store byte
+	ret
+
+;-------------------------------------------------------------------------------
+; Send a byte to RAM chip
+; input: hl - chip address
+;         a - byte to write (retained)
+; uses: iyh
+; fixed: de
+;-------------------------------------------------------------------------------
+ramsendhl:
+	ld iyh,a				; temporarily store a in i
+	ld a,l
+	out (O_ROM_LA),a		; set lower address
+	ld a,h
 	out (O_ROM_UA),a		; set upper address
 	ld a,iyh				; recall a from i
 	out (O_RAM_RW),a		; store byte
@@ -118,13 +120,43 @@ stairram:
 	ret
 
 ;-------------------------------------------------------------------------------
-; Rinse RAM and ROM
+; Copy bytes from external ROM to external RAM
+;
+; input: bc - number of bytes
+;        de - rom address
+;        hl - ram address
+;
+; uses: a,bc,de,hl,iyh
 ;-------------------------------------------------------------------------------
-ramrinse:
-	ld a,0
-	out (O_ROM_BANK),a
-	out (O_ROM_LA),a
-	out (O_ROM_UA),a
-	in a,(O_ROM_EXT)
-	out (O_RAM_RW),a
+copysectorrora:
+.nextbyte:
+	call sst39sfrecvextrom		; read byte from external rom
+	call ramsendhl				; write byte to external RAM
+	inc de						; increment rom addr
+	inc hl						; increment ram addr
+	dec bc						; decrement counter
+	ld a,b
+	or c
+	jr nz,.nextbyte
 	ret
+
+;-------------------------------------------------------------------------------
+; Copy bytes from external RAM to external ROM
+;
+; input: bc - number of bytes
+;        de - rom address
+;        hl - ram address
+;
+; uses: a,bc,de,hl,iyh
+;-------------------------------------------------------------------------------
+copysectorraro:
+.nextbyte:
+	call ramrecvhl				; read byte from external RAM
+	call sst39sfwrbyteaccde		; write byte from a to to external ROM de
+	inc de						; increment rom addr
+	inc hl						; increment ram addr
+	dec bc						; decrement counter
+	ld a,b
+	or c
+	ret z
+	jr .nextbyte

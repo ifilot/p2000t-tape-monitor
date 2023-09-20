@@ -1,3 +1,4 @@
+;# MAIN="main.asm"
 ;-------------------------------------------------------------------------------
 ; Completely erase a 64 kb bank of a ROM chip
 ; $0000-$FFFF
@@ -87,6 +88,22 @@ sst39sfsend:
 	ret
 
 ;-------------------------------------------------------------------------------
+; Send a byte to SST39SF0x0 chip
+; input: de - chip address
+;         b - byte to send
+; uses: a
+; fixed: c,de
+;-------------------------------------------------------------------------------
+sst39sfsendexrom:
+	ld a,e
+	out (O_ROM_LA),a
+	ld a,d
+	out (O_ROM_UA),a
+	ld a,b
+	out (O_ROM_EXT),a
+	ret
+
+;-------------------------------------------------------------------------------
 ; Receive a byte from SST39SF0x0 chip
 ; input:  c - port number
 ;		 de - chip address
@@ -118,9 +135,9 @@ sst39sfrecvintromhl:
 
 ;-------------------------------------------------------------------------------
 ; Receive a byte from internal SST39SF0x0 chip
-; input: de - chip address
+; input: hl - chip address
 ; output: a - byte at address
-;		 de - chip address
+;		 hl - chip address
 ;-------------------------------------------------------------------------------
 sst39sfrecvextromhl:
 	ld a,l
@@ -235,6 +252,35 @@ sst39sfwrbyteacc:
 	pop af				; retrieve byte to be written
 	ld b,a				; set byte in b
 	call sst39sfsend
+	ret
+
+;-------------------------------------------------------------------------------
+; Write a single byte from accumulator
+; input:  de - chip address
+;		   a - byte to write
+; output:  a - byte to write
+;		  de - rom address
+; uses: iyh
+;-------------------------------------------------------------------------------
+sst39sfwrbyteaccde:
+	di
+	ld iyh,a			; store byte to be written in a
+	push de				; store rom address
+	exx
+	ld de,$5555
+	ld b,$AA
+	call sst39sfsendexrom
+	ld de,$2AAA
+	ld b,$55
+	call sst39sfsendexrom
+	ld de,$5555
+	ld b,$A0
+	call sst39sfsendexrom
+	pop de				; retrieve rom address
+	ld b,iyh			; set byte in b
+	call sst39sfsendexrom
+	exx
+	ei
 	ret
 
 ;-------------------------------------------------------------------------------

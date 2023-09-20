@@ -1,3 +1,4 @@
+;# MAIN="main.asm"
 ;-------------------------------------------------------------------------------
 ; VARIABLES
 ;-------------------------------------------------------------------------------
@@ -65,20 +66,35 @@ STRPTR:		equ $9148	; string pointer
 CRC:		equ $9150	; used to store intermediary CRC result (2 bytes)
 RAMFLAG:	equ $9152	; byte which RAM should be shown
 
+; variables for file deletion and program monitor
+CURBANK:		equ $9154	; counter to keep track of which bank we are in
+CURBLOCK: 		equ $9155	; counter to keep track of which block we are in
+CURBANKBLOCK:	equ $9156	; current bank and block holder in linked list
+FVIDPOS:		equ $9158   ; current video position
+FEXTRAMPTR:		equ $915A	; pointer to external ram address
+CURSECTOR:		equ $915C	; current sector
+BLOCKSUSED:		equ $915E	; count number of blocks used
+
 ; MONITOR RAM FLAG constants
 RAMFLAGRAMINT: equ $00
 RAMFLAGRAMEXT: equ $01
 RAMFLAGROMINT: equ $02
 RAMFLAGROMEXT: equ $03
 
-; MONITOR STARTIN ADDRESS LOCATIONS
-MONADDR: 	equ $9154	; address for monitor (word)
-EXTRAMADDR:	equ $9156	; current address in external RAM for monitor (2 bytes)
-INTROMADDR:	equ $9158	; current address in internal ROM for monitor (2 bytes)
-EXTROMADDR:	equ $915A	; current address in external ROM for monitor (2 bytes)
-MAXFILES:	equ $915C	; how many files are on the external ROM (2 bytes)
-FILESTART:	equ $915E   ; which file to look at (2 bytes)
-PRGPOINTER: equ $9160	; currently selected program
+; MONITOR STARTING ADDRESS LOCATIONS
+MONADDR: 	equ $9160	; address for monitor (word)
+EXTRAMADDR:	equ $9162	; current address in external RAM for monitor (2 bytes)
+INTROMADDR:	equ $9164	; current address in internal ROM for monitor (2 bytes)
+EXTROMADDR:	equ $9166	; current address in external ROM for monitor (2 bytes)
+MAXFILES:	equ $9168	; how many files are on the external ROM (2 bytes)
+FILESTART:	equ $916A   ; which file to look at (2 bytes)
+PRGPOINTER: equ $916C	; currently selected program (2 bytes)
+TEMPCURSEC: equ $916E	; temporary variable current sector
+
+; addresses for file I/O (external RAM)
+FILEBLADDR: equ $6000
+FILEOPLIST:	equ $6400
+FILEIOBUF:	equ $7000
 
 ; variables for keyboard interface
 KEYBUF:		equ $6000	; start of key buffer

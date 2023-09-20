@@ -7,11 +7,12 @@ Read data from tapes and write them to an external ROM chip.
 
 ## Assembly
 Assemble the source code in [src/main.asm](src/tapemon.asm) using the
-P2000T-ide or the [tniasm Z80 assembler](http://www.tni.nl/products/tniasm.html) 
+[P2000T-ide](https://github.com/ifilot/p2000t-ide) 
+or the [tniasm Z80 assembler](http://www.tni.nl/products/tniasm.html) 
 and place the resulting binary file in a SLOT1 cartridge.
 
 ## Commands
-Upon boot of the P2000T a monitor-type of programmed is displayed from which
+Upon boot of the P2000T a monitor-type of program is displayed from which
 the user can read out the address space of the P2000T and interface with the
 tape recorder. The program accepts the following commands:
 
