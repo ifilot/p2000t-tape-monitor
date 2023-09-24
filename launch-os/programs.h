@@ -2,6 +2,10 @@
 #define _PROGRAMS_H
 
 #include <stdint.h>
+#include "vidmem.h"
+#include "util.h"
+
+#define RAMADDRPROG 0x4000
 
 // store number of programss
 extern uint16_t numprogs;
@@ -16,5 +20,7 @@ struct Program {
 };
 
 void read_programs(void);
+
+void print_programs(void);
 
 #endif // _PROGRAMS_H

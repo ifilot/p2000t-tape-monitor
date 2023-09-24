@@ -13,7 +13,7 @@ __at (0x5000) char vidmem_base[];
  */
 void read_programs(void) {
 	numprogs = 0;
-	uint16_t ram_ptr = 0;
+	uint16_t ram_ptr = RAMADDRPROG;
 	uint16_t vidmemptr = 0x50 * 10;
 
 	// loop over the rom banks
@@ -56,9 +56,8 @@ void read_programs(void) {
 			}
 
 			// read program size
-			prg.size = sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x24) + 
-			           (sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x25) << 8);
-
+			prg.size = (sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x24) << 8) + 
+			            sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x25);
 
 			prg.padding = '.';
 
@@ -71,4 +70,21 @@ void read_programs(void) {
 			}
 		}
 	}
+}
+
+void print_programs(void) {
+	for(uint16_t i=0; i<20; i++) {
+        for(uint8_t j=0; j<16; j++) {
+            vidmem[i*0x50+j] = read_ram(RAMADDRPROG + i * 24 + 2 + j);
+        }
+        
+        vidmem[i*0x50+16] = ' ';
+        
+        for(uint8_t j=0; j<3; j++) {
+            vidmem[i*0x50+17+j] = read_ram(RAMADDRPROG + i * 24 + 18 + j);
+        }
+
+        printhex(i*0x50+21, read_ram(RAMADDRPROG + i * 24 + 21));
+        printhex(i*0x50+23, read_ram(RAMADDRPROG + i * 24 + 22));
+    }
 }

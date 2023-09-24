@@ -1,8 +1,12 @@
-all: main.bin main.map main.rom disassembly.txt
-
-main.bin main.map main.rom: main.c sst39sf.c programs.c ram.c
-	docker run -v ${PWD}:/src/ -it z88dk/z88dk zcc \
-	+embedded -clib=sdcc_iy main.c sst39sf.c programs.c ram.c \
+main.bin main.map main.rom: main.c sst39sf.c programs.c ram.c util.c vidmem.c
+	zcc \
+	+embedded -clib=sdcc_iy \
+	main.c \
+	sst39sf.c \
+	programs.c \
+	ram.c \
+	util.c \
+	vidmem.c \
 	-startup=2 \
 	-pragma-define:CRT_ORG_CODE=0x1000 \
 	-pragma-define:CRT_ORG_DATA=0x6100 \
@@ -13,6 +17,3 @@ main.bin main.map main.rom: main.c sst39sf.c programs.c ram.c
 	--max-allocs-per-node200000 \
 	-SO3 -bn main.bin \
 	-create-app -m
-
-disassembly.txt: main.map main.rom
-	z88dk-dis -mz80 -o 0x1000 -x main.map main.rom > disassembly.txt
