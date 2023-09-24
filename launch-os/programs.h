@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include "memory.h"
 #include "util.h"
+#include "constants.h"
 
 #define RAMADDRPROG 0x4000
 #define PRINTPROGROW 3

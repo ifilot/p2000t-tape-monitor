@@ -70,12 +70,18 @@ void read_programs(void) {
 }
 
 /**
- * @brief      Read all programs from banks
+ * @brief      Read 16 programs with respect to a given offset
+ *             stores the result in external RAM.
  */
 void read_programs_offset(uint16_t offset) {
     uint16_t numprogs = 0;
     uint16_t ram_ptr = RAMADDRPROG;
+
+    // set starting bank
     uint8_t bank = 0;
+    sst39sf_set_bank(bank);
+
+    // set start positions
     uint8_t startblock = 0;
     uint16_t addr = 0x0000;
 
@@ -85,9 +91,11 @@ void read_programs_offset(uint16_t offset) {
 
         // terminate loop upon reading 0xFF
         if(startblock == 0xFF) {
+            // increment bank
             bank++;
-
             sst39sf_set_bank(bank);
+
+            // reset start position on bank
             startblock = 0;
             addr = 0x0000;
 
@@ -148,6 +156,11 @@ void read_programs_offset(uint16_t offset) {
     }
 }
 
+/**
+ * @brief      Get the total number of programs (files) on the chip
+ *
+ * @return     The number of programs.
+ */
 uint16_t get_number_programs(void) {
     uint16_t numprogs = 0;
     uint16_t ram_ptr = RAMADDRPROG;
@@ -178,6 +191,12 @@ uint16_t get_number_programs(void) {
     return numprogs;
 }
 
+/**
+ * @brief      Print the programs
+ *
+ * @param[in]  numprogs  The numprogs
+ * @param[in]  offset    The offset
+ */
 void print_programs(uint8_t numprogs, uint16_t offset) {
     for(uint16_t i=0; i<numprogs; i++) {
 
@@ -185,27 +204,32 @@ void print_programs(uint8_t numprogs, uint16_t offset) {
             break;
         }
 
-        sprintf(&vidmem[0x50*(i+PRINTPROGROW)], "%03i", i + offset + 1);
+        vidmem[(i+PRINTPROGROW)*0x50] = COL_WHITE;
+        sprintf(&vidmem[(i+PRINTPROGROW)*0x50+1], "%03i", i + offset + 1);
 
+        vidmem[(i+PRINTPROGROW)*0x50+4] = COL_YELLOW;
         for(uint8_t j=0; j<16; j++) {
-            vidmem[(i+PRINTPROGROW)*0x50+j+4] = read_ram(RAMADDRPROG + i * 24 + 2 + j);
+            vidmem[(i+PRINTPROGROW)*0x50+j+5] = read_ram(RAMADDRPROG + i * 24 + 2 + j);
         }
         
-        vidmem[i*0x50+16+4] = ' ';
-        
+        vidmem[(i+PRINTPROGROW)*0x50+21] = COL_CYAN;
         for(uint8_t j=0; j<3; j++) {
-            vidmem[(i+PRINTPROGROW)*0x50+17+j+4] = read_ram(RAMADDRPROG + i * 24 + 18 + j);
+            vidmem[(i+PRINTPROGROW)*0x50+22+j] = read_ram(RAMADDRPROG + i * 24 + 18 + j);
         }
 
         // print number of bytes
-        printhex((i+PRINTPROGROW)*0x50+21+4, read_ram(RAMADDRPROG + i * 24 + 21));
-        printhex((i+PRINTPROGROW)*0x50+23+4, read_ram(RAMADDRPROG + i * 24 + 22));
+        vidmem[(i+PRINTPROGROW)*0x50+25] = COL_MAGENTA;
+        uint16_t size = read_ram(RAMADDRPROG + i * 24 + 21) * 256 +
+                        read_ram(RAMADDRPROG + i * 24 + 22);
+        sprintf(&vidmem[(i+PRINTPROGROW)*0x50+26], "%5i", size);
 
         // print starting bank
-        printhex((i+PRINTPROGROW)*0x50+26+4, read_ram(RAMADDRPROG + i * 24 + 0));
+        vidmem[(i+PRINTPROGROW)*0x50+31] = COL_GREEN;
+        printhex((i+PRINTPROGROW)*0x50+32, read_ram(RAMADDRPROG + i * 24 + 0));
 
         // print starting block
-        printhex((i+PRINTPROGROW)*0x50+29+4, read_ram(RAMADDRPROG + i * 24 + 1));
+        vidmem[(i+PRINTPROGROW)*0x50+34] = COL_RED;
+        printhex((i+PRINTPROGROW)*0x50+35, read_ram(RAMADDRPROG + i * 24 + 1));
     }
 
     printhex(23*0x50, offset+1);
