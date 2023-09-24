@@ -1,10 +1,11 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
+
 #include "sst39sf.h"
 #include "programs.h"
 #include "ram.h"
-#include "vidmem.h"
+#include "memory.h"
 
 void init(void);
 
@@ -29,10 +30,44 @@ int main(void) {
 
     // read the programs on the cartridge and place the
     // contents on the cartridge RAM
-    read_programs();
-    print_programs();
+    
+    uint16_t offset = 0;
+    read_programs_offset(offset);
+    print_programs(16);
 
-    return 0;
+    while(1) {
+        if(keymem[0x0C] > 0) {
+            for(uint8_t i=0; i<keymem[0x0C]; i++) {
+                switch(keymem[i]) {
+                    case 25:  // 'n'
+                        offset += 8;
+                        read_programs_offset(offset);
+                        print_programs(16);
+                        break;
+                    case 53: // 'p'
+                        if(offset > 8) {
+                            offset -= 8;
+                        } else {
+                            offset = 0;
+                        }
+                        read_programs_offset(offset);
+                        print_programs(16);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            keymem[0x0C] = 0;
+        }
+        printhex(20*0x50, offset);
+
+        for(uint8_t i=0; i<8; i++) {
+            printhex(21*0x50+(i*3), keymem[i]);    
+        }
+        for(uint8_t i=0; i<8; i++) {
+            printhex(22*0x50+(i*3), keymem[i+8]);    
+        }
+    }
 }
 
 void init(void) {

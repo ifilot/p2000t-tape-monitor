@@ -1,4 +1,4 @@
-main.bin main.map main.rom: main.c sst39sf.c programs.c ram.c util.c vidmem.c
+main.bin main.map main.rom: main.c sst39sf.c programs.c ram.c util.c memory.c
 	zcc \
 	+embedded -clib=sdcc_iy \
 	main.c \
@@ -6,7 +6,7 @@ main.bin main.map main.rom: main.c sst39sf.c programs.c ram.c util.c vidmem.c
 	programs.c \
 	ram.c \
 	util.c \
-	vidmem.c \
+	memory.c \
 	-startup=2 \
 	-pragma-define:CRT_ORG_CODE=0x1000 \
 	-pragma-define:CRT_ORG_DATA=0x6100 \

@@ -2,7 +2,7 @@
 #define _PROGRAMS_H
 
 #include <stdint.h>
-#include "vidmem.h"
+#include "memory.h"
 #include "util.h"
 
 #define RAMADDRPROG 0x4000
@@ -21,6 +21,8 @@ struct Program {
 
 void read_programs(void);
 
-void print_programs(void);
+void read_programs_offset(uint16_t offset);
+
+void print_programs(uint8_t numprogs);
 
 #endif // _PROGRAMS_H
