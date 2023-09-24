@@ -30,28 +30,32 @@ int main(void) {
 
     // read the programs on the cartridge and place the
     // contents on the cartridge RAM
-    
+    __nrprogs = get_number_programs();
     uint16_t offset = 0;
     read_programs_offset(offset);
-    print_programs(16);
+    print_programs(16, offset);
 
     while(1) {
         if(keymem[0x0C] > 0) {
             for(uint8_t i=0; i<keymem[0x0C]; i++) {
                 switch(keymem[i]) {
                     case 25:  // 'n'
-                        offset += 8;
+                        if(offset + 16 < (__nrprogs - 16)) {
+                            offset += 16;
+                        } else {
+                            offset = __nrprogs - 17;
+                        }
                         read_programs_offset(offset);
-                        print_programs(16);
+                        print_programs(16, offset);
                         break;
                     case 53: // 'p'
-                        if(offset > 8) {
-                            offset -= 8;
+                        if(offset > 16) {
+                            offset -= 16;
                         } else {
                             offset = 0;
                         }
                         read_programs_offset(offset);
-                        print_programs(16);
+                        print_programs(16, offset);
                         break;
                     default:
                         break;
@@ -59,18 +63,12 @@ int main(void) {
             }
             keymem[0x0C] = 0;
         }
-        printhex(20*0x50, offset);
-
-        for(uint8_t i=0; i<8; i++) {
-            printhex(21*0x50+(i*3), keymem[i]);    
-        }
-        for(uint8_t i=0; i<8; i++) {
-            printhex(22*0x50+(i*3), keymem[i+8]);    
-        }
     }
 }
 
 void init(void) {
-    const char str[] = "Datacartridge test";
-    memcpy(&vidmem[23*0x50], str, strlen(str));
+    vidmem[0x0000] = 0x06;    // cyan color
+    vidmem[0x0001] = 0x0D;    // double height
+    const char str[] = "Launcher";
+    memcpy(&vidmem[0x0002], str, strlen(str));
 }

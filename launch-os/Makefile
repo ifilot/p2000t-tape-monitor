@@ -14,6 +14,6 @@ main.bin main.map main.rom: main.c sst39sf.c programs.c ram.c util.c memory.c
 	-pragma-define:CRT_STACK_SIZE=256 \
 	-pragma-define:CRT_INCLUDE_PREAMBLE=1 \
 	-pragma-define:CLIB_FOPEN_MAX=0 \
-	--max-allocs-per-node200000 \
+	--max-allocs-per-node2000 \
 	-SO3 -bn main.bin \
 	-create-app -m
