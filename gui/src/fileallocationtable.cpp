@@ -101,6 +101,15 @@ const File& FileAllocationTable::get_file(unsigned int id) {
 }
 
 /**
+ * @brief Get a single file
+ * @param file index
+ * @return file (meta-)data
+ */
+const File& FileAllocationTable::get_file_metadata(unsigned int id) {
+    return this->files[id];
+}
+
+/**
  * @brief Create a CAS file from a file
  * @param id
  * @return

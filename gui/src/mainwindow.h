@@ -152,6 +152,11 @@ private slots:
     void slot_run();
 
     /**
+     * @brief Produce a list of all programs
+     */
+    void slot_list();
+
+    /**
      * @brief Save a binary file
      */
     void slot_save();

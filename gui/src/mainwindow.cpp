@@ -108,6 +108,9 @@ void MainWindow::create_dropdown_menu() {
     QAction *action_run = new QAction(menu_tools);
     action_run->setText(tr("Run file"));
     menu_tools->addAction(action_run);
+    QAction *action_list = new QAction(menu_tools);
+    action_list->setText(tr("List programs"));
+    menu_tools->addAction(action_list);
 
     // actions for help menu
     QAction *action_about = new QAction(menu_help);
@@ -116,6 +119,7 @@ void MainWindow::create_dropdown_menu() {
 
     // connect actions file menu
     connect(action_run, &QAction::triggered, this, &MainWindow::slot_run);
+    connect(action_list, &QAction::triggered, this, &MainWindow::slot_list);
     connect(action_save, &QAction::triggered, this, &MainWindow::slot_save);
     connect(action_about, &QAction::triggered, this, &MainWindow::slot_about);
     connect(action_quit, &QAction::triggered, this, &MainWindow::exit);
@@ -376,6 +380,18 @@ void MainWindow::slot_run() {
     runthread->set_process_configuration(ThreadRun::ProcessConfiguration::MCODE_AS_CAS);
     connect(runthread, SIGNAL(signal_run_complete(void*)), this, SLOT(slot_run_complete(void*)));
     runthread->start();
+}
+
+/**
+ * @brief Run a .cas file
+ */
+void MainWindow::slot_list() {
+    for(unsigned int i=0; i<this->fat->get_num_files(); i++) {
+        const auto& file = this->fat->get_file_metadata(i);
+        qDebug() << tr("%1 %2 %3").arg(QString::fromUtf8(file.filename, 16))
+                                  .arg(file.startbank)
+                                  .arg(file.startblock);
+    }
 }
 
 /**
