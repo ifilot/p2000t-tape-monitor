@@ -8,6 +8,7 @@
 #include "constants.h"
 
 #define RAMADDRPROG 0x4000
+#define RAMLINKEDLIST 0x5000
 #define PRINTPROGROW 3
 
 // store number of programs
@@ -29,5 +30,11 @@ void read_programs(void);
 void read_programs_offset(uint16_t offset);
 
 void print_programs(uint8_t numprogs, uint16_t offset);
+
+void build_linked_list(uint16_t progid);
+
+void print_linked_list(uint8_t row);
+
+void copyprogramlinkedlist(void);
 
 #endif // _PROGRAMS_H

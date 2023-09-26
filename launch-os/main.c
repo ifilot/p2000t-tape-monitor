@@ -68,6 +68,9 @@ int main(void) {
                     case 44:
                         handle_key(keymem[i]);
                         break;
+                    case 52:
+                        handle_keybuffer_return();
+                        break;
                     default:
                         break;
                 }
@@ -125,6 +128,30 @@ void handle_key(uint8_t key) {
 
 void handle_keybuffer_return(void) {
     uint16_t progid = strtoul(keybuffer, 0x00, 10);
+    char buf[40];
+    if(progid > 0 && progid <= __nrprogs) {
+        uint8_t nrchars = sprintf(buf, "Loading program: %03i", progid);
+        memcpy(&vidmem[0x50*21], buf, nrchars);
+        build_linked_list(progid-1);
+        //print_linked_list(20);
+        copyprogramlinkedlist();
+
+        for(uint8_t i=0; i<16; i++) {
+            clearline(i+3);
+            for(uint8_t j=0; j<8; j++) {
+                printhex(0x50*(i+3)+j*3, read_ram(i * 0x400 + j));
+            }
+        }
+    } else {
+        uint8_t nrchars = sprintf(buf, "Invalid program id: %03i", progid);
+        memcpy(&vidmem[0x50*21], buf, strlen(buf));
+    }
+
+    // clean video buffer
+    clearline(22);
+    memset(keybuffer, 0x00, 3);
+    memcpy(&vidmem[0x50*22+22], keybuffer, 3);
+    numkeysbuf = 0;
 }
 
 void init(void) {

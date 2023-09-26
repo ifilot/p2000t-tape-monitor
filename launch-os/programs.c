@@ -236,3 +236,92 @@ void print_programs(uint8_t numprogs, uint16_t offset) {
     printhex(23*0x50+3, offset + 16);
     printhex(23*0x50+6, __nrprogs);
 }
+
+void build_linked_list(uint16_t progid) {
+    uint16_t numprogs = 0;
+    uint16_t ram_ptr = RAMADDRPROG;
+
+    // set starting bank
+    uint8_t bank = 0;
+    sst39sf_set_bank(bank);
+
+    // set start positions
+    uint8_t startblock = 0;
+    uint16_t addr = 0x0000;
+
+    // skip first items by offset
+    while((numprogs < progid) && (bank < 8)) {
+        startblock = sst39sf_read_byte(addr++);
+
+        // terminate loop upon reading 0xFF
+        if(startblock == 0xFF) {
+            // increment bank
+            bank++;
+            sst39sf_set_bank(bank);
+
+            // reset start position on bank
+            startblock = 0;
+            addr = 0x0000;
+
+            continue;
+        }
+
+        numprogs++;
+    }
+
+    // establish startbank and startblock of chosen program
+    uint8_t nextblock = sst39sf_read_byte(addr);
+    uint8_t nextbank = bank;
+    uint16_t ramptr = RAMLINKEDLIST;
+
+    while(nextbank != 0xFF) {
+        // write linked list to ram
+        write_ram(ramptr++, nextbank);
+        write_ram(ramptr++, nextblock);
+
+        sst39sf_set_bank(nextbank);
+        nextbank = sst39sf_read_byte(0x0100 + 0x40 * nextblock + 0x03);
+        nextblock = sst39sf_read_byte(0x0100 + 0x40 * nextblock + 0x04);
+    }
+
+    // terminate with two 0xFF characters
+    write_ram(ramptr++, 0xFF);
+    write_ram(ramptr++, 0xFF);
+}
+
+void print_linked_list(uint8_t row) {
+    clearline(row);
+
+    uint16_t ramptr = RAMLINKEDLIST;
+    uint8_t nextbank = read_ram(ramptr++);
+    uint8_t nextblock = read_ram(ramptr++);
+    uint8_t numblocks = 0;
+
+    while(nextbank != 0xFF) {
+        printhex(row*0x50+numblocks*5, nextbank);
+        printhex(row*0x50+numblocks*5+2, nextblock);
+
+        numblocks++;
+        nextbank = read_ram(ramptr++);
+        nextblock = read_ram(ramptr++);
+    }
+}
+
+void copyprogramlinkedlist(void) {
+    uint16_t llptr = RAMLINKEDLIST;
+    uint8_t nextbank = read_ram(llptr++);
+    uint8_t nextblock = read_ram(llptr++);
+
+    uint16_t ramptr = 0x0000;
+    while(nextbank != 0xFF) {
+        sst39sf_set_bank(nextbank);
+
+        uint16_t romptr = 0x1000 + nextblock * 0x400;
+        for(uint16_t i=0; i<0x400; i++) {
+            write_ram(ramptr++, sst39sf_read_byte(romptr++));
+        }
+
+        nextbank = read_ram(llptr++);
+        nextblock = read_ram(llptr++);
+    }
+}
