@@ -22,3 +22,14 @@ void printhex(uint16_t vidaddr, uint8_t val) {
 void clearline(uint8_t row) {
     memset(&vidmem[row * 0x50], 0x00, 40);
 }
+
+void clearscreen(void) {
+    #asm
+    ld a,0x00
+    ld hl,0x5000
+    ld (hl),a
+    ld de,0x5001
+    ld bc,0x1000
+    ldir
+    #endasm
+}

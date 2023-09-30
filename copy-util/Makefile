@@ -1,7 +1,8 @@
-main.bin main.map main.rom: main.c sst39sf.c memory.c util.c
+main.bin main.map main.rom: main.c sst39sf.c memory.c util.c copy.asm
 	zcc \
 	+embedded -clib=sdcc_iy \
 	main.c \
+	copy.asm \
 	sst39sf.c \
 	memory.c \
 	util.c \

@@ -61,9 +61,9 @@ def upload_rom(ser, filename):
     data = bytearray(f.read())
     f.close()
     
-    # wipe first bank
+    # wipe second bank
     for i in range(0,4):
-        ser.write(b'ESST00%02X' % (i * 0x10))
+        ser.write(b'ESST00%02X' % ((i+4) * 0x10))
         res = ser.read(8)
         print(res)
         res = ser.read(2)
@@ -75,8 +75,9 @@ def upload_rom(ser, filename):
     print('Expanding %i to %i' % (sz, exp))
     data.extend(np.zeros(exp - sz))
     
+    offset = 16*1024//256
     for i in range(0, exp // 256):
-        ser.write(b'WRBK%04X' % i)
+        ser.write(b'WRBK%04X' % (i + offset))
         res = ser.read(8)
         print(res)
         parcel = data[i*256:(i+1)*256]

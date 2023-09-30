@@ -8,5 +8,6 @@
 
 void printhex(uint16_t, uint8_t);
 void clearline(uint8_t);
+void clearscreen(void);
 
 #endif
