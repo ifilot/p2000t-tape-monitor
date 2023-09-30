@@ -31,7 +31,7 @@ void read_programs_offset(uint16_t offset);
 
 void print_programs(uint8_t numprogs, uint16_t offset);
 
-void build_linked_list(uint16_t progid);
+uint16_t build_linked_list(uint16_t progid);
 
 void print_linked_list(uint8_t row);
 

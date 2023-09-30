@@ -237,7 +237,7 @@ void print_programs(uint8_t numprogs, uint16_t offset) {
     printhex(23*0x50+6, __nrprogs);
 }
 
-void build_linked_list(uint16_t progid) {
+uint16_t build_linked_list(uint16_t progid) {
     uint16_t numprogs = 0;
     uint16_t ram_ptr = RAMADDRPROG;
 
@@ -273,6 +273,8 @@ void build_linked_list(uint16_t progid) {
     uint8_t nextblock = sst39sf_read_byte(addr);
     uint8_t nextbank = bank;
     uint16_t ramptr = RAMLINKEDLIST;
+    uint16_t prgsize = (sst39sf_read_byte(0x0100 + 0x40 * nextblock + 0x24) << 8) +
+                        sst39sf_read_byte(0x0100 + 0x40 * nextblock + 0x25);
 
     while(nextbank != 0xFF) {
         // write linked list to ram
@@ -287,6 +289,8 @@ void build_linked_list(uint16_t progid) {
     // terminate with two 0xFF characters
     write_ram(ramptr++, 0xFF);
     write_ram(ramptr++, 0xFF);
+
+    return prgsize;
 }
 
 void print_linked_list(uint8_t row) {

@@ -75,7 +75,21 @@ loadcode:
     or c
     jr nz,.nextbyte
     ei
-    jp EXCODE
+    call EXCODE
+    jp loadrom
+
+loadrom:
+    call clrscrn
+    ld de,$8000-2
+    call read_ram
+    ld de,$5000
+    call printhex
+    ld de,$8000-1
+    call read_ram
+    ld de,$5002
+    call printhex
+.loop:
+    jr .loop
 
 ;-----------------------------------------------------
 ; clear the screen
