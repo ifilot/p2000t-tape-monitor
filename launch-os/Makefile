@@ -11,6 +11,7 @@ main.bin main.map main.rom: main.c sst39sf.c programs.c ram.c util.c memory.c
 	-pragma-define:CRT_ORG_CODE=0x7000 \
 	-pragma-define:REGISTER_SP=-1 \
 	-pragma-define:CLIB_FOPEN_MAX=0 \
-	--max-allocs-per-node200000 \
+	-pragma-define:CRT_ON_EXIT=0x10002 \
+	--max-allocs-per-node2000 \
 	-SO3 -bn main.bin \
 	-create-app -m

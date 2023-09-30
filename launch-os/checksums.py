@@ -10,6 +10,8 @@ def main():
     f.close()
 
     data.extend(np.zeros(0x4000 - len(data)))
+    print()
+    print("Outputting checksums:")
     for i in range(0,4):
         checksum = crc16(data[i*0x1000:(i+1)*0x1000])
         print('%02i: %04X' % (i,checksum))

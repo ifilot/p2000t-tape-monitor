@@ -32,8 +32,9 @@ void main(void) {
     uint16_t offset = 0;
     read_programs_offset(offset);
     print_programs(16, offset);
+    uint8_t exit_loop = 1;
 
-    while(1) {
+    while(exit_loop != 0) {
         if(keymem[0x0C] > 0) {
             for(uint8_t i=0; i<keymem[0x0C]; i++) {
                 switch(keymem[i]) {
@@ -69,9 +70,8 @@ void main(void) {
                         handle_key(keymem[i]);
                         break;
                     case 52:
-                        if(handle_keybuffer_return() == 0) {
-                            return;
-                        }
+                        exit_loop = handle_keybuffer_return();
+                        break;
                     default:
                         break;
                 }
@@ -79,6 +79,10 @@ void main(void) {
             keymem[0x0C] = 0;
         }
     }
+
+    clearline(21);
+    const char msg[] = "Exiting main routine";
+    memcpy(&vidmem[0x50*21], msg, strlen(msg));
 }
 
 void handle_key(uint8_t key) {
@@ -156,6 +160,10 @@ uint8_t handle_keybuffer_return(void) {
 
         keymem[0x0C] = 0;
         while(keymem[0x0C] == 0) {}
+
+        clearline(21);
+        const char msg2[] = "Returning to main routine";
+        memcpy(&vidmem[0x50*21], msg2, strlen(msg2));
 
         return 0;
 

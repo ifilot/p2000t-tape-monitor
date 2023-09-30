@@ -18,8 +18,9 @@ IO_RAMEX:       EQU $64         ; external RAM
 IO_AL:          EQU $60         ; address low
 IO_AH:          EQU $61         ; address high
 IO_BANK:        EQU $63         ; address bank
-NUMBYTES:       EQU $2500
+NUMBYTES:       EQU $2000
 PROGADDR:       EQU $0000
+BASICPROGSTART: EQU $6547
 
 ;-----------------------------------------------------
 ; CODE INJECTION PART
@@ -61,10 +62,9 @@ loadcode:
     di
     ld a,0
     out (IO_BANK),a     ; set to bank 0
-
-    ; load number of bytes from internal ram
-    ld hl,EXCODE                    ; location where to write
-    ld de,PROGADDR                  ; location where to read
+    ld bc,NUMBYTES      ; load number of bytes from internal ram
+    ld hl,EXCODE        ; location where to write
+    ld de,PROGADDR      ; location where to read
 .nextbyte:
     call read_rom
     ld (hl),a
@@ -75,21 +75,69 @@ loadcode:
     or c
     jr nz,.nextbyte
     ei
-    call EXCODE
+    call EXCODE         ; call custom firmware code (will return here)
+    call zeroram
     jp loadrom
 
+;-----------------------------------------------------
+; Load data from external rom
+;-----------------------------------------------------
 loadrom:
     call clrscrn
-    ld de,$8000-2
-    call read_ram
-    ld de,$5000
-    call printhex
     ld de,$8000-1
-    call read_ram
+    call read_ram       ; load high byte
+    ld b,a
+    ld de,$5000
+    call printhex       
+    ld de,$8000-2
+    call read_ram       ; load low byte
+    ld c,a
     ld de,$5002
     call printhex
-.loop:
-    jr .loop
+    call copydata       ; bc contains number of bytes
+    jp $28d4            ; launch basic program
+
+;-----------------------------------------------------
+; Copy data from external ram to internal memory
+;
+; bc - number of bytes
+;-----------------------------------------------------
+copydata:
+    push bc                 ; store number of bytes
+    ld de,$0000             ; start of external ram address
+    ld hl,BASICPROGSTART    ; start of ram address
+.nextbyte:
+    call read_ram           ; load from external ram into a register
+    ld (hl),a
+    inc de
+    inc hl
+    dec bc
+    ld a,b
+    or c
+    jp nz,.nextbyte
+    pop bc
+    ld hl,BASICPROGSTART
+    add hl,bc
+    ld ($6405),hl
+    ld ($6407),hl
+    ld ($6409),hl
+
+    ;ld a, ($63b9)
+    ;add a, 2
+    ;ld ($63b9), a
+    ;ld ($6259), a
+
+    ei
+    ret
+
+zeroram:
+    ld hl,$7000
+    ld de,$7001
+    ld bc,NUMBYTES-1
+    ld a,0
+    ld (hl),a
+    ldir
+    ret
 
 ;-----------------------------------------------------
 ; clear the screen
@@ -108,7 +156,7 @@ clrscrn:
 ; Load message to screen
 ;-----------------------------------------------------
 message:
-    DB "Test loading external code...",255
+    DB "Loading launcher...",255
 
 printmsg:
     call clrscrn

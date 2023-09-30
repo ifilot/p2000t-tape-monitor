@@ -69,13 +69,7 @@ def upload_rom(ser, filename):
         res = ser.read(2)
         print(res)
     
-    # expand data to 256-size
-    sz = len(data)
-    exp = (sz // 256 + 1) * 256
-    print('Expanding %i to %i' % (sz, exp))
-    data.extend(np.zeros(exp - sz))
-    
-    for i in range(0, exp // 256):
+    for i in range(0, 16 * 1024 // 256):
         ser.write(b'WRBK%04X' % i)
         res = ser.read(8)
         print(res)
