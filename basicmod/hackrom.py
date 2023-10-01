@@ -2,7 +2,7 @@
 
 import numpy as np
 
-f = open('BASICROM.bin', 'rb')
+f = open('BASICROM.BIN', 'rb')
 rom = bytearray(f.read())
 f.close()
 
@@ -61,7 +61,7 @@ launcher = bytearray(f.read())
 f.close()
 rom[0x3EC7:0x3EC7+len(launcher)] = launcher
 
-print('Writing modified BASIC cartridge as BASICBOOTSTRAP.bin...')
-f = open('BASICBOOTSTRAP.bin', 'wb')
+print('Writing modified BASIC cartridge as BASICBOOTSTRAP.BIN...')
+f = open('BASICBOOTSTRAP.BIN', 'wb')
 f.write(rom)
 f.close()
