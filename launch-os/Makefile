@@ -8,7 +8,7 @@ main.bin main.map main.rom: *.c *.asm
 	-pragma-define:REGISTER_SP=-1 \
 	-pragma-define:CLIB_FOPEN_MAX=0 \
 	-pragma-define:CRT_ON_EXIT=0x10002 \
-	-pragma-define:CRT_ENABLE_EIDI=0x00 \
-	--max-allocs-per-node2000000 \
+	-pragma-define:CRT_ENABLE_EIDI=0x33 \
+	--max-allocs-per-node20000 \
 	-SO3 -bn main.bin \
 	-create-app -m

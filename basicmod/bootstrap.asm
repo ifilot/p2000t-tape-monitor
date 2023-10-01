@@ -57,7 +57,7 @@ BASICPROGSTART: EQU $6547
 loadcode:
     ld a,0
     ld ($6150),a        ; disable bootstrap routine
-    call clrscrn
+    ld hl,.message
     call printmsg
     di
     ld a,0
@@ -74,28 +74,30 @@ loadcode:
     ld a,b
     or c
     jr nz,.nextbyte
-    ei
     call EXCODE         ; call custom firmware code (will return here)
     call zeroram
     jp loadrom
+
+.message:
+    DB $06,$0D,"Booting launcher",$FF
 
 ;-----------------------------------------------------
 ; Load data from external rom
 ;-----------------------------------------------------
 loadrom:
-    call clrscrn
+    ld hl,.message
+    call printmsg
     ld de,$8000-1
     call read_ram       ; load high byte
     ld b,a
-    ld de,$5000
-    call printhex       
     ld de,$8000-2
     call read_ram       ; load low byte
     ld c,a
-    ld de,$5002
-    call printhex
     call copydata       ; bc contains number of bytes
     jp $28d4            ; launch basic program
+
+.message:
+    DB $06,$0D,"Launching program",$FF
 
 ;-----------------------------------------------------
 ; Copy data from external ram to internal memory
@@ -103,6 +105,7 @@ loadrom:
 ; bc - number of bytes
 ;-----------------------------------------------------
 copydata:
+    di
     push bc                 ; store number of bytes
     ld de,$0000             ; start of external ram address
     ld hl,BASICPROGSTART    ; start of ram address
@@ -121,15 +124,12 @@ copydata:
     ld ($6405),hl
     ld ($6407),hl
     ld ($6409),hl
-
-    ;ld a, ($63b9)
-    ;add a, 2
-    ;ld ($63b9), a
-    ;ld ($6259), a
-
     ei
     ret
 
+;-----------------------------------------------------
+; Clear any remains from the previous program
+;-----------------------------------------------------
 zeroram:
     ld hl,$7000
     ld de,$7001
@@ -153,23 +153,20 @@ clrscrn:
     ret
 
 ;-----------------------------------------------------
-; Load message to screen
-;-----------------------------------------------------
-message:
-    DB "Loading launcher...",255
-
+; Print message to screen
+; hl - pointer to string
+;----------------------------------------------------
 printmsg:
     call clrscrn
-    ld hl,message
-    ld bc,$5000
-print:
+    ld bc,$5000 * $50*10
+.print:
     ld a,(hl)
     cp 255
     ret z
     ld (bc),a
     inc hl
     inc bc
-    jp print
+    jp .print
 
 ;-----------------------------------------------------
 ; go into infinite loop

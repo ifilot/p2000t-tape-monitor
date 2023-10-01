@@ -133,10 +133,14 @@ void handle_key(uint8_t key) {
 
 uint8_t handle_keybuffer_return(void) {
     uint16_t progid = strtoul(keybuffer, 0x00, 10);
-    clearscreen();
 
     if(progid > 0 && progid <= __nrprogs) {
-        sprintf(&vidmem[0x50*10], "Loading program: %03i", progid);
+
+        clearscreen();
+        vidmem[0x50*10] = 0x06;
+        vidmem[0x50*10+1] = 0x0D;
+        sprintf(&vidmem[0x50*10+2], "Loading program");
+
         uint16_t prgsize = build_linked_list(progid-1);
         //print_linked_list(20);
         copyprogramlinkedlist();

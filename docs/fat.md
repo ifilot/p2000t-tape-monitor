@@ -66,6 +66,8 @@ The CAS header basically corresponds to memory locations $6030-$604F of the
 P2000T after reading a block from the cassette. These addresses are hardcoded 
 in the P2000T ROM (e.g. 0x0000 - 0x1000) and cannot be changed.
 
+**Note that all values are stored in big endian order**
+
 |   Address   | RAM Address | Description      |
 |-------------|-------------|------------------|
 | $0020-$0021 | $6030-$6031 | Transfer address |
