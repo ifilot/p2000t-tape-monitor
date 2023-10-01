@@ -150,6 +150,8 @@ private:
      */
     void raise_error_window(QMessageBox::Icon icon, const QString errormsg);
 
+    void index_files();
+
 private slots:
     /**
      * @brief      Close the application

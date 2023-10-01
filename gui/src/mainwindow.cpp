@@ -298,6 +298,17 @@ void MainWindow::raise_error_window(QMessageBox::Icon icon, const QString errorm
     msg_box.exec();
 }
 
+/**
+ * @brief Read files from FAT and produce list
+ */
+void MainWindow::index_files() {
+    this->fat->read_files();
+    this->filelist->clear();
+    this->filelist->insertItems(0, this->fat->get_files_listing());
+    this->button_identify_chip->setEnabled(true);
+    this->progress_bar_capacity->setValue(this->fat->get_number_occupied_blocks());
+}
+
 /****************************************************************************
  *  SIGNALS :: COMMUNICATION INTERFACE ROUTINES
  ****************************************************************************/
@@ -421,9 +432,9 @@ void MainWindow::slot_list() {
  * @brief Add a program to the ROM
  */
 void MainWindow::slot_add_program() {
-    QString filename = QFileDialog::getOpenFileName(this, tr("Open file"), tr("roms (*.CAS *.cas)"));
-
+    QString filename = QFileDialog::getOpenFileName(this, tr("Open file"), tr("roms (*.CAS; *.cas)"));
     QFile file(filename);
+
     if(file.exists() && file.open(QIODevice::ReadOnly)) {
         QByteArray data = file.readAll();
         QByteArray header = data.mid(0x30, 0x20);
@@ -452,6 +463,8 @@ void MainWindow::slot_add_program() {
             }
 
             this->fat->add_file(header, romdata);
+            this->index_files();
+            this->filelist->setCurrentRow(this->filelist->count()-1);
         } else {
             return;
         }
@@ -622,11 +635,7 @@ void MainWindow::slot_access_fat() {
     connect(this->fat, SIGNAL(read_operation(int,int)), this, SLOT(read_operation(int,int)));
     connect(this->fat, SIGNAL(message(QString)), this, SLOT(message(QString)));
 
-    this->fat->read_files();
-    this->filelist->clear();
-    this->filelist->insertItems(0, this->fat->get_files_listing());
-    this->button_identify_chip->setEnabled(true);
-    this->progress_bar_capacity->setValue(this->fat->get_number_occupied_blocks());
+    this->index_files();
     this->action_add_file->setEnabled(true);
 }
 

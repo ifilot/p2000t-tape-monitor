@@ -163,6 +163,20 @@ private:
     QByteArray read_block(unsigned int address);
 
     /**
+     * @brief Read a bank of 0x4000 bytes
+     * @param bank_id
+     * @return datablock
+     */
+    QByteArray read_bank(uint8_t bank_id);
+
+    /**
+     * @brief Read a block (0x100 bytes) from the chip, use caching
+     * @param address
+     * @return datablock
+     */
+    QByteArray read_block_cache_bank(unsigned int address);
+
+    /**
      * @brief Extract linked list of file
      * @param vector of bank/block pairs
      */
@@ -181,6 +195,11 @@ private:
      * @return
      */
     std::pair<uint8_t, uint8_t> find_next_free_block();
+
+    /**
+     * @brief sync external rom chip with current data
+     */
+    void sync();
 };
 
 #endif // FILEALLOCATIONTABLE_H
