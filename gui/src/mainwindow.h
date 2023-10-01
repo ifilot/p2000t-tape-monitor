@@ -79,9 +79,13 @@ private:
 
     // progress bar
     QProgressBar* progress_bar_load;
+    QProgressBar* progress_bar_capacity;
 
     // information on compilation time
     QLabel* label_compile_data;
+
+    // some actions which need to be changed
+    QAction* action_add_file;
 
     // for FAT
     FileAllocationTable* fat = nullptr;
@@ -130,6 +134,12 @@ private:
     void build_filedata_interface(QVBoxLayout* target_layout);
 
     /**
+     * @brief Build capacity interface
+     * @param layout position where to put this part of the GUI
+     */
+    void build_fat_capacity_interface(QVBoxLayout* target_layout);
+
+    /**
      * @brief Verify whether the chip is correct before flashing
      */
     void verify_chip();
@@ -155,6 +165,11 @@ private slots:
      * @brief Produce a list of all programs
      */
     void slot_list();
+
+    /**
+     * @brief Add a program to the ROM
+     */
+    void slot_add_program();
 
     /**
      * @brief Save a binary file

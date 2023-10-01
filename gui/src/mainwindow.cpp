@@ -40,6 +40,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     // add widget for containing files
     this->filelist = new QListWidget();
+    this->filelist->setStyleSheet("font: 9pt \"Courier\";");
+    this->filelist->setMinimumWidth(330);
     layout->addWidget(this->filelist);
     connect(this->filelist, SIGNAL(currentRowChanged(int)), this, SLOT(slot_select_file(int)));
 
@@ -53,6 +55,7 @@ MainWindow::MainWindow(QWidget *parent)
     this->build_serial_interface_menu(right_layout);
     this->build_operations_menu(right_layout);
     this->build_filedata_interface(right_layout);
+    this->build_fat_capacity_interface(right_layout);
 
     // add padding frame on RHS
     QFrame* padding_frame = new QFrame();
@@ -64,7 +67,7 @@ MainWindow::MainWindow(QWidget *parent)
     right_layout->addWidget(this->label_compile_data);
 
     this->setMinimumWidth(800);
-    this->setMinimumHeight(600);
+    this->setMinimumHeight(700);
 
     this->create_dropdown_menu();
 
@@ -111,6 +114,10 @@ void MainWindow::create_dropdown_menu() {
     QAction *action_list = new QAction(menu_tools);
     action_list->setText(tr("List programs"));
     menu_tools->addAction(action_list);
+    this->action_add_file = new QAction(menu_tools);
+    this->action_add_file->setText(tr("Add program"));
+    this->action_add_file->setEnabled(false);
+    menu_tools->addAction(this->action_add_file);
 
     // actions for help menu
     QAction *action_about = new QAction(menu_help);
@@ -120,6 +127,7 @@ void MainWindow::create_dropdown_menu() {
     // connect actions file menu
     connect(action_run, &QAction::triggered, this, &MainWindow::slot_run);
     connect(action_list, &QAction::triggered, this, &MainWindow::slot_list);
+    connect(action_add_file, &QAction::triggered, this, &MainWindow::slot_add_program);
     connect(action_save, &QAction::triggered, this, &MainWindow::slot_save);
     connect(action_about, &QAction::triggered, this, &MainWindow::slot_about);
     connect(action_quit, &QAction::triggered, this, &MainWindow::exit);
@@ -218,6 +226,21 @@ void MainWindow::build_filedata_interface(QVBoxLayout* target_layout) {
     layout_files->addWidget(this->label_startlocation);
     layout_files->addWidget(this->label_checksums);
     layout_files->addWidget(this->blockmap);
+}
+
+/**
+ * @brief Build filedata interface
+ * @param layout position where to put this part of the GUI
+ */
+void MainWindow::build_fat_capacity_interface(QVBoxLayout* target_layout) {
+    // placeholder for file information
+    QGroupBox* groupbox = new QGroupBox("ROM capacity");
+    target_layout->addWidget(groupbox);
+    this->progress_bar_capacity = new QProgressBar();
+    this->progress_bar_capacity->setMinimum(0);
+    QVBoxLayout* layout = new QVBoxLayout();
+    groupbox->setLayout(layout);
+    layout->addWidget(this->progress_bar_capacity);
 }
 
 /**
@@ -395,6 +418,47 @@ void MainWindow::slot_list() {
 }
 
 /**
+ * @brief Add a program to the ROM
+ */
+void MainWindow::slot_add_program() {
+    QString filename = QFileDialog::getOpenFileName(this, tr("Open file"), tr("roms (*.CAS *.cas)"));
+
+    QFile file(filename);
+    if(file.exists() && file.open(QIODevice::ReadOnly)) {
+        QByteArray data = file.readAll();
+        QByteArray header = data.mid(0x30, 0x20);
+
+        char filename[16];
+        memcpy(filename, header.data() + 0x06, 8);
+        memcpy(&filename[8], header.data() + 0x17, 8);
+
+        uint16_t filesize = (uint8_t)header[0x02] + (uint8_t)header[0x03] * 256;
+        uint8_t nrblocks = (uint8_t)header[0x1F];
+
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this,
+            "Add program?",
+            tr("Are you sure you want to commit this program?\n%1\n%2 bytes (%3 blocks)")
+                    .arg(QString::fromUtf8(filename, 16))
+                    .arg(filesize)
+                    .arg(nrblocks),
+            QMessageBox::Yes | QMessageBox::No
+        );
+
+        if (reply == QMessageBox::Yes) {
+            QByteArray romdata;
+            for(unsigned int i=0; i<nrblocks; i++) {
+                romdata.append(data.mid((i*0x500)+0x100, 0x400));
+            }
+
+            this->fat->add_file(header, romdata);
+        } else {
+            return;
+        }
+    }
+}
+
+/**
  * @brief Open a binary file
  */
 void MainWindow::slot_save() {
@@ -480,18 +544,21 @@ void MainWindow::read_chip_id() {
                 case 0xB5:
                     this->num_blocks = 128*1024/256;
                     this->progress_bar_load->setMaximum(this->num_blocks);
+                    this->progress_bar_capacity->setMaximum(60*2);
                     statusBar()->showMessage("Identified a SST39SF010 chip");
                     this->label_chip_type->setText("ROM chip: SST39SF010");
                 break;
                 case 0xB6:
                 this->num_blocks = 256*1024/256;
                     this->progress_bar_load->setMaximum(this->num_blocks);
+                    this->progress_bar_capacity->setMaximum(60*4);
                     statusBar()->showMessage("Identified a SST39SF020 chip");
                     this->label_chip_type->setText("ROM chip: SST39SF020");
                 break;
                 case 0xB7:
                     this->num_blocks = 512*1024/256;
                     this->progress_bar_load->setMaximum(this->num_blocks);
+                    this->progress_bar_capacity->setMaximum(60*8);
                     statusBar()->showMessage("Identified a SST39SF040 chip");
                     this->label_chip_type->setText("ROM chip: SST39SF040");
                 break;
@@ -557,8 +624,10 @@ void MainWindow::slot_access_fat() {
 
     this->fat->read_files();
     this->filelist->clear();
-    this->filelist->insertItems(0, this->fat->get_files());
+    this->filelist->insertItems(0, this->fat->get_files_listing());
     this->button_identify_chip->setEnabled(true);
+    this->progress_bar_capacity->setValue(this->fat->get_number_occupied_blocks());
+    this->action_add_file->setEnabled(true);
 }
 
 /**

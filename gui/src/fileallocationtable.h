@@ -81,6 +81,12 @@ public:
     QStringList get_files() const;
 
     /**
+     * @brief Get a list of filenames
+     * @return list of filenames
+     */
+    QStringList get_files_listing() const;
+
+    /**
      * @brief Get total number of files
      * @return number of files
      */
@@ -122,6 +128,19 @@ public:
      */
     QString build_filename(unsigned int id);
 
+    /**
+     * @brief Get number of occupied blocks (0x400 byte sections)
+     * @return number of occupied blocks
+     */
+    unsigned int get_number_occupied_blocks() const;
+
+    /**
+     * @brief Add file to FAT
+     * @param header
+     * @param data
+     */
+    void add_file(const QByteArray& header, const QByteArray& data);
+
 signals:
     /**
      * @brief signal when a read operation is conducted
@@ -156,6 +175,12 @@ private:
     void attach_filedata(unsigned int id);
 
     uint16_t crc16_xmodem(const QByteArray& data, uint16_t length);
+
+    /**
+     * @brief find_next_free_block
+     * @return
+     */
+    std::pair<uint8_t, uint8_t> find_next_free_block();
 };
 
 #endif // FILEALLOCATIONTABLE_H

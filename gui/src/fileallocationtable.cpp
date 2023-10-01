@@ -87,6 +87,28 @@ QStringList FileAllocationTable::get_files() const {
 }
 
 /**
+ * @brief Get a list of filenames
+ * @return list of filenames
+ */
+QStringList FileAllocationTable::get_files_listing() const {
+    QStringList list;
+    unsigned int ctr=0;
+    for(const auto& file : this->files) {
+        ctr++;
+        list.append(
+            QString("%1 %2 | %3 | %4 %5")
+                .arg(ctr,3,10,QLatin1Char('0'))
+                .arg(QString::fromUtf8(file.filename, 16), 16, QLatin1Char(' '))
+                .arg(file.size,5)
+                .arg(file.startbank,2)
+                .arg(file.startblock,2)
+        );
+    }
+
+    return list;
+}
+
+/**
  * @brief Get a single file
  * @param file index
  * @return file (meta-)data
@@ -163,6 +185,42 @@ QString FileAllocationTable::build_filename(unsigned int id) {
     QString filename = base.toLower() + "_" + QString::fromUtf8(file.extension,3).toLower() + ".cas";
 
     return filename;
+}
+
+/**
+ * @brief Get number of occupied blocks (0x400 byte sections)
+ * @return number of occupied blocks
+ */
+unsigned int FileAllocationTable::get_number_occupied_blocks() const {
+    unsigned int numblocks = 0;
+    for(const auto& file : this->files) {
+        unsigned int sz = file.size;
+        numblocks += sz / 0x400;
+        if(sz % 0x400 != 0) {
+            numblocks++;
+        }
+    }
+
+    return numblocks;
+}
+
+/**
+ * @brief Add file to FAT
+ * @param header
+ * @param data
+ */
+void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& data) {
+    qDebug() << "Adding file";
+
+    char filename[16];
+    memcpy(filename, header.data() + 0x06, 8);
+    memcpy(&filename[8], header.data() + 0x17, 8);
+
+    uint16_t filesize = (uint8_t)header[0x02] + (uint8_t)header[0x03] * 256;
+    uint8_t nrblocks = (uint8_t)header[0x1F];
+
+    auto newbankblock = this->find_next_free_block();
+    qDebug() << newbankblock.first << "/" << newbankblock.second;
 }
 
 /**
@@ -273,4 +331,27 @@ uint16_t FileAllocationTable::crc16_xmodem(const QByteArray& data, uint16_t leng
     }
 
     return (uint16_t)crc;
+}
+
+/**
+ * @brief find_next_free_block
+ * @return
+ */
+std::pair<uint8_t, uint8_t> FileAllocationTable::find_next_free_block() {
+    for(uint8_t bank=0; bank<8; bank++) {
+        QByteArray data;
+        for(unsigned int i=0; i<0x10; i++) {
+            //qDebug() << "Reading block: " << i;
+            data.append(this->read_block(bank * 0x10000 / 0x100 + i));
+        }
+        for(uint8_t block=0; block<60; block++) {
+            // qDebug() << "Testing block: " << block;
+            // qDebug() << data.mid(0x100 + block * 0x40, 0x10);
+            if((uint8_t)data.data()[0x100 + block*0x40+0x08] == 0xFF) {
+                return std::make_pair(bank, block);
+            }
+        }
+    }
+
+    return std::make_pair(0xFF, 0xFF);
 }
