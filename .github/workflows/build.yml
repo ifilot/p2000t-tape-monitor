@@ -1,0 +1,24 @@
+name: build
+
+on:
+  push:
+    branches: [ "master", "develop" ]
+  pull_request:
+    branches: [ "master", "develop" ]
+
+jobs:
+  build-launcher:
+
+    runs-on: z88dk/z88dk
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Perform code coverage
+      run: |
+        cd launch-os
+        make
+    - name: Upload launcher
+      uses: actions/upload-artifact@v3
+      with:
+        name: launcher.rom
+        path: ./launch-os/main.rom
