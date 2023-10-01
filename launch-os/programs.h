@@ -6,6 +6,7 @@
 #include "memory.h"
 #include "util.h"
 #include "constants.h"
+#include "sst39sf.h"
 
 #define RAMADDRPROG 0x4000
 #define RAMLINKEDLIST 0x5000
@@ -36,5 +37,7 @@ uint16_t build_linked_list(uint16_t progid);
 void print_linked_list(uint8_t row);
 
 void copyprogramlinkedlist(void);
+
+extern void copyblock(uint16_t ramptr, uint16_t romptr) __z88dk_callee;
 
 #endif // _PROGRAMS_H

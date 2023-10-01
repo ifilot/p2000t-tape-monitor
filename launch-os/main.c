@@ -71,6 +71,10 @@ void main(void) {
                         break;
                     case 52:
                         exit_loop = handle_keybuffer_return();
+                        if(exit_loop != 0) {
+                            read_programs_offset(offset);
+                            print_programs(16, offset);
+                        }
                         break;
                     default:
                         break;
@@ -79,10 +83,6 @@ void main(void) {
             keymem[0x0C] = 0;
         }
     }
-
-    clearline(21);
-    const char msg[] = "Exiting main routine";
-    memcpy(&vidmem[0x50*21], msg, strlen(msg));
 }
 
 void handle_key(uint8_t key) {
@@ -128,65 +128,50 @@ void handle_key(uint8_t key) {
             return;
         }
     }
-    memcpy(&vidmem[0x50*22+22], keybuffer, 3);
+    memcpy(&vidmem[0x50*21+34], keybuffer, 3);
 }
 
 uint8_t handle_keybuffer_return(void) {
     uint16_t progid = strtoul(keybuffer, 0x00, 10);
-    char buf[40];
+    clearscreen();
+
     if(progid > 0 && progid <= __nrprogs) {
-        uint8_t nrchars = sprintf(buf, "Loading program: %03i", progid);
-        memcpy(&vidmem[0x50*21], buf, nrchars);
+        sprintf(&vidmem[0x50*10], "Loading program: %03i", progid);
         uint16_t prgsize = build_linked_list(progid-1);
         //print_linked_list(20);
         copyprogramlinkedlist();
 
-        // write number of bytes in memory
-        write_ram(0x8000-2, (uint8_t)(prgsize >> 8));
-        write_ram(0x8000-1, (uint8_t)(prgsize & 0xFF));
-
-        for(uint8_t i=0; i<16; i++) {
-            clearline(i+3);
-            for(uint8_t j=0; j<8; j++) {
-                printhex(0x50*(i+3)+j*3, read_ram(i * 0x400 + j));
-            }
-        }
-
-        // wait till a key is pressed to return from the main program
-
-        clearline(21);
-        const char msg[] = "Press any key to continue";
-        memcpy(&vidmem[0x50*21], msg, strlen(msg));
-
-        keymem[0x0C] = 0;
-        while(keymem[0x0C] == 0) {}
-
-        clearline(21);
-        const char msg2[] = "Returning to main routine";
-        memcpy(&vidmem[0x50*21], msg2, strlen(msg2));
+        // write number of bytes in memory, note that prgsize is stored
+        // in big endian order
+        write_ram(0x8000-2, (uint8_t)(prgsize & 0xFF));
+        write_ram(0x8000-1, (uint8_t)(prgsize >> 8));
 
         return 0;
 
     } else {
-        uint8_t nrchars = sprintf(buf, "Invalid program id: %03i", progid);
-        memcpy(&vidmem[0x50*21], buf, strlen(buf));
+        sprintf(&vidmem[0x50*10], "Invalid program id: %03i", progid);
     }
 
     // clean video buffer
-    clearline(22);
     memset(keybuffer, 0x00, 3);
-    memcpy(&vidmem[0x50*22+22], keybuffer, 3);
+    memcpy(&vidmem[0x50*21+34], keybuffer, 3);
     numkeysbuf = 0;
 
     return 1;
 }
 
 void init(void) {
+    clearscreen();
+
     vidmem[0x0000] = 0x06;    // cyan color
     vidmem[0x0001] = 0x0D;    // double height
-    const char str1[] = "Launcher";
+
+    static const char str1[] = "Launcher";
     memcpy(&vidmem[0x0002], str1, strlen(str1));
 
-    const char str2[] = "Select program [0-9]: ";
-    memcpy(&vidmem[0x50*22], str2, strlen(str2));
+    static const char str2[] = "Press [n/p] to scroll between pages.";
+    memcpy(&vidmem[0x50*20], str2, strlen(str2));
+
+    static const char str3[] = "Select program by entering [0-9]: ";
+    memcpy(&vidmem[0x50*21], str3, strlen(str3));
 }

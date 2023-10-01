@@ -52,9 +52,9 @@ void read_programs(void) {
                 prg.extension[i] = sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x2E + i);
             }
 
-            // read program size
-            prg.size = (sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x24) << 8) +
-                        sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x25);
+            // read program size, note big endian order
+            prg.size = (sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x23) << 8) +
+                        sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x22);
 
             prg.padding = '.';
 
@@ -141,8 +141,8 @@ void read_programs_offset(uint16_t offset) {
         }
 
         // read program size
-        prg.size = (sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x24) << 8) +
-                    sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x25);
+        prg.size = (sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x23) << 8) +
+                    sst39sf_read_byte(0x0100 + 0x40 * startblock + 0x22);
 
         prg.padding = '.';
 
@@ -205,7 +205,7 @@ void print_programs(uint8_t numprogs, uint16_t offset) {
         }
 
         vidmem[(i+PRINTPROGROW)*0x50] = COL_WHITE;
-        sprintf(&vidmem[(i+PRINTPROGROW)*0x50+1], "%03i", i + offset + 1);
+        sprintf(&vidmem[(i+PRINTPROGROW)*0x50+1], "%03u", i + offset + 1);
 
         vidmem[(i+PRINTPROGROW)*0x50+4] = COL_YELLOW;
         for(uint8_t j=0; j<16; j++) {
@@ -219,9 +219,9 @@ void print_programs(uint8_t numprogs, uint16_t offset) {
 
         // print number of bytes
         vidmem[(i+PRINTPROGROW)*0x50+25] = COL_MAGENTA;
-        uint16_t size = read_ram(RAMADDRPROG + i * 24 + 21) * 256 +
-                        read_ram(RAMADDRPROG + i * 24 + 22);
-        sprintf(&vidmem[(i+PRINTPROGROW)*0x50+26], "%5i", size);
+        uint16_t size = read_ram(RAMADDRPROG + i * 24 + 22) * 256 +
+                        read_ram(RAMADDRPROG + i * 24 + 21);
+        sprintf(&vidmem[(i+PRINTPROGROW)*0x50+26], "%5u", size);
 
         // print starting bank
         vidmem[(i+PRINTPROGROW)*0x50+31] = COL_GREEN;
@@ -232,9 +232,12 @@ void print_programs(uint8_t numprogs, uint16_t offset) {
         printhex((i+PRINTPROGROW)*0x50+35, read_ram(RAMADDRPROG + i * 24 + 1));
     }
 
-    printhex(23*0x50, offset+1);
-    printhex(23*0x50+3, offset + 16);
-    printhex(23*0x50+6, __nrprogs);
+    clearline(22);
+    vidmem[22 * 0x50] = 0x05;
+    sprintf(&vidmem[22 * 0x50+1], "Showing programs %u-%u.", offset+1, offset+16);
+    clearline(23);
+    vidmem[23 * 0x50] = 0x05;
+    sprintf(&vidmem[23 * 0x50+1], "Total programs: %u.", __nrprogs-1);
 }
 
 uint16_t build_linked_list(uint16_t progid) {
@@ -273,8 +276,10 @@ uint16_t build_linked_list(uint16_t progid) {
     uint8_t nextblock = sst39sf_read_byte(addr);
     uint8_t nextbank = bank;
     uint16_t ramptr = RAMLINKEDLIST;
-    uint16_t prgsize = (sst39sf_read_byte(0x0100 + 0x40 * nextblock + 0x24) << 8) +
-                        sst39sf_read_byte(0x0100 + 0x40 * nextblock + 0x25);
+
+    // note that prgsize is stored in big endian order on the ROM
+    uint16_t prgsize = (sst39sf_read_byte(0x0100 + 0x40 * nextblock + 0x25) << 8) +
+                        sst39sf_read_byte(0x0100 + 0x40 * nextblock + 0x24);
 
     while(nextbank != 0xFF) {
         // write linked list to ram
@@ -321,9 +326,11 @@ void copyprogramlinkedlist(void) {
         sst39sf_set_bank(nextbank);
 
         uint16_t romptr = 0x1000 + nextblock * 0x400;
-        for(uint16_t i=0; i<0x400; i++) {
-            write_ram(ramptr++, sst39sf_read_byte(romptr++));
-        }
+        copyblock(ramptr, romptr);
+        ramptr += 0x400;
+        // for(uint16_t i=0; i<0x400; i++) {
+        //     write_ram(ramptr++, sst39sf_read_byte(romptr++));
+        // }
 
         nextbank = read_ram(llptr++);
         nextblock = read_ram(llptr++);
