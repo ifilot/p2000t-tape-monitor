@@ -25,6 +25,24 @@ jobs:
         name: LAUNCHER.BIN
         path: ./launch-os/main.rom
 
+  build-firmware-flasher:
+
+    runs-on: ubuntu-latest
+    container: 
+      image: z88dk/z88dk
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build launcher application
+      run: |
+        cd firmwareflasher
+        make
+    - name: Upload launcher
+      uses: actions/upload-artifact@v3
+      with:
+        name: FIRMWAREFLASHER.BIN
+        path: ./firmwareflasher/main.rom
+
   build-basic:
 
     runs-on: ubuntu-latest
