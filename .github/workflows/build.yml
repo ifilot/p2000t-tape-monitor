@@ -60,5 +60,5 @@ jobs:
     - name: Upload
       uses: actions/upload-artifact@v1
       with:
-        name: BASICBOOTSTRAP.bin
-        path: basicmod/BASICBOOTSTRAP.bin
+        name: BASICBOOTSTRAP.BIN
+        path: basicmod/BASICBOOTSTRAP.BIN
