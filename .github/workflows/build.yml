@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     container: 
       image: z88dk/z88dk
+
     steps:
     - uses: actions/checkout@v3
     - name: Build launcher application
@@ -24,7 +25,6 @@ jobs:
         name: LAUNCHER.BIN
         path: ./launch-os/main.rom
 
-jobs:
   build-basic:
 
     runs-on: ubuntu-latest
