@@ -9,16 +9,38 @@ on:
 jobs:
   build-launcher:
 
-    runs-on: z88dk/z88dk
-
+    runs-on: ubuntu-latest
+    container: 
+      image: z88dk/z88dk
     steps:
     - uses: actions/checkout@v3
-    - name: Perform code coverage
+    - name: Build launcher application
       run: |
         cd launch-os
         make
     - name: Upload launcher
       uses: actions/upload-artifact@v3
       with:
-        name: launcher.rom
+        name: LAUNCHER.BIN
         path: ./launch-os/main.rom
+
+jobs:
+  build-basic:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install dependencies
+      run: sudo apt install -y python3 python3-numpy z80asm make
+    - name: Build modified basic cartridge
+      run: |
+        cd basicmod
+        z80asm bootstrap.asm -o bootstrap.bin
+        z80asm launcher.asm -o launcher.bin
+        python hackrom.py
+    - name: Upload
+      uses: actions/upload-artifact@v1
+      with:
+        name: BASICBOOTSTRAP.bin
+        path: basicmod/BASICBOOTSTRAP.bin
