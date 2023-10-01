@@ -40,6 +40,7 @@
 #include <QFileDialog>
 #include <QListWidget>
 #include <QImage>
+#include <QTableWidget>
 
 #include "config.h"
 #include "qhexview.h"
@@ -65,6 +66,8 @@ private:
     QPushButton* button_scan_ports;
     QLabel* label_serial;
     QLabel* label_board_id;
+    QLabel* label_selected_file;
+    int selected_file = -1;
     QComboBox* combobox_serial_ports;
     std::vector<std::pair<uint16_t, uint16_t>> port_identifiers;
     std::shared_ptr<SerialInterface> serial_interface;
@@ -89,7 +92,7 @@ private:
 
     // for FAT
     FileAllocationTable* fat = nullptr;
-    QListWidget* filelist;
+    QTableWidget* filetable;
     QLabel* label_filename;
     QLabel* label_extension;
     QLabel* label_filesize;
@@ -235,5 +238,10 @@ private slots:
      * @brief Select a new file
      */
     void slot_select_file(int row);
+
+    /**
+     * @brief Select a file via pushbutton
+     */
+    void slot_select_file_button();
 };
 #endif // MAINWINDOW_H

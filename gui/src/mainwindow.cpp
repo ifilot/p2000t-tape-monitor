@@ -33,17 +33,21 @@ MainWindow::MainWindow(QWidget *parent)
     container->setLayout(layout);
 
     // add hex editor widget
+    QWidget* container_widget = new QWidget();
+    layout->addWidget(container_widget);
+    QVBoxLayout* container_layout = new QVBoxLayout();
+    container_widget->setLayout(container_layout);
+    this->label_selected_file = new QLabel();
+    container_layout->addWidget(this->label_selected_file);
     this->hex_widget = new QHexView();
     this->hex_widget->setMinimumWidth(680);
     this->hex_widget->setMaximumWidth(680);
-    layout->addWidget(this->hex_widget);
+    container_layout->addWidget(this->hex_widget);
 
     // add widget for containing files
-    this->filelist = new QListWidget();
-    this->filelist->setStyleSheet("font: 9pt \"Courier\";");
-    this->filelist->setMinimumWidth(330);
-    layout->addWidget(this->filelist);
-    connect(this->filelist, SIGNAL(currentRowChanged(int)), this, SLOT(slot_select_file(int)));
+    this->filetable = new QTableWidget();
+    this->filetable->setMinimumWidth(440);
+    layout->addWidget(this->filetable);
 
     // create widget for writing data
     QWidget* right_container = new QWidget();
@@ -66,7 +70,7 @@ MainWindow::MainWindow(QWidget *parent)
     this->label_compile_data = new QLabel(tr("<b>Build:</b><br>Compile time: %1<br>Git id: %2").arg(__DATE__).arg(GIT_HASH));
     right_layout->addWidget(this->label_compile_data);
 
-    this->setMinimumWidth(800);
+    this->setMinimumWidth(1000);
     this->setMinimumHeight(700);
 
     this->create_dropdown_menu();
@@ -303,8 +307,67 @@ void MainWindow::raise_error_window(QMessageBox::Icon icon, const QString errorm
  */
 void MainWindow::index_files() {
     this->fat->read_files();
-    this->filelist->clear();
-    this->filelist->insertItems(0, this->fat->get_files_listing());
+    this->filetable->clear();
+    this->filetable->setRowCount(0);
+
+    this->filetable->setColumnCount(6);
+    this->filetable->setColumnWidth(0, 140);
+    this->filetable->setColumnWidth(1, 50);
+    this->filetable->setColumnWidth(2, 30);
+    this->filetable->setColumnWidth(3, 30);
+    this->filetable->setColumnWidth(4, 60);
+    this->filetable->setColumnWidth(5, 60);
+    this->filetable->setHorizontalHeaderLabels({
+        "Filename",
+        "Size",
+        "",
+        "",
+        "Open",
+        "Delete"
+    });
+    this->filetable->setStyleSheet("font: 8px \"Courier\";");
+
+    QTableWidgetItem *item;
+    for(unsigned int i=0; i<this->fat->get_num_files(); i++) {
+        const auto file = this->fat->get_file_metadata(i);
+        this->filetable->insertRow(i);
+        this->filetable->setRowHeight(i, 15);
+
+        // filename
+        item = new QTableWidgetItem(QString::fromUtf8(file.filename, 16));
+        item->setTextAlignment(Qt::AlignLeft|Qt::AlignVCenter);
+        this->filetable->setItem(i, 0, item);
+
+        // size
+        item = new QTableWidgetItem(tr("%1").arg(file.size));
+        item->setTextAlignment(Qt::AlignRight|Qt::AlignVCenter);
+        this->filetable->setItem(i, 1, item);
+
+        // bank
+        item = new QTableWidgetItem(tr("%1").arg(file.startbank));
+        item->setTextAlignment(Qt::AlignRight|Qt::AlignVCenter);
+        this->filetable->setItem(i, 2, item);
+
+        // block
+        item = new QTableWidgetItem(tr("%1").arg(file.startblock));
+        item->setTextAlignment(Qt::AlignRight|Qt::AlignVCenter);
+        this->filetable->setItem(i, 3, item);
+
+        // select button
+        QPushButton* button_select = new QPushButton("Open");
+        button_select->setProperty("row", QVariant(i));
+        button_select->setProperty("operation", QVariant("open"));
+        this->filetable->setCellWidget(i, 4, button_select);
+        connect(button_select, SIGNAL(released()), this, SLOT(slot_select_file_button()));
+
+        // delete button
+        QPushButton* button_delete = new QPushButton("Delete");
+        button_delete->setProperty("row", QVariant(i));
+        button_delete->setProperty("operation", QVariant("delete"));
+        this->filetable->setCellWidget(i, 5, button_delete);
+        connect(button_delete, SIGNAL(released()), this, SLOT(slot_select_file_button()));
+    }
+
     this->button_identify_chip->setEnabled(true);
     this->progress_bar_capacity->setValue(this->fat->get_number_occupied_blocks());
 }
@@ -410,7 +473,7 @@ void MainWindow::slot_run() {
     }
 
     ThreadRun* runthread = new ThreadRun();
-    runthread->set_mcode(this->fat->create_cas_file(this->filelist->currentRow()));
+    runthread->set_mcode(this->fat->create_cas_file(this->selected_file));
     runthread->set_process_configuration(ThreadRun::ProcessConfiguration::MCODE_AS_CAS);
     connect(runthread, SIGNAL(signal_run_complete(void*)), this, SLOT(slot_run_complete(void*)));
     runthread->start();
@@ -464,7 +527,6 @@ void MainWindow::slot_add_program() {
 
             this->fat->add_file(header, romdata);
             this->index_files();
-            this->filelist->setCurrentRow(this->filelist->count()-1);
         } else {
             return;
         }
@@ -481,7 +543,7 @@ void MainWindow::slot_save() {
         return;
     }
 
-    QString suggested_filename = this->fat->build_filename(this->filelist->currentRow());
+    QString suggested_filename = this->fat->build_filename(this->selected_file);
     QString filename = QFileDialog::getSaveFileName(this, tr("Save File"), suggested_filename, tr("roms (*.CAS *.cas)"));
 
     // do nothing if user has cancelled
@@ -490,9 +552,8 @@ void MainWindow::slot_save() {
     }
 
     QFile file(filename);
-
     file.open(QIODevice::WriteOnly);
-    file.write(this->fat->create_cas_file(this->filelist->currentRow()));
+    file.write(this->fat->create_cas_file(this->selected_file));
     file.close();
 }
 
@@ -584,7 +645,7 @@ void MainWindow::read_chip_id() {
         }
 
         this->progress_bar_load->reset();
-        this->filelist->clear();
+        this->filetable->clear();
         this->button_read_rom->setEnabled(true);
     } catch (const std::exception& e) {
         QMessageBox msg_box;
@@ -648,6 +709,7 @@ void MainWindow::slot_select_file(int row) {
         auto file = this->fat->get_file(row);
 
         this->label_filename->setText("Filename: " + QString::fromUtf8(file.filename, 16));
+        this->label_selected_file->setText(QString::fromUtf8(file.filename, 16));
         this->label_extension->setText("Extension: " + QString::fromUtf8(file.extension, 3));
         this->label_filesize->setText(tr("Filesize: %1 bytes").arg(file.size));
         this->label_startlocation->setText(tr("Start location: Bank %1 / Block %2").arg(file.startbank).arg(file.startblock));
@@ -670,5 +732,20 @@ void MainWindow::slot_select_file(int row) {
 
         // set data in hexviewer
         this->hex_widget->setData(new QHexView::DataStorageArray(file.data));
+    }
+}
+
+/**
+ * @brief Select a file via pushbutton
+ */
+void MainWindow::slot_select_file_button() {
+    QPushButton* button_sender = qobject_cast<QPushButton*>(sender());
+    int row = button_sender->property("row").toInt();
+    QString operation =  button_sender->property("operation").toString();
+    qDebug() << row << operation;
+
+    if(operation == "open") {
+        this->slot_select_file(row);
+        this->selected_file = row;
     }
 }
