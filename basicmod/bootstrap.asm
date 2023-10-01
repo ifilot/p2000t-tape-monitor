@@ -57,7 +57,7 @@ BASICPROGSTART: EQU $6547
 loadcode:
     ld a,0
     ld ($6150),a        ; disable bootstrap routine
-    ld hl,.message
+    ld hl,msgbl
     call printmsg
     di
     ld a,0
@@ -65,7 +65,7 @@ loadcode:
     ld bc,NUMBYTES      ; load number of bytes from internal ram
     ld hl,EXCODE        ; location where to write
     ld de,PROGADDR      ; location where to read
-.nextbyte:
+lcnextbyte:
     call read_rom
     ld (hl),a
     inc hl
@@ -73,19 +73,19 @@ loadcode:
     dec bc
     ld a,b
     or c
-    jr nz,.nextbyte
+    jr nz,lcnextbyte
     call EXCODE         ; call custom firmware code (will return here)
     call zeroram
     jp loadrom
 
-.message:
+msgbl:
     DB $06,$0D,"Booting launcher",$FF
 
 ;-----------------------------------------------------
 ; Load data from external rom
 ;-----------------------------------------------------
 loadrom:
-    ld hl,.message
+    ld hl,msglp
     call printmsg
     ld de,$8000-1
     call read_ram       ; load high byte
@@ -96,7 +96,7 @@ loadrom:
     call copydata       ; bc contains number of bytes
     jp $28d4            ; launch basic program
 
-.message:
+msglp:
     DB $06,$0D,"Launching program",$FF
 
 ;-----------------------------------------------------
@@ -109,7 +109,7 @@ copydata:
     push bc                 ; store number of bytes
     ld de,$0000             ; start of external ram address
     ld hl,BASICPROGSTART    ; start of ram address
-.nextbyte:
+cdnextbyte:
     call read_ram           ; load from external ram into a register
     ld (hl),a
     inc de
@@ -117,7 +117,7 @@ copydata:
     dec bc
     ld a,b
     or c
-    jp nz,.nextbyte
+    jp nz,cdnextbyte
     pop bc
     ld hl,BASICPROGSTART
     add hl,bc
@@ -158,15 +158,15 @@ clrscrn:
 ;----------------------------------------------------
 printmsg:
     call clrscrn
-    ld bc,$5000 * $50*10
-.print:
+    ld bc,$5000 + $50*10
+pmprint:
     ld a,(hl)
     cp 255
     ret z
     ld (bc),a
     inc hl
     inc bc
-    jp .print
+    jp pmprint
 
 ;-----------------------------------------------------
 ; go into infinite loop
@@ -214,12 +214,12 @@ read_ram:
 ; hl - address
 ;-----------------------------------------------------
 write_ram:
-    ld ixl,a
+    push af
     ld a,h
     out (IO_AH),a         ; store upper bytes in register
     ld a,l
     out (IO_AL),a         ; store lower bytes in register
-    ld a,ixl
+    pop af
     out (IO_RAMEX),a      ; write byte
     ret
 
@@ -228,18 +228,18 @@ write_ram:
 ;
 ; input: a  - value to print
 ;        de - video memory address
-; uses:  a,iyh
+; uses:  a
 ; output: de - new cursor position of video address
 ;-------------------------------------------------------------------------------
 printhex:
-    ld iyh,a                ; load value into b
+    push af
     rra                     ; shift right by 4, ignore leaving bits
     rra
     rra
     rra
     and $0f                 ; mask
     call printnibble        ; print upper nibble
-    ld a,iyh                ; reload value to print
+    pop af
     and $0f                 ; mask
     call printnibble        ; print lower nibble
     ret
@@ -255,9 +255,9 @@ printhex:
 printnibble:
     add $30                 ; add $30 to number in a
     cp $3A                  ; less than $3A?
-    jp c,.print             ; if so, number between 0-9, so print it
+    jp c,pnprint            ; if so, number between 0-9, so print it
     add 7                   ; if not, number between A-F, so add 7
-.print:
+pnprint:
     ld (de),a               ; load accumulator into (de)
     inc de                  ; increment video position
     ret

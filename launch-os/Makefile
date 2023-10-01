@@ -9,6 +9,6 @@ main.bin main.map main.rom: *.c *.asm
 	-pragma-define:CLIB_FOPEN_MAX=0 \
 	-pragma-define:CRT_ON_EXIT=0x10002 \
 	-pragma-define:CRT_ENABLE_EIDI=0x33 \
-	--max-allocs-per-node20000 \
+	--max-allocs-per-node2000000 \
 	-SO3 -bn main.bin \
 	-create-app -m
