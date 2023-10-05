@@ -646,6 +646,8 @@ void MainWindow::read_chip_id() {
 
         this->progress_bar_load->reset();
         this->filetable->clear();
+        this->filetable->setColumnCount(0);
+        this->filetable->setRowCount(0);
         this->button_read_rom->setEnabled(true);
     } catch (const std::exception& e) {
         QMessageBox msg_box;
