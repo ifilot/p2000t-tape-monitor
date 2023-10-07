@@ -218,8 +218,24 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
     memcpy(filename, header.data() + 0x06, 8);
     memcpy(&filename[8], header.data() + 0x17, 8);
 
-    uint16_t filesize = (uint8_t)header[0x02] + (uint8_t)header[0x03] * 256;
-    uint8_t nrblocks = (uint8_t)header[0x1F];
+    uint16_t filesize = (uint8_t)header[0x02] + (uint8_t)header[0x03] * 256; // big endian
+    qDebug() << tr("Header claims file size is: %1 bytes").arg(filesize);
+
+    // determine number of blocks based on data size as we cannot a priori
+    // trust the header block for that; check therefore whether the data size
+    // is divisable by 0x400
+    if(data.size() % 0x400 != 0) {
+        throw std::runtime_error("Data size should be divisable by 0x400.");
+    }
+    uint8_t nrblocks = data.size() / 0x400;
+
+    // assert whether filesize as indicated in header is sensible
+    bool reformat = false;
+    if(!(filesize <= nrblocks * 0x400 && filesize > (nrblocks-1) * 0x400)) {
+        qDebug() << "Invalid header size encountered, reformatting metadata";
+        filesize = nrblocks * 0x400;
+        reformat = true;
+    }
 
     qDebug() << "Starting looking for free blocks";
     emit(read_operation(0, nrblocks));
@@ -248,6 +264,15 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
         this->contents[headeroffset + 0x08] = 0x00;         // designating block as used
         this->contents[headeroffset + 0x09] = i;            // set current block
         this->contents[headeroffset + 0x0A] = nrblocks;     // set total number of blocks
+
+        // overwriting header format if it is invalid
+        if(reformat) {
+            this->contents[headeroffset + 0x22] = filesize & 0xFF;
+            this->contents[headeroffset + 0x23] = filesize >> 8;
+            this->contents[headeroffset + 0x24] = filesize & 0xFF;
+            this->contents[headeroffset + 0x25] = filesize >> 8;
+            this->contents[headeroffset + 0x3F] = nrblocks - i;
+        }
 
         // marking blocks as unsynced
         this->cache_status[headeroffset / 0x100] = 0x02;

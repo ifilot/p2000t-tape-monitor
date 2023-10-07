@@ -14,6 +14,7 @@ SOURCES += \
     src/fileallocationtable.cpp \
     src/flashthread.cpp \
     src/ioworker.cpp \
+    src/logwindow.cpp \
     src/main.cpp \
     src/mainwindow.cpp \
     src/qhexview.cpp \
@@ -29,6 +30,7 @@ HEADERS += \
     src/fileallocationtable.h \
     src/flashthread.h \
     src/ioworker.h \
+    src/logwindow.h \
     src/mainwindow.h \
     src/qhexview.h \
     src/readthread.h \
