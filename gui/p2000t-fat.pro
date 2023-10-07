@@ -19,6 +19,7 @@ SOURCES += \
     src/qhexview.cpp \
     src/readthread.cpp \
     src/serial_interface.cpp \
+    src/syncthread.cpp \
     src/threadrun.cpp
 
 HEADERS += \
@@ -33,6 +34,7 @@ HEADERS += \
     src/readthread.h \
     src/romsizes.h \
     src/serial_interface.h \
+    src/syncthread.h \
     src/threadrun.h
 
 # store Git id

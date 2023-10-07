@@ -52,6 +52,7 @@
 #include "fileallocationtable.h"
 #include "blockmap.h"
 #include "threadrun.h"
+#include "syncthread.h"
 
 class MainWindow : public QMainWindow
 {
@@ -71,6 +72,7 @@ private:
     QComboBox* combobox_serial_ports;
     std::vector<std::pair<uint16_t, uint16_t>> port_identifiers;
     std::shared_ptr<SerialInterface> serial_interface;
+    std::unique_ptr<SyncThread> syncthread;
 
     // buttons
     QLabel* label_chip_type;
@@ -99,6 +101,9 @@ private:
     QLabel* label_startlocation;
     QLabel* label_checksums;
     BlockMap* blockmap;
+
+    static const unsigned int FILETABLE_OPEN_COLUMN = 4;
+    static const unsigned int FILETABLE_DELETE_COLUMN = 5;
 
 public:
     /**
@@ -154,6 +159,10 @@ private:
     void raise_error_window(QMessageBox::Icon icon, const QString errormsg);
 
     void index_files();
+
+    void disable_all_buttons();
+
+    void enable_all_buttons();
 
 private slots:
     /**
@@ -243,5 +252,14 @@ private slots:
      * @brief Select a file via pushbutton
      */
     void slot_select_file_button();
+
+    /****************************************************************************
+     *  SIGNALS :: SYNCHRONIZATION
+     ****************************************************************************/
+
+    /**
+     * @brief Select a new file
+     */
+    void slot_sync_complete();
 };
 #endif // MAINWINDOW_H

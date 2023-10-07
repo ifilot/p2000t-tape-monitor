@@ -220,6 +220,9 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
 
     uint16_t filesize = (uint8_t)header[0x02] + (uint8_t)header[0x03] * 256;
     uint8_t nrblocks = (uint8_t)header[0x1F];
+
+    qDebug() << "Starting looking for free blocks";
+    emit(read_operation(0, nrblocks));
     auto newbankblock = this->find_next_free_block();
 
     for(uint8_t i=0; i<nrblocks; i++) {
@@ -273,8 +276,6 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
             this->contents[headeroffset + 0x04] = newbankblock.second;
         }
     }
-
-    this->sync();
 }
 
 /**
@@ -463,24 +464,4 @@ std::pair<uint8_t, uint8_t> FileAllocationTable::find_next_free_block() {
     }
 
     return std::make_pair(0xFF, 0xFF);
-}
-
-/**
- * @brief sync external rom chip with current data
- */
-void FileAllocationTable::sync() {
-    for(unsigned int i=0; i<128; i++) { // loop over sectors
-        for(unsigned int j=0; j<0x10; j++) {
-            if(this->cache_status[i * 0x10 + j] == 0x02) {
-                qDebug() << "Writing sector: " << i;
-                this->serial_interface->open_port();
-                this->serial_interface->burn_sector(i, QByteArray(&this->contents[i * 0x1000], 0x1000));
-                this->serial_interface->close_port();
-                for(unsigned int k=0; k<0x10; k++) {
-                    this->cache_status[i * 0x10 + j] = 0x01;
-                }
-                break;
-            }
-        }
-    }
 }

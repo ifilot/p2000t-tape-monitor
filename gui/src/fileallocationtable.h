@@ -141,6 +141,18 @@ public:
      */
     void add_file(const QByteArray& header, const QByteArray& data);
 
+    inline const auto& get_contents() const {
+        return this->contents;
+    }
+
+    inline const auto& get_cache_status() const {
+        return this->cache_status;
+    }
+
+    inline void set_cache_status(const std::vector<uint8_t>& _cache_status) {
+        this->cache_status = _cache_status;
+    }
+
 signals:
     /**
      * @brief signal when a read operation is conducted
@@ -153,6 +165,8 @@ signals:
      * @param str
      */
     void message(QString str);
+
+
 
 private:
     /**
@@ -195,11 +209,6 @@ private:
      * @return
      */
     std::pair<uint8_t, uint8_t> find_next_free_block();
-
-    /**
-     * @brief sync external rom chip with current data
-     */
-    void sync();
 };
 
 #endif // FILEALLOCATIONTABLE_H

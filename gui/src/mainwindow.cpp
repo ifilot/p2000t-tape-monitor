@@ -357,19 +357,45 @@ void MainWindow::index_files() {
         QPushButton* button_select = new QPushButton("Open");
         button_select->setProperty("row", QVariant(i));
         button_select->setProperty("operation", QVariant("open"));
-        this->filetable->setCellWidget(i, 4, button_select);
+        this->filetable->setCellWidget(i, FILETABLE_OPEN_COLUMN, button_select);
         connect(button_select, SIGNAL(released()), this, SLOT(slot_select_file_button()));
 
         // delete button
         QPushButton* button_delete = new QPushButton("Delete");
         button_delete->setProperty("row", QVariant(i));
         button_delete->setProperty("operation", QVariant("delete"));
-        this->filetable->setCellWidget(i, 5, button_delete);
+        this->filetable->setCellWidget(i, FILETABLE_DELETE_COLUMN, button_delete);
         connect(button_delete, SIGNAL(released()), this, SLOT(slot_select_file_button()));
     }
 
     this->button_identify_chip->setEnabled(true);
     this->progress_bar_capacity->setValue(this->fat->get_number_occupied_blocks());
+}
+
+void MainWindow::disable_all_buttons() {
+    this->button_identify_chip->setEnabled(false);
+    this->button_read_rom->setEnabled(false);
+    this->button_scan_ports->setEnabled(false);
+    this->button_select_serial->setEnabled(false);
+
+    // loop over files and disable also all buttons there
+    for(unsigned int i=0; i<this->filetable->rowCount(); i++) {
+        qobject_cast<QPushButton*>(this->filetable->cellWidget(i, FILETABLE_OPEN_COLUMN))->setEnabled(false);
+        qobject_cast<QPushButton*>(this->filetable->cellWidget(i, FILETABLE_DELETE_COLUMN))->setEnabled(false);
+    }
+}
+
+void MainWindow::enable_all_buttons() {
+    this->button_identify_chip->setEnabled(true);
+    this->button_read_rom->setEnabled(true);
+    this->button_scan_ports->setEnabled(true);
+    this->button_select_serial->setEnabled(true);
+
+    // loop over files and disable also all buttons there
+    for(unsigned int i=0; i<this->filetable->rowCount(); i++) {
+        qobject_cast<QPushButton*>(this->filetable->cellWidget(i, FILETABLE_OPEN_COLUMN))->setEnabled(true);
+        qobject_cast<QPushButton*>(this->filetable->cellWidget(i, FILETABLE_DELETE_COLUMN))->setEnabled(true);
+    }
 }
 
 /****************************************************************************
@@ -509,13 +535,25 @@ void MainWindow::slot_add_program() {
         uint16_t filesize = (uint8_t)header[0x02] + (uint8_t)header[0x03] * 256;
         uint8_t nrblocks = (uint8_t)header[0x1F];
 
+        // sometimes the header does not contain the proper amount of blocks; if that is
+        // the case, ignore this value and recalculate the number of blocks from the
+        // total filesize
+        if(nrblocks * 0x500 < file.size() || nrblocks == 0 || filesize == 0) {
+            qDebug() << "Invalid header; recalculating file parameters.";
+            filesize = file.size() / 0x500 * 0x400;
+            nrblocks = file.size() / 0x500;
+        }
+
         QMessageBox::StandardButton reply = QMessageBox::question(
             this,
             "Add program?",
-            tr("Are you sure you want to commit this program?\n%1\n%2 bytes (%3 blocks)")
+            tr("Are you sure you want to commit this program?\n"
+               "%1\n%2 bytes (%3 blocks)\n"
+               "CAS file size: %4 bytes")
                     .arg(QString::fromUtf8(filename, 16))
                     .arg(filesize)
-                    .arg(nrblocks),
+                    .arg(nrblocks)
+                    .arg(file.size()),
             QMessageBox::Yes | QMessageBox::No
         );
 
@@ -525,8 +563,19 @@ void MainWindow::slot_add_program() {
                 romdata.append(data.mid((i*0x500)+0x100, 0x400));
             }
 
+            qDebug() << "Disabling all buttons";
+            this->disable_all_buttons();
+
+            qDebug() << "Start adding data";
             this->fat->add_file(header, romdata);
-            this->index_files();
+
+            this->syncthread = std::make_unique<SyncThread>(this->serial_interface);
+            syncthread->set_contents(this->fat->get_contents());
+            syncthread->set_cache_status(this->fat->get_cache_status());
+            connect(this->syncthread.get(), SIGNAL(sync_item_done(int, int)), this, SLOT(read_operation(int, int)));
+            connect(this->syncthread.get(), SIGNAL(sync_complete()), this, SLOT(slot_sync_complete()));
+            this->syncthread->start();
+
         } else {
             return;
         }
@@ -750,4 +799,11 @@ void MainWindow::slot_select_file_button() {
         this->slot_select_file(row);
         this->selected_file = row;
     }
+}
+
+void MainWindow::slot_sync_complete() {
+    this->fat->set_cache_status(this->syncthread->get_cache_status());
+    this->index_files();
+    this->enable_all_buttons();
+    this->syncthread.release();
 }
