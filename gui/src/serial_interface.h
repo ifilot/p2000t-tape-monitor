@@ -117,9 +117,9 @@ public:
 
     /**
      * @brief Erase sector (0x1000 bytes) on SST39SF0x0 chip
-     * @param upper bytes of sector address
+     * @param upper bytes of sector address (which is a block_id)
      */
-    void erase_sector(unsigned int sector_id);
+    void erase_sector(unsigned int block_id);
 
     /**
      * @brief Burn block (256 bytes) to SST39SF0x0 chip

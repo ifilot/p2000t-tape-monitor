@@ -582,14 +582,6 @@ void MainWindow::slot_add_program() {
 
             qDebug() << "Start adding data";
             this->fat->add_file(header, romdata);
-
-            this->syncthread = std::make_unique<SyncThread>(this->serial_interface);
-            syncthread->set_contents(this->fat->get_contents());
-            syncthread->set_cache_status(this->fat->get_cache_status());
-            connect(this->syncthread.get(), SIGNAL(sync_item_done(int, int)), this, SLOT(read_operation(int, int)));
-            connect(this->syncthread.get(), SIGNAL(sync_complete()), this, SLOT(slot_sync_complete()));
-            this->syncthread->start();
-
         } else {
             return;
         }
@@ -763,6 +755,7 @@ void MainWindow::slot_access_fat() {
 
     // connect signals
     connect(this->fat, SIGNAL(read_operation(int,int)), this, SLOT(read_operation(int,int)));
+    connect(this->fat, SIGNAL(signal_sync_needed()), this, SLOT(slot_start_sync()));
     connect(this->fat, SIGNAL(message(QString)), this, SLOT(message(QString)));
 
     this->index_files();
@@ -804,6 +797,10 @@ void MainWindow::slot_select_file(int row) {
     }
 }
 
+/****************************************************************************
+ *  SIGNALS :: SYNCHRONIZATION ROUTINES
+ ****************************************************************************/
+
 /**
  * @brief Select a file via pushbutton
  */
@@ -811,15 +808,31 @@ void MainWindow::slot_select_file_button() {
     QPushButton* button_sender = qobject_cast<QPushButton*>(sender());
     int row = button_sender->property("row").toInt();
     QString operation =  button_sender->property("operation").toString();
-    qDebug() << row << operation;
 
     if(operation == "open") {
         this->slot_select_file(row);
         this->selected_file = row;
+    } else if(operation == "delete") {
+        this->fat->delete_file(row);
     }
 }
 
+/**
+ * @brief Receiving slot that a sync operation is needed
+ */
+void MainWindow::slot_start_sync() {
+    qInfo() << "Received synchronization request";
+    this->disable_all_buttons();
+    this->syncthread = std::make_unique<SyncThread>(this->serial_interface);
+    syncthread->set_contents(this->fat->get_contents());
+    syncthread->set_cache_status(this->fat->get_cache_status());
+    connect(this->syncthread.get(), SIGNAL(sync_item_done(int, int)), this, SLOT(read_operation(int, int)));
+    connect(this->syncthread.get(), SIGNAL(sync_complete()), this, SLOT(slot_sync_complete()));
+    this->syncthread->start();
+}
+
 void MainWindow::slot_sync_complete() {
+    qInfo() << "Synchronization process completed";
     this->fat->set_cache_status(this->syncthread->get_cache_status());
     this->index_files();
     this->enable_all_buttons();

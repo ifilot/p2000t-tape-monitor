@@ -75,8 +75,6 @@ int main(int argc, char *argv[])
         mainWindow = std::make_unique<MainWindow>(log_messages);
         mainWindow->setWindowTitle(QString(PROGRAM_NAME) + " " + QString(PROGRAM_VERSION));
     } catch(const std::exception& e) {
-        // if any errors are caught in the process of starting up the application,
-        // they will be printed in the execution.log file
         std::cerr << "Error detected!" << std::endl;
         std::cerr << e.what() << std::endl;
         std::cerr << "Abnormal closing of program." << std::endl;

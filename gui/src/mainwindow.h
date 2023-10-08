@@ -271,6 +271,11 @@ private slots:
      ****************************************************************************/
 
     /**
+     * @brief Receiving slot that a sync operation is needed
+     */
+    void slot_start_sync();
+
+    /**
      * @brief Select a new file
      */
     void slot_sync_complete();

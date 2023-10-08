@@ -63,12 +63,19 @@ private:
     std::vector<char> contents;
     std::vector<uint8_t> cache_status;
 
+    // size variables
     static const unsigned int BLOCK_SIZE = 0x100;
     static const unsigned int SECTOR_SIZE = 0x1000;
     static const unsigned int BANK_SIZE = 0x4000;
+    static const unsigned int CLUSTER_SIZE = 0x10000;
     static const unsigned int BLOCKS_PER_SECTOR = SECTOR_SIZE / BLOCK_SIZE;
     static const unsigned int BLOCKS_PER_BANK = BANK_SIZE / BLOCK_SIZE;
-    static const unsigned int SECTORS_PER_BANK = BANK_SIZE / SECTOR_SIZE;
+
+    // cache status variables; these cache status variables are mutually
+    static const uint8_t CACHE_UNKNOWN = 0x00;              // data has not yet been read from the chip
+    static const uint8_t CACHE_SYNCED = 0x01;               // data has been read from the chip and is synced
+    static const uint8_t CACHE_WRITE_NONERASE = 0x02;       // local data is newer than on chip, syncing does not require erasing
+    static const uint8_t CACHE_WRITE_ERASE = 0x03;          // local data is newer than on chip and required erasing for syncing
 
 public:
     /**
@@ -156,6 +163,12 @@ public:
      */
     void add_file(const QByteArray& header, const QByteArray& data);
 
+    /**
+     * @brief Remove a file from the ROM
+     * @param file_id
+     */
+    void delete_file(unsigned int file_id);
+
     inline const auto& get_contents() const {
         return this->contents;
     }
@@ -181,7 +194,10 @@ signals:
      */
     void message(QString str);
 
-
+    /**
+     * @brief Give a signal that ROM chip resyncing is needed
+     */
+    void signal_sync_needed();
 
 private:
     /**
@@ -224,6 +240,12 @@ private:
      */
     void attach_filedata(unsigned int id);
 
+    /**
+     * @brief Generate CRC16-XMODEM checksum for data
+     * @param data
+     * @param length
+     * @return
+     */
     uint16_t crc16_xmodem(const QByteArray& data, uint16_t length);
 
     /**

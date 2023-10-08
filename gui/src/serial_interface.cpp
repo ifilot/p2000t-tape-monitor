@@ -142,14 +142,16 @@ QByteArray SerialInterface::read_bank(unsigned int bank_id) {
 /**
  * @brief Erase sector (4096 bytes) on SST39SF0x0 chip
  * @param start address
+ *
+ * WARNING: THIS FUNCTION TAKES A BLOCK_ID AS INPUT
  */
-void SerialInterface::erase_sector(unsigned int sector_id) {
+void SerialInterface::erase_sector(unsigned int block_id) {
     try {
-        std::string command = QString("ESST%1").arg(sector_id,4,16,QLatin1Char('0')).toUpper().toStdString();
+        std::string command = QString("ESST%1").arg(block_id,4,16,QLatin1Char('0')).toUpper().toStdString();
         auto response = this->send_command_capture_response(command, 2);
         uint16_t nrcycles = 0;
         memcpy((void*)&nrcycles, (void*)&response.data()[0], 2);
-        qInfo() << "Succesfully erased sector #" << sector_id << " in " << nrcycles << " cyles.";
+        qInfo() << "Succesfully erased sector #" << (block_id / 10) << " in " << nrcycles << " cyles.";
     }  catch (std::exception& e) {
         std::cerr << "Caught error: " << e.what() << std::endl;
         throw e;

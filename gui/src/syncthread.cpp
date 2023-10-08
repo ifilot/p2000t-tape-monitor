@@ -31,7 +31,8 @@ void SyncThread::run() {
     unsigned int nrsectowrite = 0;
     for(unsigned int i=0; i<nrsects; i++) { // loop over sectors
         for(unsigned int j=0; j<0x10; j++) {
-            if(this->cache_status[i * 0x10 + j] == 0x02) {
+            if(this->cache_status[i * 0x10 + j] == 0x02 ||
+               this->cache_status[i * 0x10 + j] == 0x03) {
                 nrsectowrite++;
                 break;
             }
@@ -44,7 +45,16 @@ void SyncThread::run() {
 
             // if at least one sector page has a - to be written - flag, write
             // the whole sector
-            if(this->cache_status[i * 0x10 + j] == 0x02) {
+            if(this->cache_status[i * 0x10 + j] == 0x02 ||
+               this->cache_status[i * 0x10 + j] == 0x03) {
+
+                if(this->cache_status[i * 0x10 + j] == 0x03) {
+                    qDebug() << "Erasing sector: " << i;
+                    this->serial_interface->open_port();
+                    this->serial_interface->erase_sector(i * 0x10); // !! this function takes a block_id as input !!
+                    this->serial_interface->close_port();
+                }
+
                 qDebug() << "Writing sector: " << i;
                 this->serial_interface->open_port();
                 this->serial_interface->burn_sector(i, QByteArray(&this->contents[i * 0x1000], 0x1000));
@@ -55,10 +65,10 @@ void SyncThread::run() {
 
                 // update cache status for the whole sector
                 for(unsigned int k=0; k<0x10; k++) {
-                    this->cache_status[i * 0x10 + j] = 0x01;
+                    this->cache_status[i * 0x10 + k] = 0x01;
                 }
 
-                // and terminate the loop over the sector pages
+                // and terminate the loop and go to the sector pages
                 break;
             }
         }
