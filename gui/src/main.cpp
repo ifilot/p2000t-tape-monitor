@@ -21,6 +21,8 @@
 
 #include <QApplication>
 #include <QStringList>
+#include <QDateTime>
+#include <QString>
 
 std::shared_ptr<QStringList> log_messages;
 
@@ -33,26 +35,29 @@ std::shared_ptr<QStringList> log_messages;
 void message_output(QtMsgType type, const QMessageLogContext &context, const QString &msg) {
     QString local_msg = QString(msg.toLocal8Bit());
 
+    QDateTime date = QDateTime::currentDateTime();
+    QString fmtime = date.toString("dd.MM.yyyy hh:mm:ss.zzz");
+
     switch (type) {
     case QtDebugMsg:
-        log_messages->append("[D] " + local_msg);
-        std::cout << "[D] " << msg.toStdString() << std::endl;
+        log_messages->append(fmtime + " [DEBUG] " + local_msg);
+        std::cout << "[DEBUG] " << msg.toStdString() << std::endl;
         break;
     case QtInfoMsg:
-        log_messages->append("[I] " + local_msg);
-        std::cout << "[I] " << msg.toStdString() << std::endl;
+        log_messages->append(fmtime + " [INFO] " + local_msg);
+        std::cout << "[INFO] " << msg.toStdString() << std::endl;
         break;
     case QtWarningMsg:
-        log_messages->append("[W] " + local_msg);
-        std::cout << "[W] " << msg.toStdString() << std::endl;
+        log_messages->append(fmtime + " [WARNING] " + local_msg);
+        std::cout << "[WARNING] " << msg.toStdString() << std::endl;
         break;
     case QtCriticalMsg:
-        log_messages->append("[C] " + local_msg);
-        std::cerr << "[C] " << msg.toStdString() << std::endl;
+        log_messages->append(fmtime + " [CRITICAL] " + local_msg);
+        std::cerr << "[CRITICAL] " << msg.toStdString() << std::endl;
         break;
     case QtFatalMsg:
-        log_messages->append("[F] " + local_msg);
-        std::cerr << "[F] " << msg.toStdString() << std::endl;
+        log_messages->append(fmtime + " [FATAL] " + local_msg);
+        std::cerr << "[FATAL] " << msg.toStdString() << std::endl;
         break;
     }
 }

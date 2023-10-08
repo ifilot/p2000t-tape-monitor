@@ -102,6 +102,13 @@ public:
     QByteArray read_block(unsigned int sector_addr);
 
     /**
+     * @brief Read a sector (0x1000 bytes)
+     * @param address location
+     * @return data at address
+     */
+    QByteArray read_sector(unsigned int sector_id);
+
+    /**
      * @brief Read a bank (0x4000 bytes)
      * @param bank_id
      * @return data at address

@@ -46,7 +46,7 @@ void FileAllocationTable::read_files() {
                 break;
             } else {
                 this->progblocks.emplace_back(bank, blockid);
-                qDebug() << "Found program: " << (unsigned int)bank << "," << (unsigned int)blockid;
+                qInfo() << "Found program: BANK " << (unsigned int)bank << " BLOCK " << (unsigned int)blockid;
             }
         }
     }
@@ -56,12 +56,13 @@ void FileAllocationTable::read_files() {
     emit(this->message("Parsing file metadata..."));
     for(const auto& loc : this->progblocks) {
         emit(this->read_operation(ctr++, this->progblocks.size()));
-        unsigned int addr = loc.first * 0x10000 + 0x100 + loc.second * 0x40;
-        unsigned int saddr = addr / 0x100;
-        unsigned int offset = addr % 0x100;
+        unsigned int addr = loc.first * 0x10000 + 0x100 + loc.second * 0x40;    // start address of metadata
+        unsigned int offset = addr % 0x100;                                     // determine block offset
+        uint8_t sector_id = addr >> 12 & 0xFF;                                  // determine sector
 
-        QByteArray meta = this->read_block(saddr);
-        QByteArray metadata = meta.mid(offset, 0x40);
+        QByteArray sectordata = this->read_sector(sector_id);                   // read complete sector
+        QByteArray block = sectordata.mid(addr & 0x0F00);                       // grab block from sector
+        QByteArray metadata = block.mid(offset, 0x40);                          // grab metada from block
 
         File file;
         memcpy(file.filename, &metadata.data()[0x26], 8);
@@ -219,7 +220,7 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
     memcpy(&filename[8], header.data() + 0x17, 8);
 
     uint16_t filesize = (uint8_t)header[0x02] + (uint8_t)header[0x03] * 256; // big endian
-    qDebug() << tr("Header claims file size is: %1 bytes").arg(filesize);
+    qInfo() << tr("Header claims file size is: %1 bytes").arg(filesize);
 
     // determine number of blocks based on data size as we cannot a priori
     // trust the header block for that; check therefore whether the data size
@@ -232,12 +233,12 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
     // assert whether filesize as indicated in header is sensible
     bool reformat = false;
     if(!(filesize <= nrblocks * 0x400 && filesize > (nrblocks-1) * 0x400)) {
-        qDebug() << "Invalid header size encountered, reformatting metadata";
+        qWarning() << "Invalid header size encountered, reformatting metadata";
         filesize = nrblocks * 0x400;
         reformat = true;
     }
 
-    qDebug() << "Starting looking for free blocks";
+    qInfo() << "Starting looking for free blocks";
     emit(read_operation(0, nrblocks));
     auto newbankblock = this->find_next_free_block();
 
@@ -246,7 +247,7 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
         uint8_t newblock = newbankblock.second;
 
         if(i == 0) { // write start position in preample
-            qDebug() << "Placing startblock in preample";
+            qInfo() << "Placing startblock in preample";
             char *ptr = &this->contents[newbank * 0x10000];
             while((uint8_t)*ptr != 0xFF) {
                 ptr++;
@@ -259,7 +260,7 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
 
         // copy raw file header
         unsigned int headeroffset = newbank * 0x10000 + 0x100 + 0x40 * newblock;
-        qDebug() << tr("Copying header to 0x%1").arg(headeroffset, 6, 16, QLatin1Char('0'));
+        qInfo() << tr("Copying header to 0x%1").arg(headeroffset, 6, 16, QLatin1Char('0'));
         memcpy(&this->contents[headeroffset + 0x20], header.data(), 0x20);
         this->contents[headeroffset + 0x08] = 0x00;         // designating block as used
         this->contents[headeroffset + 0x09] = i;            // set current block
@@ -279,7 +280,7 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
 
         // copy data
         unsigned int dataoffset = newbank * 0x10000 + 0x400 * (newblock + 4);
-        qDebug() << tr("Copying data to 0x%1").arg(dataoffset, 6, 16, QLatin1Char('0'));
+        qInfo() << tr("Copying data to 0x%1").arg(dataoffset, 6, 16, QLatin1Char('0'));
         uint8_t bank_id = dataoffset / 0x4000;
         this->read_bank(bank_id); // ensure bank is loaded
         QByteArray blockdata = data.mid(i*0x400,0x400);
@@ -327,25 +328,47 @@ QByteArray FileAllocationTable::read_block(unsigned int address) {
 }
 
 /**
- * @brief Read a bank of 0x4000 bytes
- * @param bank_id
+ * @brief Read a sector (0x1000 bytes) from the chip, use caching
+ * @param block address (0x1000 segment)
  * @return datablock
  */
-QByteArray FileAllocationTable::read_bank(uint8_t bank_id) {
-    for(unsigned int i=0; i<(0x4000 / 0x100); i++) {
-        if(this->cache_status[bank_id * (0x4000 / 0x100) + i] < 0x01) {
+QByteArray FileAllocationTable::read_sector(uint8_t sector_id) {
+    for(unsigned int i=0; i<BLOCKS_PER_SECTOR; i++) {
+        if(this->cache_status[sector_id * BLOCKS_PER_SECTOR + i] < 0x01) {
             this->serial_interface->open_port();
-            QByteArray data = this->serial_interface->read_bank(bank_id);
+            QByteArray data = this->serial_interface->read_sector(sector_id);
             this->serial_interface->close_port();
-            memcpy((void*)&this->contents[bank_id * 0x4000], data.data(), 0x4000);
-            for(unsigned int j=0; j<(0x4000 / 0x100); j++) {
-                this->cache_status[bank_id * (0x4000 / 0x100) + j] = 0x01;
+            memcpy((void*)&this->contents[sector_id *SECTOR_SIZE], data.data(), SECTOR_SIZE);
+            for(unsigned int j=0; j<BLOCKS_PER_SECTOR; j++) {
+                this->cache_status[sector_id * BLOCKS_PER_SECTOR + j] = 0x01;
             }
             break;
         }
     }
 
-    return QByteArray(&this->contents[bank_id * 0x4000], 0x4000);
+    return QByteArray(&this->contents[sector_id * SECTOR_SIZE], SECTOR_SIZE);
+}
+
+/**
+ * @brief Read a bank of 0x4000 bytes
+ * @param bank_id
+ * @return datablock
+ */
+QByteArray FileAllocationTable::read_bank(uint8_t bank_id) {
+    for(unsigned int i=0; i<BLOCKS_PER_BANK; i++) {
+        if(this->cache_status[bank_id * BLOCKS_PER_BANK + i] < 0x01) {
+            this->serial_interface->open_port();
+            QByteArray data = this->serial_interface->read_bank(bank_id);
+            this->serial_interface->close_port();
+            memcpy((void*)&this->contents[bank_id * BANK_SIZE], data.data(), BANK_SIZE);
+            for(unsigned int j=0; j<BLOCKS_PER_BANK; j++) {
+                this->cache_status[bank_id * BLOCKS_PER_BANK + j] = 0x01;
+            }
+            break;
+        }
+    }
+
+    return QByteArray(&this->contents[bank_id * BANK_SIZE], BANK_SIZE);
 
 }
 
@@ -480,7 +503,7 @@ uint16_t FileAllocationTable::crc16_xmodem(const QByteArray& data, uint16_t leng
  */
 std::pair<uint8_t, uint8_t> FileAllocationTable::find_next_free_block() {
     for(uint8_t bank=0; bank<8; bank++) {
-        QByteArray data = this->read_bank(bank * 4);
+        QByteArray data = this->read_sector(bank * SECTORS_PER_BANK);
         for(uint8_t block=0; block<60; block++) {
             if((uint8_t)data.data()[0x100 + block*0x40+0x08] == 0xFF) {
                 return std::make_pair(bank, block);

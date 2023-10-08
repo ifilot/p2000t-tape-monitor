@@ -44,7 +44,8 @@ LogWindow::LogWindow(const std::shared_ptr<QStringList>& _log_messages) :
     }
     this->linesread = this->log_messages->size();
 
-    this->setGeometry(640, 480, 640, 480);
+    this->setMinimumHeight(256);
+    this->setMinimumWidth(1024);
     this->hide();
 
     // setup timer that checks every second whether

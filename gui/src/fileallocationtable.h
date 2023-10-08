@@ -43,6 +43,14 @@ public:
 
 /**
  * @brief Class to interface with the P2000T File Allocation Table
+ *
+ * Note that this class uses internal caching. When a block, sector or bank of data
+ * is retrieved, the program checks whether that information is already in cache and
+ * then returns the data from cache.
+ *
+ * Write operations will invalidate the cache and require a sync operation via the
+ * SyncThread class.
+ *
  */
 class FileAllocationTable : public QObject {
     Q_OBJECT
@@ -54,6 +62,13 @@ private:
     // enable caching
     std::vector<char> contents;
     std::vector<uint8_t> cache_status;
+
+    static const unsigned int BLOCK_SIZE = 0x100;
+    static const unsigned int SECTOR_SIZE = 0x1000;
+    static const unsigned int BANK_SIZE = 0x4000;
+    static const unsigned int BLOCKS_PER_SECTOR = SECTOR_SIZE / BLOCK_SIZE;
+    static const unsigned int BLOCKS_PER_BANK = BANK_SIZE / BLOCK_SIZE;
+    static const unsigned int SECTORS_PER_BANK = BANK_SIZE / SECTOR_SIZE;
 
 public:
     /**
@@ -175,6 +190,13 @@ private:
      * @return datablock
      */
     QByteArray read_block(unsigned int address);
+
+    /**
+     * @brief Read a block (0x1000 bytes) from the chip, use caching
+     * @param address
+     * @return datablock
+     */
+    QByteArray read_sector(uint8_t sector_id);
 
     /**
      * @brief Read a bank of 0x4000 bytes
