@@ -42,7 +42,7 @@ void main(void) {
                         if(offset + 16 < (__nrprogs - 16)) {
                             offset += 16;
                         } else {
-                            offset = __nrprogs - 17;
+                            offset = __nrprogs - 16;
                         }
                         read_programs_offset(offset);
                         print_programs(16, offset);
