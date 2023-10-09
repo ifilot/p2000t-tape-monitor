@@ -1,5 +1,7 @@
 # P2000T Tape Monitor
 
+[![build](https://github.com/ifilot/p2000t-tape-monitor/actions/workflows/build.yml/badge.svg)](https://github.com/ifilot/p2000t-tape-monitor/actions/workflows/build.yml)
+
 ## Features
 - [x] Launch tape files from data cartridge in SLOT2
 - [ ] Write tape data to data cartridge in SLOT2
@@ -22,9 +24,13 @@ This repository is organized as follows
 
 ## Files
 
-* BASICBOOTSTRAP.BIN: Modified BASIC cartridge (SLOT1)
-* FIRMWAREFLASHER.BIN: Firwmare flasher for the data cartridge firmware (SLOT1)
-* LAUNCHER.BIN: Firmware for the data cartridge (SLOT2)
+The latest version of the files below can be obtained from the action artifacts
+of the [last build](https://github.com/ifilot/p2000t-tape-monitor/actions/workflows/build.yml).
+
+* `BASICBOOTSTRAP.BIN`: Modified BASIC cartridge (SLOT1)
+* `FIRMWAREFLASHER.BIN`: Firwmare flasher for the data cartridge firmware (SLOT1)
+* `LAUNCHER.BIN`: Firmware for the data cartridge (SLOT2)
+* `p2000t-fat-flasher--installer-win64.exe`: Windows installer for GUI
 
 ## File system
 
