@@ -1,34 +1,36 @@
 # P2000T Tape Monitor
 
-## Purpose
-Read data from tapes and write them to an external ROM chip.
+[![build](https://github.com/ifilot/p2000t-tape-monitor/actions/workflows/build.yml/badge.svg)](https://github.com/ifilot/p2000t-tape-monitor/actions/workflows/build.yml)
 
-![screenshot of P2000T Tape Monitor](img/tapemonitor.png)
+## Features
+- [x] Launch tape files from data cartridge in SLOT2
+- [ ] Write tape data to data cartridge in SLOT2
+- [ ] Write data back to tapes from the data cartridge
 
-## Assembly
-Assemble the source code in [src/main.asm](src/tapemon.asm) using the
-P2000T-ide or the [tniasm Z80 assembler](http://www.tni.nl/products/tniasm.html) 
-and place the resulting binary file in a SLOT1 cartridge.
+## Contents
+This repository is organized as follows
 
-## Commands
-Upon boot of the P2000T a monitor-type of programmed is displayed from which
-the user can read out the address space of the P2000T and interface with the
-tape recorder. The program accepts the following commands:
+* `basicmod`: Modified BASIC ROM. This ROM is needed for the cartridge in SLOT1.
+* `cases`: Enclosures for the data cartridge
+* `docs`: Technical documentation; mainly needed for development
+* `firmwareflasher`: SLOT1 program to transfer launch-os from external ROM chip
+  on the data cartridge to the internal ROM.
+* `gui`: GUI to add and delete programs from the data cartridge and to format a
+  chip.
+* `pcb`: PCBs for the SLOT2 datacartridge.
+* `src`: Source files for the SLOT1 program "tape monitor" that can be used to
+  transfer tapes to the external rom. **This program is still in development,
+  use at your own risk.**
 
-### Single-byte commands
+## Files
 
-* `i`/`I`: Read all programs that are on the tape (index)
-* `w` / `W`: Rewind the tape
-* `rxxxx` / `Rxxxx`: Read memory at address $xxxx.
-* `l` / `L`: Load a single block from the tape.
-* `n`: Forward $60 bytes in monitor
-* `p`: Reverse $60 bytes in monitor
-* `P`: Print the archive
+The latest version of the files below can be obtained from the action artifacts
+of the [last build](https://github.com/ifilot/p2000t-tape-monitor/actions/workflows/build.yml).
 
-### Full commands
-
-* `copy`: Copy the tape to the SST39SF040 chip
-* `format`: Format the SST39SF0x0 chip
+* `BASICBOOTSTRAP.BIN`: Modified BASIC cartridge (SLOT1)
+* `FIRMWAREFLASHER.BIN`: Firwmare flasher for the data cartridge firmware (SLOT1)
+* `LAUNCHER.BIN`: Firmware for the data cartridge (SLOT2)
+* `p2000t-fat-flasher--installer-win64.exe`: Windows installer for GUI
 
 ## File system
 

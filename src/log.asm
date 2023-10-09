@@ -1,3 +1,4 @@
+;# MAIN="main.asm"
 ;-------------------------------------------------------------------------------
 ; LOGGING ROUTINES
 ;-------------------------------------------------------------------------------
@@ -8,28 +9,12 @@ initlog:
 	ret
 
 ;-------------------------------------------------------------------------------
-; copyramromlog
-;-------------------------------------------------------------------------------
-copyramromlog:
-	ld hl,.message
-	call writelogstring
-	call writecolon
-	ld a,(FREEBANK)
-	call writeloghex
-	ld hl,(ROMADDR)
-	call writelogword
-	call writelognextline
-	ret
-
-.message: DB "CRR",255
-
-;-------------------------------------------------------------------------------
 ; print string to screen
 ; input:  hl - string pointer
-; output: de - log address pointer
 ; uses: a
 ;-------------------------------------------------------------------------------
 writelogstring:
+	push de
 	ld de,(LOGPOINTER)
 .nextbyte:
 	ld a,(hl)
@@ -38,54 +23,61 @@ writelogstring:
 	ld (de),a
 	inc de
 	inc hl
-	jp .nextbyte
+	jr .nextbyte
 .exit:
 	ld (LOGPOINTER),de
+	pop de
 	ret
 
 ;-------------------------------------------------------------------------------
 ; Write colon to logaddress
 ;-------------------------------------------------------------------------------
 writecolon:
+	push de
 	ld de,(LOGPOINTER)
 	ld a,":"
 	ld (de),a
 	inc de
 	ld (LOGPOINTER),de
+	pop de
 	ret
 
 ;-------------------------------------------------------------------------------
 ; write a newline character to LOG
-; uses: a,de
+; uses: a
 ;-------------------------------------------------------------------------------
 writelognextline:
+	push de
 	ld de,(LOGPOINTER)
 	ld a,10 				; newline character
 	ld (de),a
 	inc de
 	ld (LOGPOINTER),de
+	pop de
 	ret
 
 ;-------------------------------------------
 ; printhex subroutine
-; input: a  - value to print
-; uses:  a,b
-; output: de - new cursor position of video address
+; input: a  - value to print (retained)
+; uses:  a,iyh
 ;-------------------------------------------
 writeloghex:
+	push de
 	ld de,(LOGPOINTER)
-	ld b,a
-    rra
+	ld iyh,a				; load value into b
+    rra						; shift right by 4, ignore leaving bits
 	rra
 	rra
 	rra
-	and $0f
-    call .printnibble
-	ld a,b
-	and $0f
-	call .printnibble
+	and $0f					; mask
+    call .printnibble		; print upper nibble
+	ld a,iyh				; reload value to print
+	and $0f					; mask
+	call .printnibble		; print lower nibble
+	ld (LOGPOINTER),de
+	ld a,iyh
+	pop de
 	ret
-
 .printnibble:
 	add $30
 	cp $3A
@@ -94,7 +86,6 @@ writeloghex:
 .print:
 	ld (de),a
 	inc de
-	ld (LOGPOINTER),de
 	ret
 
 ;-------------------------------------------

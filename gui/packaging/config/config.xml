@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Installer>
+    <Name>P2000T FAT Flasher</Name>
+    <Version>0.1.0</Version>
+    <Title>PICO SST39SF0x0 Programmer Installer</Title>
+    <Publisher>philips-p2000t.nl</Publisher>
+    <StartMenuDir>philips-p2000t.nl</StartMenuDir>
+    <TargetDir>@HomeDir@/philips-p2000t.nl/P2000T-FAT-Flasher</TargetDir>
+    <RunProgram>@TargetDir@/P2000T-FAT-Flasher</RunProgram>
+    <RunProgramDescription>P2000T FAT Flasher</RunProgramDescription>
+</Installer>

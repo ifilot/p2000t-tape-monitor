@@ -66,18 +66,20 @@ The CAS header basically corresponds to memory locations $6030-$604F of the
 P2000T after reading a block from the cassette. These addresses are hardcoded 
 in the P2000T ROM (e.g. 0x0000 - 0x1000) and cannot be changed.
 
-|   Address   | Description      |
-|-------------|------------------|
-| $6030-$6031 | Transfer address |
-| $6032-$6033 | File length      |
-| $6034-$6035 | Record length    |
-| $6036-$603D | Descriptor (1/2) |
-| $603E-$6040 | Extension        |
-| $6041-$6042 | Type             |
-| $6043-$6044 | Start boot       |
-| $6045-$6046 | Load             |
-| $6047-$604E | Descriptor (2/2) |
-|       $604F | Blocks remaining |
+**Note that all values are stored in big endian order**
+
+|   Address   | RAM Address | Description      |
+|-------------|-------------|------------------|
+| $0020-$0021 | $6030-$6031 | Transfer address |
+| $0022-$0023 | $6032-$6033 | File length      |
+| $0024-$0025 | $6034-$6035 | Record length    |
+| $0026-$002D | $6036-$603D | Descriptor (1/2) |
+| $002E-$0030 | $603E-$6040 | Extension        |
+| $0031-$0032 | $6041-$6042 | Type             |
+| $0033-$0034 | $6043-$6044 | Start boot       |
+| $0035-$0036 | $6045-$6046 | Load             |
+| $0037-$003E | $6047-$604E | Descriptor (2/2) |
+|       $003F |       $604F | Blocks remaining |
 
 ### Checksum
 

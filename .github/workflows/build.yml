@@ -1,0 +1,126 @@
+name: build
+
+on:
+  push:
+    branches: [ "master", "develop" ]
+  pull_request:
+    branches: [ "master", "develop" ]
+
+env:
+  BUILD_TYPE: Release
+  PROGNAME: p2000t-fat-flasher
+  EXEC: p2000t-fat-flasher.exe
+
+jobs:
+
+  # Firmware of the SLOT2 cartridge
+  build-launcher:
+
+    runs-on: ubuntu-latest
+    container: 
+      image: z88dk/z88dk
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build launcher application
+      run: |
+        cd launch-os
+        make
+    - name: Upload launcher
+      uses: actions/upload-artifact@v3
+      with:
+        name: LAUNCHER.BIN
+        path: ./launch-os/main.rom
+
+  # Firmware flasher for the SLOT2 cartridge firmware
+  build-firmware-flasher:
+
+    runs-on: ubuntu-latest
+    container: 
+      image: z88dk/z88dk
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build launcher application
+      run: |
+        cd firmwareflasher
+        make
+    - name: Upload launcher
+      uses: actions/upload-artifact@v3
+      with:
+        name: FIRMWAREFLASHER.BIN
+        path: ./firmwareflasher/main.rom
+
+  # Modified BASIC cartridge
+  build-basic:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install dependencies
+      run: sudo apt install -y python3 python3-numpy z80asm make
+    - name: Build modified basic cartridge
+      run: |
+        cd basicmod
+        z80asm bootstrap.asm -o bootstrap.bin
+        z80asm launcher.asm -o launcher.bin
+        python hackrom.py
+    - name: Upload
+      uses: actions/upload-artifact@v1
+      with:
+        name: BASICBOOTSTRAP.BIN
+        path: basicmod/BASICBOOTSTRAP.BIN
+
+  # GUI to interface with a P2000TFAT-chip
+  build-gui-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '5.15.2'
+        target: 'desktop'
+        arch: 'win64_msvc2019_64'
+        cache: true
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -S ${{github.workspace}}/gui -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    - name: Upload executable
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{env.EXEC}}
+        path: ${{github.workspace}}/build/Release/${{env.EXEC}}
+
+  create-installer-windows:
+    runs-on: windows-latest
+    needs: build-gui-windows
+    permissions: write-all
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '5.15.2'
+        target: 'desktop'
+        arch: 'win64_msvc2019_64'
+        tools: 'tools_ifw'
+        cache: true
+    - name: Download artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{env.EXEC}}
+        path: gui/packaging/packages/com.vendor.product/data/
+    - name: Get dependencies
+      run: windeployqt.exe gui\packaging\packages\com.vendor.product\data\${{env.EXEC}} --release --force
+    - name: Copy assets
+      run: copy gui\assets\icon\icon.ico gui\packaging\packages\com.vendor.product\data\icon.ico
+    - name: Create installer
+      run: ${{github.workspace}}\..\Qt\Tools\QtInstallerFramework\4.6\bin\binarycreator.exe -c config\config.xml -p packages ${{env.PROGNAME}}-installer-win64.exe
+      working-directory: gui/packaging
+    - name: Upload installer
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{env.PROGNAME}}-installer-win64.exe
+        path: gui/packaging/${{env.PROGNAME}}-installer-win64.exe
