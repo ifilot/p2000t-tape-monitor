@@ -58,6 +58,7 @@ private:
     std::shared_ptr<SerialInterface> serial_interface;
     std::vector<std::pair<unsigned int, unsigned int>> progblocks;
     std::vector<File> files;
+    unsigned int nrbanks = 0;
 
     // enable caching
     std::vector<char> contents;
@@ -81,7 +82,7 @@ public:
     /**
      * @brief Default constructor
      */
-    FileAllocationTable();
+    FileAllocationTable(unsigned int _nr_banks);
 
     /**
      * @brief Connect Serial interface object to class
@@ -199,6 +200,11 @@ signals:
      */
     void signal_sync_needed();
 
+    /**
+     * @brief Signal when synchronization status has changed
+     */
+    void signal_sync_status_changed(const std::vector<uint8_t>&);
+
 private:
     /**
      * @brief Read a block (0x100 bytes) from the chip, use caching
@@ -253,6 +259,13 @@ private:
      * @return
      */
     std::pair<uint8_t, uint8_t> find_next_free_block();
+
+    /**
+     * @brief Update cache status
+     * @param block_id
+     * @param cache_status
+     */
+    void update_cache_status(unsigned int block_id, uint8_t cache_status);
 };
 
 #endif // FILEALLOCATIONTABLE_H

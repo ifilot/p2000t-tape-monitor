@@ -23,8 +23,11 @@
 
 #include <QMessageBox>
 #include <QIcon>
+#include <vector>
 
 #include "ioworker.h"
+
+Q_DECLARE_METATYPE(std::vector<uint8_t>)
 
 /**
  * @brief class for Flashing a cartridge
@@ -32,7 +35,6 @@
  * Currently, only support for the AT28C256 is implemented.
  */
 class SyncThread : public IOWorker {
-
     Q_OBJECT
 
 private:
@@ -84,6 +86,11 @@ signals:
      * @param block_id
      */
     void sync_complete();
+
+    /**
+     * @brief Signal when synchronization status has changed
+     */
+    void signal_sync_status_changed(const std::vector<uint8_t>);
 };
 
 #endif // SYNCTHREAD_H

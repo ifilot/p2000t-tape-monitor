@@ -23,8 +23,9 @@
 /**
  * @brief Default constructor
  */
-FileAllocationTable::FileAllocationTable() {
-    this->contents = std::vector<char>(0x10000 * 8, 0x00);
+FileAllocationTable::FileAllocationTable(unsigned int _nrbanks) :
+    nrbanks(_nrbanks) {
+    this->contents = std::vector<char>(0x10000 * this->nrbanks, 0x00);
     this->cache_status = std::vector<uint8_t>(0x10000 * 8 / 0x100, CACHE_UNKNOWN);
 }
 
@@ -36,8 +37,8 @@ void FileAllocationTable::read_files() {
     emit(this->message("Parsing banks..."));
     this->progblocks.clear();
     this->files.clear();
-    for(unsigned int bank=0; bank<8; bank++) {
-        emit(this->read_operation(bank,8));
+    for(unsigned int bank=0; bank<this->nrbanks; bank++) {
+        emit(this->read_operation(bank,this->nrbanks));
         QByteArray data = this->read_block(bank * 0x100);
         unsigned int ptr = 0x0000;
         while(ptr < 0x100) {
@@ -254,7 +255,7 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
                 ptr++;
             }
             *ptr = newblock;
-            this->cache_status[newbank * 0x10000 / 0x100] = CACHE_WRITE_NONERASE;
+            this->update_cache_status(newbank * 0x10000 / 0x100, CACHE_WRITE_NONERASE);
         }
 
         qDebug() << "Placing contents in: " << newbank << " / " << newblock;
@@ -277,7 +278,7 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
         }
 
         // marking blocks as unsynced
-        this->cache_status[headeroffset / 0x100] = CACHE_WRITE_NONERASE;
+        this->update_cache_status(headeroffset / 0x100, CACHE_WRITE_NONERASE);
 
         // copy data
         unsigned int dataoffset = newbank * 0x10000 + 0x400 * (newblock + 4);
@@ -293,7 +294,7 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
 
         // marking blocks as unsynced
         for(unsigned int j=0; j<4; j++) {
-            this->cache_status[dataoffset / 0x100 + j] = CACHE_WRITE_NONERASE;
+            this->update_cache_status(dataoffset / 0x100 + j, CACHE_WRITE_NONERASE);
         }
 
         // set next bank and block if not the last block
@@ -337,7 +338,7 @@ void FileAllocationTable::delete_file(unsigned int file_id) {
     memcpy(&this->contents[0x10000 * linked_list[0].first], newlist.data(), newlist.size());
 
     // and invalidate the memory with an erase instruction
-    this->cache_status[linked_list[0].first * 0x100] = CACHE_WRITE_ERASE;
+    this->update_cache_status(linked_list[0].first * 0x100, CACHE_WRITE_ERASE);
 
     // loop over all blocks and wipe these as well
     for(const auto& bankblock : linked_list) {
@@ -358,7 +359,7 @@ void FileAllocationTable::delete_file(unsigned int file_id) {
         this->read_sector(dataoffset / 0x1000); // ensure data is read before overwriting
         memcpy(&this->contents[dataoffset], wipe.data(), 0x400);
         for(unsigned int i=0; i<4; i++) {
-            this->cache_status[dataoffset / 0x100 + i] = CACHE_WRITE_ERASE;
+            this->update_cache_status(dataoffset / 0x100 + i, CACHE_WRITE_ERASE);
         }
     }
 
@@ -383,7 +384,7 @@ QByteArray FileAllocationTable::read_block(unsigned int address) {
         QByteArray data = this->serial_interface->read_block(address);
         this->serial_interface->close_port();
         memcpy((void*)&this->contents[address * 0x100], data.data(), 0x100);
-        this->cache_status[address] = CACHE_SYNCED;
+        this->update_cache_status(address, CACHE_SYNCED);
         return data;
     }
 }
@@ -401,7 +402,7 @@ QByteArray FileAllocationTable::read_sector(uint8_t sector_id) {
             this->serial_interface->close_port();
             memcpy((void*)&this->contents[sector_id *SECTOR_SIZE], data.data(), SECTOR_SIZE);
             for(unsigned int j=0; j<BLOCKS_PER_SECTOR; j++) {
-                this->cache_status[sector_id * BLOCKS_PER_SECTOR + j] = CACHE_SYNCED;
+                this->update_cache_status(sector_id * BLOCKS_PER_SECTOR + j, CACHE_SYNCED);
             }
             break;
         }
@@ -423,7 +424,7 @@ QByteArray FileAllocationTable::read_bank(uint8_t bank_id) {
             this->serial_interface->close_port();
             memcpy((void*)&this->contents[bank_id * BANK_SIZE], data.data(), BANK_SIZE);
             for(unsigned int j=0; j<BLOCKS_PER_BANK; j++) {
-                this->cache_status[bank_id * BLOCKS_PER_BANK + j] = CACHE_SYNCED;
+                this->update_cache_status(bank_id * BLOCKS_PER_BANK + j, CACHE_SYNCED);
             }
             break;
         }
@@ -456,7 +457,7 @@ QByteArray FileAllocationTable::read_block_cache_bank(unsigned int address) {
         memcpy((void*)&this->contents[bank_address * 0x4000], data.data(), 0x4000);
 
         for(unsigned int i=0; i<(0x4000 / 0x100); i++) {
-            this->cache_status[bank_address + i] = CACHE_SYNCED;
+            this->update_cache_status(bank_address + i, CACHE_SYNCED);
         }
         return data;
     }
@@ -569,7 +570,7 @@ uint16_t FileAllocationTable::crc16_xmodem(const QByteArray& data, uint16_t leng
  * @return
  */
 std::pair<uint8_t, uint8_t> FileAllocationTable::find_next_free_block() {
-    for(uint8_t bank=0; bank<8; bank++) {
+    for(uint8_t bank=0; bank<this->nrbanks; bank++) {
         QByteArray data = this->read_sector(bank * 0x10);
         for(uint8_t block=0; block<60; block++) {
             if((uint8_t)data.data()[0x100 + block*0x40+0x08] == 0xFF) {
@@ -580,4 +581,14 @@ std::pair<uint8_t, uint8_t> FileAllocationTable::find_next_free_block() {
     }
 
     throw std::runtime_error("Cannot find a new bank / block");
+}
+
+/**
+ * @brief Update cache status
+ * @param block_id
+ * @param cache_status
+ */
+void FileAllocationTable::update_cache_status(unsigned int block_id, uint8_t cache_status) {
+    this->cache_status[block_id] = cache_status;
+    emit(signal_sync_status_changed(this->cache_status));
 }

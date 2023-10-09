@@ -87,11 +87,10 @@ private:
     QPushButton* button_read_rom;
 
     // chip data
-    int num_blocks = 0;
+    int nrbanks = -1;
 
     // progress bar
     QProgressBar* progress_bar_load;
-    QProgressBar* progress_bar_capacity;
 
     // information on compilation time
     QLabel* label_compile_data;
@@ -108,6 +107,7 @@ private:
     QLabel* label_startlocation;
     QLabel* label_checksums;
     BlockMap* blockmap;
+    BlockMap* syncmap;
 
     static const unsigned int FILETABLE_OPEN_COLUMN = 4;
     static const unsigned int FILETABLE_DELETE_COLUMN = 5;
@@ -153,7 +153,7 @@ private:
      * @brief Build capacity interface
      * @param layout position where to put this part of the GUI
      */
-    void build_fat_capacity_interface(QVBoxLayout* target_layout);
+    void build_synchronization_interface(QVBoxLayout* target_layout);
 
     /**
      * @brief Verify whether the chip is correct before flashing
@@ -279,5 +279,10 @@ private slots:
      * @brief Select a new file
      */
     void slot_sync_complete();
+
+    /**
+     * @brief Update synchronization map
+     */
+    void slot_update_syncmap(const std::vector<uint8_t>);
 };
 #endif // MAINWINDOW_H

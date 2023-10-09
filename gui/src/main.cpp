@@ -65,6 +65,7 @@ void message_output(QtMsgType type, const QMessageLogContext &context, const QSt
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
+    qRegisterMetaType<std::vector<uint8_t>>("stdvector_uint8_t");
 
     std::unique_ptr<MainWindow> mainWindow;
     log_messages = std::make_shared<QStringList>();

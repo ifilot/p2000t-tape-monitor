@@ -63,7 +63,7 @@ MainWindow::MainWindow(const std::shared_ptr<QStringList> _log_messages, QWidget
     this->build_serial_interface_menu(right_layout);
     this->build_operations_menu(right_layout);
     this->build_filedata_interface(right_layout);
-    this->build_fat_capacity_interface(right_layout);
+    this->build_synchronization_interface(right_layout);
 
     // add padding frame on RHS
     QFrame* padding_frame = new QFrame();
@@ -232,7 +232,7 @@ void MainWindow::build_filedata_interface(QVBoxLayout* target_layout) {
     this->label_filesize = new QLabel("");
     this->label_startlocation = new QLabel("");
     this->label_checksums = new QLabel("");
-    this->blockmap = new BlockMap();
+    this->blockmap = new BlockMap(60,8,5,this);
     QVBoxLayout* layout_files = new QVBoxLayout();
     file_groupbox->setLayout(layout_files);
     layout_files->addWidget(this->label_filename);
@@ -247,15 +247,14 @@ void MainWindow::build_filedata_interface(QVBoxLayout* target_layout) {
  * @brief Build filedata interface
  * @param layout position where to put this part of the GUI
  */
-void MainWindow::build_fat_capacity_interface(QVBoxLayout* target_layout) {
+void MainWindow::build_synchronization_interface(QVBoxLayout* target_layout) {
     // placeholder for file information
-    QGroupBox* groupbox = new QGroupBox("ROM capacity");
+    QGroupBox* groupbox = new QGroupBox("Synchronization");
     target_layout->addWidget(groupbox);
-    this->progress_bar_capacity = new QProgressBar();
-    this->progress_bar_capacity->setMinimum(0);
     QVBoxLayout* layout = new QVBoxLayout();
     groupbox->setLayout(layout);
-    layout->addWidget(this->progress_bar_capacity);
+    this->syncmap = new BlockMap(64,32,3);
+    layout->addWidget(this->syncmap);
 }
 
 /**
@@ -272,21 +271,21 @@ void MainWindow::verify_chip() {
     if((chip_id >> 8 & 0xFF) == 0xBF) {
         switch(chip_id & 0xFF) {
             case 0xB5:
-                if(this->num_blocks != 128*1024/256) {
+                if(this->nrbanks != 2) {
                     throw std::runtime_error("Different chip in socket.");
                 } else {
                     qDebug() << "Valid chip size for SST39SF010 found.";
                 }
             break;
             case 0xB6:
-                if(this->num_blocks != 256*1024/256) {
+                if(this->nrbanks != 4) {
                     throw std::runtime_error("Different chip in socket.");
                 } else {
                     qDebug() << "Valid chip size for SST39SF020 found.";
                 }
             break;
             case 0xB7:
-                if(this->num_blocks != 512*1024/256) {
+                if(this->nrbanks != 8) {
                     throw std::runtime_error("Different chip in socket.");
                 } else {
                     qDebug() << "Valid chip size for SST39SF040 found.";
@@ -380,7 +379,6 @@ void MainWindow::index_files() {
     }
 
     this->button_identify_chip->setEnabled(true);
-    this->progress_bar_capacity->setValue(this->fat->get_number_occupied_blocks());
 }
 
 void MainWindow::disable_all_buttons() {
@@ -675,23 +673,17 @@ void MainWindow::read_chip_id() {
         if((chip_id >> 8 & 0xFF) == 0xBF) {
             switch(chip_id & 0xFF) {
                 case 0xB5:
-                    this->num_blocks = 128*1024/256;
-                    this->progress_bar_load->setMaximum(this->num_blocks);
-                    this->progress_bar_capacity->setMaximum(60*2);
+                    this->nrbanks = 2;
                     statusBar()->showMessage("Identified a SST39SF010 chip");
                     this->label_chip_type->setText("ROM chip: SST39SF010");
                 break;
                 case 0xB6:
-                this->num_blocks = 256*1024/256;
-                    this->progress_bar_load->setMaximum(this->num_blocks);
-                    this->progress_bar_capacity->setMaximum(60*4);
+                this->nrbanks = 4;
                     statusBar()->showMessage("Identified a SST39SF020 chip");
                     this->label_chip_type->setText("ROM chip: SST39SF020");
                 break;
                 case 0xB7:
-                    this->num_blocks = 512*1024/256;
-                    this->progress_bar_load->setMaximum(this->num_blocks);
-                    this->progress_bar_capacity->setMaximum(60*8);
+                    this->nrbanks = 8;
                     statusBar()->showMessage("Identified a SST39SF040 chip");
                     this->label_chip_type->setText("ROM chip: SST39SF040");
                 break;
@@ -750,13 +742,14 @@ void MainWindow::slot_access_fat() {
     }
 
     // build new FAT object
-    this->fat = new FileAllocationTable();  // recreate
+    this->fat = new FileAllocationTable(this->nrbanks);  // recreate
     this->fat->set_serial_interface(this->serial_interface);
 
     // connect signals
     connect(this->fat, SIGNAL(read_operation(int,int)), this, SLOT(read_operation(int,int)));
     connect(this->fat, SIGNAL(signal_sync_needed()), this, SLOT(slot_start_sync()));
     connect(this->fat, SIGNAL(message(QString)), this, SLOT(message(QString)));
+    connect(this->fat, SIGNAL(signal_sync_status_changed(const std::vector<uint8_t>)), this, SLOT(slot_update_syncmap(const std::vector<uint8_t>)));
 
     this->index_files();
     this->action_add_file->setEnabled(true);
@@ -828,6 +821,7 @@ void MainWindow::slot_start_sync() {
     syncthread->set_cache_status(this->fat->get_cache_status());
     connect(this->syncthread.get(), SIGNAL(sync_item_done(int, int)), this, SLOT(read_operation(int, int)));
     connect(this->syncthread.get(), SIGNAL(sync_complete()), this, SLOT(slot_sync_complete()));
+    connect(this->syncthread.get(), SIGNAL(signal_sync_status_changed(const std::vector<uint8_t>)), this, SLOT(slot_update_syncmap(const std::vector<uint8_t>)));
     this->syncthread->start();
 }
 
@@ -837,4 +831,12 @@ void MainWindow::slot_sync_complete() {
     this->index_files();
     this->enable_all_buttons();
     this->syncthread.release();
+}
+
+/**
+ * @brief Update synchronization map
+ */
+void MainWindow::slot_update_syncmap(const std::vector<uint8_t> _cache_status) {
+    qDebug() << "Updating syncmap";
+    this->syncmap->set_cache(_cache_status);
 }

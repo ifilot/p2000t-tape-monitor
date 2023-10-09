@@ -66,6 +66,7 @@ void SyncThread::run() {
                 // update cache status for the whole sector
                 for(unsigned int k=0; k<0x10; k++) {
                     this->cache_status[i * 0x10 + k] = 0x01;
+                    emit(signal_sync_status_changed(this->cache_status));
                 }
 
                 // and terminate the loop and go to the sector pages

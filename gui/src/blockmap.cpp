@@ -1,13 +1,44 @@
 #include "blockmap.h"
 
-BlockMap::BlockMap(QWidget *parent) : QWidget(parent) {
+BlockMap::BlockMap(unsigned int _columns,
+                   unsigned int _rows,
+                   unsigned int _blocksize,
+                   QWidget *parent) : QWidget(parent) {
+
+    // set dimensions of blockmap
+    this->columns = _columns;
+    this->rows = _rows;
+    this->blocksize = _blocksize;
+    this->width = this->columns * this->blocksize + 1;
+    this->height = this->rows * this->blocksize + 1;
+
+    // contains values to plot
+    this->blockvalues = std::vector<uint8_t>(this->rows * this->columns, 0x00);
+
     this->setBackgroundRole(QPalette::Base);
-    this->setAutoFillBackground(true);
+    this->setAutoFillBackground(false);
     this->setUpdatesEnabled(true);
 }
 
+/**
+ * @brief Custom function wherein active blocks are highlighted
+ * @param _blocks
+ */
 void BlockMap::set_blocklist(const std::vector<std::pair<uint8_t, uint8_t>>& _blocks) {
-    this->blocks = _blocks;
+    memset(this->blockvalues.data(), 0x00, this->blockvalues.size());
+    for(const auto& block : _blocks) {
+        this->blockvalues[block.first * this->columns + block.second] = 0x01;
+    }
+    this->update();
+}
+
+void BlockMap::set_cache(const std::vector<uint8_t> _cache_status) {
+    if(this->blockvalues.size() != _cache_status.size()) {
+        qCritical() << "Blockvalue size " << this->blockvalues.size() << " does not match " << _cache_status.size();
+        throw std::runtime_error("Invalid sync update received.");
+    }
+
+    this->blockvalues = _cache_status;
     this->update();
 }
 
@@ -22,25 +53,33 @@ QSize BlockMap::sizeHint() const {
 void BlockMap::paintEvent(QPaintEvent *event) {
     QPainter painter(this);
     painter.setPen(QPen(Qt::black));
-    painter.setBrush(QBrush(Qt::gray));
 
-    for(unsigned int j=0; j<8; j++) {
-        for(unsigned int i=0; i<60; i++) {
-            QRect rect(i * this->pixsize,
-                       j * this->pixsize,
-                       this->pixsize,
-                       this->pixsize);
+
+    for(unsigned int j=0; j<this->rows; j++) {
+        for(unsigned int i=0; i<this->columns; i++) {
+            QRect rect(i * this->blocksize,
+                       j * this->blocksize,
+                       this->blocksize,
+                       this->blocksize);
+
+            switch(this->blockvalues[j * this->columns + i]) {
+                case 0x00:
+                    painter.setBrush(QBrush(Qt::gray));
+                break;
+                case 0x01:
+                    painter.setBrush(QBrush(Qt::green));
+                break;
+                case 0x02:
+                    painter.setBrush(QBrush(QColor("orange")));
+                break;
+                case 0x03:
+                    painter.setBrush(QBrush(Qt::red));
+                break;
+                default:
+                    painter.setBrush(QBrush(Qt::gray));
+                break;
+            }
             painter.drawRect(rect);
         }
-    }
-
-    painter.setPen(QPen(Qt::black));
-    painter.setBrush(QBrush(Qt::green));
-    for(const auto& p : this->blocks) {
-        QRect rect(p.second * this->pixsize,
-                   p.first * this->pixsize,
-                   this->pixsize,
-                   this->pixsize);
-        painter.drawRect(rect);
     }
 }

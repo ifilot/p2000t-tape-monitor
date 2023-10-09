@@ -4,20 +4,30 @@
 #include <QWidget>
 #include <QPainter>
 #include <QDebug>
+#include <stdexcept>
 
 class BlockMap : public QWidget
 {
     Q_OBJECT
 private:
-    static const unsigned int pixsize = 5;
-    static const unsigned int width = 60 * pixsize + 1;
-    static const unsigned int height = 8 * pixsize + 1;
     std::vector<std::pair<uint8_t, uint8_t>> blocks;
 
+    unsigned int rows;
+    unsigned int columns;
+    unsigned int blocksize;
+    unsigned int width;
+    unsigned int height;
+    std::vector<uint8_t> blockvalues;
+
 public:
-    explicit BlockMap(QWidget *parent = nullptr);
+    BlockMap(unsigned int _colums,
+             unsigned int _rows,
+             unsigned int _blocksize,
+             QWidget *parent = nullptr);
 
     void set_blocklist(const std::vector<std::pair<uint8_t, uint8_t>>& _blocks);
+
+    void set_cache(const std::vector<uint8_t> _cache_status);
 
     QSize minimumSizeHint() const override;
 

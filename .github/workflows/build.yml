@@ -7,6 +7,8 @@ on:
     branches: [ "master", "develop" ]
 
 jobs:
+
+  # Firmware of the SLOT2 cartridge
   build-launcher:
 
     runs-on: ubuntu-latest
@@ -25,6 +27,7 @@ jobs:
         name: LAUNCHER.BIN
         path: ./launch-os/main.rom
 
+  # Firmware flasher for the SLOT2 cartridge firmware
   build-firmware-flasher:
 
     runs-on: ubuntu-latest
@@ -43,8 +46,8 @@ jobs:
         name: FIRMWAREFLASHER.BIN
         path: ./firmwareflasher/main.rom
 
+  # Modified BASIC cartridge
   build-basic:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -62,3 +65,25 @@ jobs:
       with:
         name: BASICBOOTSTRAP.BIN
         path: basicmod/BASICBOOTSTRAP.BIN
+
+  # GUI to interface with a P2000TFAT-chip
+  build-gui-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '5.15.2'
+        target: 'desktop'
+        arch: 'win64_msvc2019_64'
+        cache: true
+    - name: Configure CMake
+      run: cmake -B ${{github.workspace}}/build -S ${{github.workspace}}/gui -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+    - name: Upload executable
+      uses: actions/upload-artifact@v3
+      with:
+        name: ${{env.EXEC}}
+        path: ${{github.workspace}}/build/Release/${{env.EXEC}}
