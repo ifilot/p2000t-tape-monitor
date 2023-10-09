@@ -8,10 +8,10 @@ Component.prototype.createOperations = function()
     component.createOperations();
 
     if (systemInfo.productType === "windows") {
-        component.addOperation("CreateShortcut", "@TargetDir@/pico-sst39sf0x0-programmer", 
-                               "@StartMenuDir@/PICO SST39SF0x0 Programmer.lnk",
+        component.addOperation("CreateShortcut", "@TargetDir@/p2000t-fat-flasher", 
+                               "@StartMenuDir@/P2000T FAT Flasher.lnk",
                                "workingDirectory=@TargetDir@", 
-                               "iconPath=@TargetDir@/eeprom_icon.ico",
-                               "description=Open PICO SST39SF0x0 programmer");
+                               "iconPath=@TargetDir@/icon.ico",
+                               "description=Open P2000T FAT Flasher");
     }
 }

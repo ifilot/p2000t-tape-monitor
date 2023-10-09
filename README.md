@@ -1,8 +1,9 @@
 # P2000T Tape Monitor
 
-## Purposes
+## Features
 - [x] Launch tape files from data cartridge in SLOT2
 - [ ] Write tape data to data cartridge in SLOT2
+- [ ] Write data back to tapes from the data cartridge
 
 ## Contents
 This repository is organized as follows
