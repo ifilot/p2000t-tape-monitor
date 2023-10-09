@@ -19,6 +19,12 @@ This repository is organized as follows
   transfer tapes to the external rom. **This program is still in development,
   use at your own risk.**
 
+## Files
+
+* BASICBOOTSTRAP.BIN: Modified BASIC cartridge (SLOT1)
+* FIRMWAREFLASHER.BIN: Firwmare flasher for the data cartridge firmware (SLOT1)
+* LAUNCHER.BIN: Firmware for the data cartridge (SLOT2)
+
 ## File system
 
 Data is stored on the ROM using a custom file system. Specifications of the file

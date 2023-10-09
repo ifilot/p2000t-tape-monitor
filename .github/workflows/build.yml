@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [ "master", "develop" ]
 
+env:
+  BUILD_TYPE: Release
+  PROGNAME: p2000t-fat-flasher
+  EXEC: p2000t-fat-flasher.exe
+
 jobs:
 
   # Firmware of the SLOT2 cartridge
