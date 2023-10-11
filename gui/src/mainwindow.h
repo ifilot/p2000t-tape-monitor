@@ -97,6 +97,7 @@ private:
 
     // some actions which need to be changed
     QAction* action_add_file;
+    QAction* action_save_all;
 
     // for FAT
     FileAllocationTable* fat = nullptr;
@@ -197,6 +198,11 @@ private slots:
      * @brief Save a binary file
      */
     void slot_save();
+
+    /**
+     * @brief Save all files
+     */
+    void slot_save_all();
 
     /**
      * @brief Show an about window
