@@ -107,12 +107,18 @@ void MainWindow::create_dropdown_menu() {
 
     // actions for file menu
     QAction *action_save = new QAction(menu_file);
-    QAction *action_quit = new QAction(menu_file);
     action_save->setText(tr("Save"));
     action_save->setShortcuts(QKeySequence::Save);
+    menu_file->addAction(action_save);
+
+    this->action_save_all = new QAction(menu_file);
+    this->action_save_all->setText(tr("Save all"));
+    menu_file->addAction(action_save_all);
+    this->action_save_all->setEnabled(false);
+
+    QAction *action_quit = new QAction(menu_file);
     action_quit->setText(tr("Quit"));
     action_quit->setShortcuts(QKeySequence::Quit);
-    menu_file->addAction(action_save);
     menu_file->addAction(action_quit);
 
     // actions for tools menu
@@ -144,6 +150,7 @@ void MainWindow::create_dropdown_menu() {
     connect(action_list, &QAction::triggered, this, &MainWindow::slot_list);
     connect(action_add_file, &QAction::triggered, this, &MainWindow::slot_add_program);
     connect(action_save, &QAction::triggered, this, &MainWindow::slot_save);
+    connect(action_save_all, &QAction::triggered, this, &MainWindow::slot_save_all);
     connect(action_about, &QAction::triggered, this, &MainWindow::slot_about);
     connect(action_quit, &QAction::triggered, this, &MainWindow::exit);
 
@@ -611,21 +618,58 @@ void MainWindow::slot_save() {
 }
 
 /**
+ * @brief Save all files
+ */
+void MainWindow::slot_save_all() {
+
+    QString folder = QFileDialog::getExistingDirectory(this, tr("Save all files"), QDir::homePath());
+
+    QMessageBox message_box;
+    //message_box.setStyleSheet("QLabel{min-width: 250px; font-weight: normal;}");
+    message_box.setText("Please note that the program might be unresponsive for a"
+                        " brief amount of time while all files are extracted from "
+                        "the ROM chip and stored on the computer.");
+    message_box.setIcon(QMessageBox::Warning);
+    message_box.setWindowTitle("Warning");
+    message_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
+    message_box.exec();
+
+    QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+
+    for(unsigned int i=0; i<this->fat->get_num_files(); i++) {
+        File file = this->fat->get_file(i);
+
+        QString filename = tr("%1_").arg(i+1, 3, 10, QLatin1Char('0')) + this->fat->build_filename(i);
+        QFile p(folder + QDir::separator() + filename);
+        qInfo() << "Storing file: " << p.fileName();
+        if(p.open(QIODevice::WriteOnly)) {
+            p.write(this->fat->create_cas_file(i));
+        }
+        p.close();
+
+        // allow the app to process additional events
+        QCoreApplication::processEvents();
+    }
+
+    QApplication::restoreOverrideCursor();
+}
+
+/**
  * @brief Show an about window
  */
 void MainWindow::slot_about() {
     QMessageBox message_box;
-        //message_box.setStyleSheet("QLabel{min-width: 250px; font-weight: normal;}");
-        message_box.setText(PROGRAM_NAME
-                            " version "
-                            PROGRAM_VERSION
-                            ".\n\nAuthor:\nIvo Filot <ivo@ivofilot.nl>\n\n"
-                            PROGRAM_NAME " is licensed under the GPLv3 license.\n\n"
-                            PROGRAM_NAME " is dynamically linked to Qt, which is licensed under LGPLv3.\n");
-        message_box.setIcon(QMessageBox::Information);
-        message_box.setWindowTitle("About " + tr(PROGRAM_NAME));
-        message_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
-        message_box.exec();
+    //message_box.setStyleSheet("QLabel{min-width: 250px; font-weight: normal;}");
+    message_box.setText(PROGRAM_NAME
+                        " version "
+                        PROGRAM_VERSION
+                        ".\n\nAuthor:\nIvo Filot <ivo@ivofilot.nl>\n\n"
+                        PROGRAM_NAME " is licensed under the GPLv3 license.\n\n"
+                        PROGRAM_NAME " is dynamically linked to Qt, which is licensed under LGPLv3.\n");
+    message_box.setIcon(QMessageBox::Information);
+    message_box.setWindowTitle("About " + tr(PROGRAM_NAME));
+    message_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
+    message_box.exec();
 }
 
 void MainWindow::slot_debug_log() {
@@ -753,6 +797,7 @@ void MainWindow::slot_access_fat() {
 
     this->index_files();
     this->action_add_file->setEnabled(true);
+    this->action_save_all->setEnabled(true);
 }
 
 /**

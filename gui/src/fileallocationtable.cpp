@@ -186,7 +186,12 @@ std::vector<std::pair<uint16_t, uint16_t>> FileAllocationTable::get_checksum_pai
 QString FileAllocationTable::build_filename(unsigned int id) {
     const auto& file = this->get_file(id);
     QString base = QString::fromUtf8(file.filename,16).simplified();
-    QString filename = base.toLower() + "_" + QString::fromUtf8(file.extension,3).toLower() + ".cas";
+
+    // build name and extension
+    QString filename = (base.toLower().trimmed() + "_" + QString::fromUtf8(file.extension,3).toLower()) + ".cas";
+
+    // replace spaces by
+    filename = filename.remove(QRegExp("[^a-zA-Z\\d\\s")).replace(" ", "_");
 
     return filename;
 }

@@ -124,3 +124,16 @@ jobs:
       with:
         name: ${{env.PROGNAME}}-installer-win64.exe
         path: gui/packaging/${{env.PROGNAME}}-installer-win64.exe
+
+  #
+  # Ubuntu
+  #
+  build-gui-ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Install packages
+      run: apt update && apt install -y qtbase5-dev qt5-qmake cmake
+    - name: Configure CMake
+      run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && qmake ../build
+    - name: Build
+      run: cd ${{github.workspace}}/build && make -j
