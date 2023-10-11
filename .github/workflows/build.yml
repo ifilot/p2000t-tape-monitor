@@ -134,6 +134,6 @@ jobs:
     - name: Install packages
       run: sudo apt update && sudo apt install -y qtbase5-dev qt5-qmake cmake
     - name: Configure CMake
-      run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && qmake ../build
+      run: mkdir ${{github.workspace}}/build && cd ${{github.workspace}}/build && qmake ../gui
     - name: Build
       run: cd ${{github.workspace}}/build && make -j
