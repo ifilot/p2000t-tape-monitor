@@ -32,10 +32,20 @@ void BlockMap::set_blocklist(const std::vector<std::pair<uint8_t, uint8_t>>& _bl
     this->update();
 }
 
+/**
+ * @brief Update cache status
+ * @param _cache_status
+ */
 void BlockMap::set_cache(const std::vector<uint8_t> _cache_status) {
     if(this->blockvalues.size() != _cache_status.size()) {
-        qCritical() << "Blockvalue size " << this->blockvalues.size() << " does not match " << _cache_status.size();
-        throw std::runtime_error("Invalid sync update received.");
+        qDebug() << "Resizing cache image";
+        this->rows = _cache_status.size() / this->columns;
+        this->width = this->columns * this->blocksize + 1;
+        this->height = this->rows * this->blocksize + 1;
+
+        this->resize(this->width, this->height);
+        this->setMinimumHeight(this->height);
+        this->setMinimumWidth(this->width);
     }
 
     this->blockvalues = _cache_status;

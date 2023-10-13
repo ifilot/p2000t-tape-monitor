@@ -26,7 +26,77 @@
 FileAllocationTable::FileAllocationTable(unsigned int _nrbanks) :
     nrbanks(_nrbanks) {
     this->contents = std::vector<char>(0x10000 * this->nrbanks, 0x00);
-    this->cache_status = std::vector<uint8_t>(0x10000 * 8 / 0x100, CACHE_UNKNOWN);
+    this->cache_status = std::vector<uint8_t>(0x10000 * this->nrbanks / 0x100, CACHE_UNKNOWN);
+}
+
+/**
+ * @brief Check whether this ROM chip is correctly formatted
+ * @return whether rom chip is correctly formatted
+ */
+bool FileAllocationTable::check_fat() {
+    // loop over all programs and capture starting blocks
+    emit(this->message("Parsing banks..."));
+    this->progblocks.clear();
+    this->files.clear();
+    for(unsigned int bank=0; bank<this->nrbanks; bank++) {
+        QByteArray data = this->read_sector(bank * 0x10);
+
+        // check whether data is correctly set
+        for(unsigned int i=0; i<60; i++) {
+            // check bank
+            if((uint8_t)data[0x100 + i * 0x40] != bank) {
+                qDebug() << tr("Bank %1 does not have bank digit set to %2 (%3)")
+                            .arg(bank).arg((unsigned int)bank).arg((unsigned int)data[0x100 + i * 0x40]);
+                return false;
+            }
+
+            // check lower bytes start address
+            if((uint8_t)data[0x100 + i * 0x40 + 1] != 0x00) {
+                qDebug() << tr("Bank %1 does not have lower byte set to %2")
+                            .arg(bank).arg((unsigned int)0x00);
+                return false;
+            }
+
+            // check upper bytes start address
+            if((uint8_t)data[0x100 + i * 0x40 + 2] != (i * 4 + 0x10)) {
+                qDebug() << tr("Bank %1 does not have upper byte set to %2 (%3)")
+                            .arg(bank)
+                            .arg(i * 4 + 0x10, 2, 16, QLatin1Char('0'))
+                            .arg((uint8_t)data[0x100 + i * 0x40 + 2], 2, 16, QLatin1Char('0'));
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+/**
+ * @brief Format the chip
+ */
+void FileAllocationTable::format_chip() {
+    for(unsigned int bank=0; bank<this->nrbanks; bank++) {
+        this->serial_interface->open_port();
+
+        // erase all banks on sector
+        for(unsigned int i=0; i<0x10; i++) {
+            this->serial_interface->erase_sector(bank * 0x100 + i * 0x10);
+        }
+
+        QByteArray data(0x1000, 0xFF);
+        for(unsigned int i=0; i<60; i++) {
+            data[0x100 + i * 0x40] = bank;
+            data[0x100 + i * 0x40 + 1] = 0x00;
+            data[0x100 + i * 0x40 + 2] = i * 4 + 0x10;
+        }
+
+        this->serial_interface->burn_sector(bank * 0x10, data);
+        this->serial_interface->close_port();
+    }
+
+    // clean cache
+    memset(this->cache_status.data(), 0x00, this->cache_status.size());
+    emit(signal_sync_status_changed(this->cache_status));
 }
 
 /**
@@ -75,6 +145,7 @@ void FileAllocationTable::read_files() {
         this->files.push_back(file);
     }
     emit(this->message("Done loading file metadata."));
+    emit(signal_sync_status_changed(this->cache_status));
 }
 
 /**
@@ -357,7 +428,7 @@ void FileAllocationTable::delete_file(unsigned int file_id) {
 
         this->contents[headeroffset + 0x00] = bank;
         this->contents[headeroffset + 0x01] = 0x00;
-        this->contents[headeroffset + 0x02] = block * 4;
+        this->contents[headeroffset + 0x02] = block * 4 + 0x10;
 
         // wipe regular data
         unsigned int dataoffset = 0x10000 * bank + 0x1000 + block * 0x400;

@@ -83,5 +83,14 @@ int main(int argc, char *argv[])
 
     mainWindow->show();
 
-    return app.exec();
+    int res = -1;
+    try {
+        int res = app.exec();
+    }  catch (const std::exception& e) {
+        std::cerr << "Error detected!" << std::endl;
+        std::cerr << e.what() << std::endl;
+        std::cerr << "Abnormal closing of program." << std::endl;
+    }
+
+    return res;
 }

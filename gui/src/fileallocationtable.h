@@ -93,6 +93,17 @@ public:
     }
 
     /**
+     * @brief Check whether this ROM chip is correctly formatted
+     * @return whether rom chip is correctly formatted
+     */
+    bool check_fat();
+
+    /**
+     * @brief Format the chip
+     */
+    void format_chip();
+
+    /**
      * @brief Read file metadata from chip
      */
     void read_files();
@@ -170,14 +181,26 @@ public:
      */
     void delete_file(unsigned int file_id);
 
+    /**
+     * @brief Get cached contents of the ROM chip
+     * @return
+     */
     inline const auto& get_contents() const {
         return this->contents;
     }
 
+    /**
+     * @brief Get current cahe status
+     * @return
+     */
     inline const auto& get_cache_status() const {
         return this->cache_status;
     }
 
+    /**
+     * @brief Update cache status
+     * @param _cache_status
+     */
     inline void set_cache_status(const std::vector<uint8_t>& _cache_status) {
         this->cache_status = _cache_status;
     }
