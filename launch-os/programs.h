@@ -14,6 +14,7 @@
 
 // store number of programs
 extern uint16_t __nrprogs;
+extern uint8_t __nrbanks;
 
 struct Program {
     uint8_t bank;

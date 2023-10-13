@@ -170,6 +170,29 @@ void init(void) {
     vidmem[0x0000] = 0x06;    // cyan color
     vidmem[0x0001] = 0x0D;    // double height
 
+    uint16_t chip_id = sst39sf_get_chip_id();
+
+    switch(chip_id & 0xFF) {
+        case 0xB5:
+            sprintf(&vidmem[30], "%s", "SST39SF010");
+            __nrbanks = 2;
+            break;
+        case 0xB6:
+            sprintf(&vidmem[30], "%s", "SST39SF020");
+            __nrbanks = 4;
+            break;
+        case 0xB7:
+            sprintf(&vidmem[30], "%s", "SST39SF040");
+            __nrbanks = 8;
+            break;
+        default:
+            // stop initialization and throw error message
+            sprintf(&vidmem[0x50 * 20], "%s", "Invalid cartridge");
+            break;
+    }
+
+    sprintf(&vidmem[20], "%04X", chip_id);
+
     static const char str1[] = "Launcher";
     memcpy(&vidmem[0x0002], str1, strlen(str1));
 
