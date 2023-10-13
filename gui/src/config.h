@@ -22,7 +22,7 @@
 #define _CONFIG_H
 
 #define PROGRAM_NAME "P2000T FAT READER"
-#define PROGRAM_VERSION "0.1.1"
+#define PROGRAM_VERSION "0.2.0"
 
 #define UNUSED(x) (void)(x)
 

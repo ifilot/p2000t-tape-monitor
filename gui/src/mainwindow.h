@@ -96,7 +96,9 @@ private:
     QLabel* label_compile_data;
 
     // some actions which need to be changed
+    QAction* action_list_programs;
     QAction* action_add_file;
+    QAction* action_format_rom;
     QAction* action_save_all;
 
     // for FAT
@@ -183,6 +185,11 @@ private slots:
      * @brief Run a .cas file
      */
     void slot_run();
+
+    /**
+     * @brief Format a ROM chip
+     */
+    void slot_format_rom();
 
     /**
      * @brief Produce a list of all programs

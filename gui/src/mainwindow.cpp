@@ -125,13 +125,21 @@ void MainWindow::create_dropdown_menu() {
     QAction *action_run = new QAction(menu_tools);
     action_run->setText(tr("Run file"));
     menu_tools->addAction(action_run);
-    QAction *action_list = new QAction(menu_tools);
-    action_list->setText(tr("List programs"));
-    menu_tools->addAction(action_list);
+
+    this->action_list_programs = new QAction(menu_tools);
+    this->action_list_programs->setText(tr("List programs"));
+    this->action_list_programs->setEnabled(false);
+    menu_tools->addAction(this->action_list_programs);
+
     this->action_add_file = new QAction(menu_tools);
     this->action_add_file->setText(tr("Add program"));
     this->action_add_file->setEnabled(false);
     menu_tools->addAction(this->action_add_file);
+
+    this->action_format_rom = new QAction(menu_tools);
+    this->action_format_rom->setText(tr("Format ROM"));
+    this->action_format_rom->setEnabled(false);
+    menu_tools->addAction(this->action_format_rom);
 
     // actions for help menu
     QAction *action_about = new QAction(menu_help);
@@ -147,8 +155,9 @@ void MainWindow::create_dropdown_menu() {
 
     // connect actions file menu
     connect(action_run, &QAction::triggered, this, &MainWindow::slot_run);
-    connect(action_list, &QAction::triggered, this, &MainWindow::slot_list);
+    connect(action_list_programs, &QAction::triggered, this, &MainWindow::slot_list);
     connect(action_add_file, &QAction::triggered, this, &MainWindow::slot_add_program);
+    connect(action_format_rom, &QAction::triggered, this, &MainWindow::slot_format_rom);
     connect(action_save, &QAction::triggered, this, &MainWindow::slot_save);
     connect(action_save_all, &QAction::triggered, this, &MainWindow::slot_save_all);
     connect(action_about, &QAction::triggered, this, &MainWindow::slot_about);
@@ -399,6 +408,11 @@ void MainWindow::disable_all_buttons() {
         qobject_cast<QPushButton*>(this->filetable->cellWidget(i, FILETABLE_OPEN_COLUMN))->setEnabled(false);
         qobject_cast<QPushButton*>(this->filetable->cellWidget(i, FILETABLE_DELETE_COLUMN))->setEnabled(false);
     }
+
+    this->action_list_programs->setEnabled(false);
+    this->action_add_file->setEnabled(false);
+    this->action_save_all->setEnabled(false);
+    this->action_format_rom->setEnabled(false);
 }
 
 void MainWindow::enable_all_buttons() {
@@ -412,6 +426,11 @@ void MainWindow::enable_all_buttons() {
         qobject_cast<QPushButton*>(this->filetable->cellWidget(i, FILETABLE_OPEN_COLUMN))->setEnabled(true);
         qobject_cast<QPushButton*>(this->filetable->cellWidget(i, FILETABLE_DELETE_COLUMN))->setEnabled(true);
     }
+
+    this->action_list_programs->setEnabled(true);
+    this->action_add_file->setEnabled(true);
+    this->action_save_all->setEnabled(true);
+    this->action_format_rom->setEnabled(true);
 }
 
 /****************************************************************************
@@ -519,6 +538,25 @@ void MainWindow::slot_run() {
     runthread->set_process_configuration(ThreadRun::ProcessConfiguration::MCODE_AS_CAS);
     connect(runthread, SIGNAL(signal_run_complete(void*)), this, SLOT(slot_run_complete(void*)));
     runthread->start();
+}
+
+/**
+ * @brief Format a ROM chip
+ */
+void MainWindow::slot_format_rom() {
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        "Format chip?",
+        tr("Are you sure you want to format this chip?"),
+        QMessageBox::Yes | QMessageBox::No
+    );
+
+    if(reply != QMessageBox::Yes) {
+        return;
+    }
+
+    this->fat->format_chip();
+    this->slot_access_fat();
 }
 
 /**
@@ -789,6 +827,25 @@ void MainWindow::slot_access_fat() {
     this->fat = new FileAllocationTable(this->nrbanks);  // recreate
     this->fat->set_serial_interface(this->serial_interface);
 
+    if(!this->fat->check_fat()) {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this,
+            "Unformatted chip?",
+            tr("This chip seems to be unformatted. Do you want to format this chip to the P2000T compatible FAT?"),
+            QMessageBox::Yes | QMessageBox::No
+        );
+
+        if(reply == QMessageBox::Yes) {
+            this->fat->format_chip();
+        } else {
+            delete this->fat;
+            this->fat = nullptr;
+            this->button_read_rom->setEnabled(true);
+            this->button_identify_chip->setEnabled(true);
+            return;
+        }
+    }
+
     // connect signals
     connect(this->fat, SIGNAL(read_operation(int,int)), this, SLOT(read_operation(int,int)));
     connect(this->fat, SIGNAL(signal_sync_needed()), this, SLOT(slot_start_sync()));
@@ -796,8 +853,10 @@ void MainWindow::slot_access_fat() {
     connect(this->fat, SIGNAL(signal_sync_status_changed(const std::vector<uint8_t>)), this, SLOT(slot_update_syncmap(const std::vector<uint8_t>)));
 
     this->index_files();
+    this->action_list_programs->setEnabled(true);
     this->action_add_file->setEnabled(true);
     this->action_save_all->setEnabled(true);
+    this->action_format_rom->setEnabled(true);
 }
 
 /**

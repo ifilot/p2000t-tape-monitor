@@ -32,6 +32,10 @@ void BlockMap::set_blocklist(const std::vector<std::pair<uint8_t, uint8_t>>& _bl
     this->update();
 }
 
+/**
+ * @brief Update cache status
+ * @param _cache_status
+ */
 void BlockMap::set_cache(const std::vector<uint8_t> _cache_status) {
     if(this->blockvalues.size() != _cache_status.size()) {
         qCritical() << "Blockvalue size " << this->blockvalues.size() << " does not match " << _cache_status.size();
