@@ -126,10 +126,10 @@ void MainWindow::create_dropdown_menu() {
     action_run->setText(tr("Run file"));
     menu_tools->addAction(action_run);
 
-    this->action_list_programs = new QAction(menu_tools);
-    this->action_list_programs->setText(tr("List programs"));
-    this->action_list_programs->setEnabled(false);
-    menu_tools->addAction(this->action_list_programs);
+//    this->action_list_programs = new QAction(menu_tools);
+//    this->action_list_programs->setText(tr("List programs"));
+//    this->action_list_programs->setEnabled(false);
+//    menu_tools->addAction(this->action_list_programs);
 
     this->action_add_file = new QAction(menu_tools);
     this->action_add_file->setText(tr("Add program"));
@@ -155,7 +155,7 @@ void MainWindow::create_dropdown_menu() {
 
     // connect actions file menu
     connect(action_run, &QAction::triggered, this, &MainWindow::slot_run);
-    connect(action_list_programs, &QAction::triggered, this, &MainWindow::slot_list);
+//    connect(action_list_programs, &QAction::triggered, this, &MainWindow::slot_list);
     connect(action_add_file, &QAction::triggered, this, &MainWindow::slot_add_program);
     connect(action_format_rom, &QAction::triggered, this, &MainWindow::slot_format_rom);
     connect(action_save, &QAction::triggered, this, &MainWindow::slot_save);
@@ -269,7 +269,7 @@ void MainWindow::build_synchronization_interface(QVBoxLayout* target_layout) {
     target_layout->addWidget(groupbox);
     QVBoxLayout* layout = new QVBoxLayout();
     groupbox->setLayout(layout);
-    this->syncmap = new BlockMap(64,32,3);
+    this->syncmap = new BlockMap(64,0,3);
     layout->addWidget(this->syncmap);
 }
 
@@ -409,7 +409,7 @@ void MainWindow::disable_all_buttons() {
         qobject_cast<QPushButton*>(this->filetable->cellWidget(i, FILETABLE_DELETE_COLUMN))->setEnabled(false);
     }
 
-    this->action_list_programs->setEnabled(false);
+//    this->action_list_programs->setEnabled(false);
     this->action_add_file->setEnabled(false);
     this->action_save_all->setEnabled(false);
     this->action_format_rom->setEnabled(false);
@@ -427,7 +427,7 @@ void MainWindow::enable_all_buttons() {
         qobject_cast<QPushButton*>(this->filetable->cellWidget(i, FILETABLE_DELETE_COLUMN))->setEnabled(true);
     }
 
-    this->action_list_programs->setEnabled(true);
+//    this->action_list_programs->setEnabled(true);
     this->action_add_file->setEnabled(true);
     this->action_save_all->setEnabled(true);
     this->action_format_rom->setEnabled(true);
@@ -853,7 +853,7 @@ void MainWindow::slot_access_fat() {
     connect(this->fat, SIGNAL(signal_sync_status_changed(const std::vector<uint8_t>)), this, SLOT(slot_update_syncmap(const std::vector<uint8_t>)));
 
     this->index_files();
-    this->action_list_programs->setEnabled(true);
+//    this->action_list_programs->setEnabled(true);
     this->action_add_file->setEnabled(true);
     this->action_save_all->setEnabled(true);
     this->action_format_rom->setEnabled(true);

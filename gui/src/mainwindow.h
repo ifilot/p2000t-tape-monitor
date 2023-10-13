@@ -96,7 +96,7 @@ private:
     QLabel* label_compile_data;
 
     // some actions which need to be changed
-    QAction* action_list_programs;
+//    QAction* action_list_programs;
     QAction* action_add_file;
     QAction* action_format_rom;
     QAction* action_save_all;

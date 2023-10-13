@@ -26,7 +26,7 @@
 FileAllocationTable::FileAllocationTable(unsigned int _nrbanks) :
     nrbanks(_nrbanks) {
     this->contents = std::vector<char>(0x10000 * this->nrbanks, 0x00);
-    this->cache_status = std::vector<uint8_t>(0x10000 * 8 / 0x100, CACHE_UNKNOWN);
+    this->cache_status = std::vector<uint8_t>(0x10000 * this->nrbanks / 0x100, CACHE_UNKNOWN);
 }
 
 /**
@@ -145,6 +145,7 @@ void FileAllocationTable::read_files() {
         this->files.push_back(file);
     }
     emit(this->message("Done loading file metadata."));
+    emit(signal_sync_status_changed(this->cache_status));
 }
 
 /**

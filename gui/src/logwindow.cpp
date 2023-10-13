@@ -18,14 +18,16 @@
  *                                                                          *
  ****************************************************************************/
 
+#include "config.h"
 #include "logwindow.h"
 
 LogWindow::LogWindow(const std::shared_ptr<QStringList>& _log_messages) :
-    log_messages(_log_messages)
-{
+    log_messages(_log_messages) {
     qDebug() << "Spawning Debug log window";
-    this->setWindowIcon(QIcon(":/assets/assets/icons/saucepan.ico"));
-    this->setWindowTitle("Debug log");
+
+    // set icon and window title
+    this->setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
+    this->setWindowTitle(tr(PROGRAM_NAME) + ": Debug log");
 
     qDebug() << "Building log window layout";
     QVBoxLayout* layout = new QVBoxLayout;
