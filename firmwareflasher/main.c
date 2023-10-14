@@ -7,8 +7,14 @@
 #include "memory.h"
 #include "util.h"
 #include "copy.h"
+#include "config.h"
+
+// forward declarations
+void init(void);
 
 int main(void) {
+    init();
+
     uint8_t row = 0;
     vidmem[0x0000] = 0x06;    // cyan color
     vidmem[0x0001] = 0x0D;    // double height
@@ -74,4 +80,9 @@ int main(void) {
     memcpy(&vidmem[0x50*row], alldonestr2, strlen(alldonestr2));
 
     return 0;
+}
+
+void init(void) {
+    sprintf(&vidmem[0x50*22], "Version: %s", __VERSION__);
+    sprintf(&vidmem[0x50*23], "Compiled at: %s / %s", __DATE__, __TIME__);
 }

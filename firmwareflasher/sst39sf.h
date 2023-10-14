@@ -23,6 +23,13 @@ void sst39sf_send_byte(uint16_t addr, uint8_t byte);
  */
 uint8_t sst39sf_read_byte(uint16_t addr);
 
+/**
+ * @brief      Read a byte from the internal rom chip
+ *
+ * @param[in]  addr  The address
+ *
+ * @return     byte value
+ */
 uint8_t sst39sf_read_byte_romint(uint16_t addr);
 
 /**
@@ -42,8 +49,18 @@ void sst39sf_write_byte_romint(uint16_t addr, uint8_t byte);
  */
 void sst39sf_wipe_sector_romint(uint16_t addr);
 
+/**
+ * @brief      Set the bank on the external ROM
+ *
+ * @param[in]  bank  The bank
+ */
 void sst39sf_set_bank(uint8_t bank);
 
+/**
+ * @brief      Set the bank on the internal ROM chip
+ *
+ * @param[in]  bank  The bank
+ */
 void sst39sf_set_bank_romint(uint8_t bank);
 
 #endif // _SST39SF_H

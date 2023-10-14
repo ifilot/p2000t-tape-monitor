@@ -25,6 +25,7 @@ jobs:
     - name: Build launcher application
       run: |
         cd launch-os
+        sed -i 's/node2000/node2000000/' Makefile
         make
     - name: Upload launcher
       uses: actions/upload-artifact@v3
@@ -44,6 +45,7 @@ jobs:
     - name: Build launcher application
       run: |
         cd firmwareflasher
+        sed -i 's/node2000/node2000000/' Makefile
         make
     - name: Upload launcher
       uses: actions/upload-artifact@v3

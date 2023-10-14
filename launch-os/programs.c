@@ -199,6 +199,16 @@ uint16_t get_number_programs(void) {
  * @param[in]  offset    The offset
  */
 void print_programs(uint8_t numprogs, uint16_t offset) {
+    // print header line
+    clearline(2);
+    char header[] = {COL_RED,' ','I','D',' ',
+                     'N','A','M','E',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
+                     'E','X','T',' ',
+                     ' ','S','I','Z','E',' ',
+                     'B','K',' ',
+                     'B','L', 0x00};
+    sprintf(&vidmem[0x50 * 2], "%s", header);
+
     for(uint16_t i=0; i<numprogs; i++) {
 
         if(offset + i >= __nrprogs) {
@@ -225,20 +235,17 @@ void print_programs(uint8_t numprogs, uint16_t offset) {
         sprintf(&vidmem[(i+PRINTPROGROW)*0x50+26], "%5u", size);
 
         // print starting bank
-        vidmem[(i+PRINTPROGROW)*0x50+31] = COL_GREEN;
+        vidmem[(i+PRINTPROGROW)*0x50+31] = COL_WHITE;
         printhex((i+PRINTPROGROW)*0x50+32, read_ram(RAMADDRPROG + i * 24 + 0));
 
         // print starting block
-        vidmem[(i+PRINTPROGROW)*0x50+34] = COL_RED;
+        vidmem[(i+PRINTPROGROW)*0x50+34] = COL_WHITE;
         printhex((i+PRINTPROGROW)*0x50+35, read_ram(RAMADDRPROG + i * 24 + 1));
     }
 
     clearline(22);
     vidmem[22 * 0x50] = 0x05;
-    sprintf(&vidmem[22 * 0x50+1], "Showing programs %u-%u.", offset+1, offset+16);
-    clearline(23);
-    vidmem[23 * 0x50] = 0x05;
-    sprintf(&vidmem[23 * 0x50+1], "Total programs: %u.", __nrprogs);
+    sprintf(&vidmem[22 * 0x50+1], "Showing %u-%u of %u programs.", offset+1, offset+16, __nrprogs);
 }
 
 uint16_t build_linked_list(uint16_t progid) {
