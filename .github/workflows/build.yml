@@ -3,6 +3,8 @@ name: build
 on:
   push:
     branches: [ "master", "develop" ]
+    tags:
+    - 'v*'
   pull_request:
     branches: [ "master", "develop" ]
 
@@ -12,10 +14,29 @@ env:
   EXEC: p2000t-fat-flasher.exe
 
 jobs:
+  # (optional) Create release
+  create-release:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+################################################################################
 
   # Firmware of the SLOT2 cartridge
-  build-launcher:
-
+  build-launcher-firmware:
     runs-on: ubuntu-latest
     container: 
       image: z88dk/z88dk
@@ -30,12 +51,35 @@ jobs:
     - name: Upload launcher
       uses: actions/upload-artifact@v3
       with:
-        name: LAUNCHER.BIN
+        name: LAUNCHERFIRMWARE.BIN
         path: ./launch-os/main.rom
+
+  deploy-launcher-firmware:
+    runs-on: ubuntu-latest
+    needs: [build-launcher-firmware, create-release]
+    permissions: write-all
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: LAUNCHERFIRMWARE.BIN
+        path: ./
+    - name: Upload Release Asset
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: LAUNCHERFIRMWARE.BIN
+        asset_name: LAUNCHERFIRMWARE.BIN
+        asset_content_type: application/octet-stream
+
+################################################################################
 
   # Firmware flasher for the SLOT2 cartridge firmware
   build-firmware-flasher:
-
     runs-on: ubuntu-latest
     container: 
       image: z88dk/z88dk
@@ -47,11 +91,36 @@ jobs:
         cd firmwareflasher
         sed -i 's/node2000/node2000000/' Makefile
         make
+        mv main.rom firmware-flasher.bin
     - name: Upload launcher
       uses: actions/upload-artifact@v3
       with:
         name: FIRMWAREFLASHER.BIN
-        path: ./firmwareflasher/main.rom
+        path: firmwareflasher/firmware-flasher.bin
+
+  deploy-firmware-flasher-rom:
+    runs-on: ubuntu-latest
+    needs: [build-firmware-flasher, create-release]
+    permissions: write-all
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: FIRMWAREFLASHER.BIN
+        path: ./
+    - name: Upload Release Asset
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: FIRMWAREFLASHER.BIN
+        asset_name: FIRMWAREFLASHER.BIN
+        asset_content_type: application/octet-stream
+
+################################################################################
 
   # Modified BASIC cartridge
   build-basic:
@@ -72,6 +141,30 @@ jobs:
       with:
         name: BASICBOOTSTRAP.BIN
         path: basicmod/BASICBOOTSTRAP.BIN
+
+  deploy-basic-cartridge:
+    runs-on: ubuntu-latest
+    needs: [build-basic, create-release]
+    permissions: write-all
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: BASICBOOTSTRAP.BIN
+        path: ./
+    - name: Upload Release Asset
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: BASICBOOTSTRAP.BIN
+        asset_name: BASICBOOTSTRAP.BIN
+        asset_content_type: application/octet-stream
+
+################################################################################
 
   # GUI to interface with a P2000TFAT-chip
   build-gui-windows:
@@ -126,6 +219,30 @@ jobs:
       with:
         name: ${{env.PROGNAME}}-installer-win64.exe
         path: gui/packaging/${{env.PROGNAME}}-installer-win64.exe
+
+  deploy-installer-windows:
+    runs-on: ubuntu-latest
+    needs: [create-installer-windows, create-release]
+    permissions: write-all
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: ${{env.PROGNAME}}-installer-win64.exe
+        path: ./
+    - name: Upload Release Asset
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ needs.create-release.outputs.upload_url }}
+        asset_path: ${{env.PROGNAME}}-installer-win64.exe
+        asset_name: ${{env.PROGNAME}}-installer-win64.exe
+        asset_content_type: application/vnd.microsoft.portable-executable
+
+################################################################################
 
   #
   # Ubuntu
