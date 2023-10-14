@@ -48,11 +48,12 @@ jobs:
         cd launch-os
         sed -i 's/node2000/node2000000/' Makefile
         make
+        mv main.rom LAUNCHERFIRMWARE.BIN
     - name: Upload launcher
       uses: actions/upload-artifact@v3
       with:
         name: LAUNCHERFIRMWARE.BIN
-        path: ./launch-os/main.rom
+        path: launch-os/LAUNCHERFIRMWARE.BIN
 
   deploy-launcher-firmware:
     runs-on: ubuntu-latest
@@ -91,12 +92,12 @@ jobs:
         cd firmwareflasher
         sed -i 's/node2000/node2000000/' Makefile
         make
-        mv main.rom firmware-flasher.bin
+        mv main.rom FIRMWAREFLASHER.BIN
     - name: Upload launcher
       uses: actions/upload-artifact@v3
       with:
         name: FIRMWAREFLASHER.BIN
-        path: firmwareflasher/firmware-flasher.bin
+        path: firmwareflasher/FIRMWAREFLASHER.BIN
 
   deploy-firmware-flasher-rom:
     runs-on: ubuntu-latest
