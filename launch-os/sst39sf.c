@@ -22,6 +22,32 @@ uint8_t sst39sf_read_byte(uint16_t addr) {
     return z80_inp(ROMCHIP);
 }
 
+/**
+ * @brief      Set the rom bank
+ *
+ * @param[in]  rom bank
+ */
 void sst39sf_set_bank(uint8_t bank) {
     z80_outp(ROMBANK, bank);
+}
+
+/**
+ * @brief      Get the chip id
+ *
+ * @return     Chip identifier token
+ */
+uint16_t sst39sf_get_chip_id(void) {
+    sst39sf_set_bank(0);
+    sst39sf_send_byte(0x5555, 0xAA);
+    sst39sf_send_byte(0x2AAA, 0x55);
+    sst39sf_send_byte(0x5555, 0x90);
+
+    uint8_t id0 = sst39sf_read_byte(0x0000);
+    uint8_t id1 = sst39sf_read_byte(0x0001);
+
+    sst39sf_send_byte(0x5555, 0xAA);
+    sst39sf_send_byte(0x2AAA, 0x55);
+    sst39sf_send_byte(0x5555, 0xF0);
+
+    return id0 << 8 | id1;
 }

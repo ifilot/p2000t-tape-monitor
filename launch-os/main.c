@@ -7,6 +7,7 @@
 #include "programs.h"
 #include "ram.h"
 #include "memory.h"
+#include "config.h"
 
 // forward declarations
 void init(void);
@@ -39,6 +40,9 @@ void main(void) {
             for(uint8_t i=0; i<keymem[0x0C]; i++) {
                 switch(keymem[i]) {
                     case 25:  // 'n'
+                        if(__nrprogs <= 16) { // if program size is smaller than 16, do nothing
+                            break;
+                        }
                         if(offset + 16 < (__nrprogs - 16)) {
                             offset += 16;
                         } else {
@@ -48,6 +52,9 @@ void main(void) {
                         print_programs(16, offset);
                         break;
                     case 53: // 'p'
+                        if(__nrprogs <= 16) { // if program size is smaller than 16, do nothing
+                            break;
+                        }
                         if(offset > 16) {
                             offset -= 16;
                         } else {
@@ -172,6 +179,33 @@ void init(void) {
 
     static const char str1[] = "Launcher";
     memcpy(&vidmem[0x0002], str1, strlen(str1));
+
+    // show version and compile information
+    sprintf(&vidmem[0x50*23], "Version %s (%s, %s)", __VERSION__, __DATE__, __TIME__);
+
+    // determine chip id
+    uint16_t chip_id = sst39sf_get_chip_id();
+
+    switch(chip_id & 0xFF) {
+        case 0xB5:
+            sprintf(&vidmem[21], "%s", "SST39SF010 (128kb)");
+            __nrbanks = 2;
+            break;
+        case 0xB6:
+            sprintf(&vidmem[21], "%s", "SST39SF020 (256kb)");
+            __nrbanks = 4;
+            break;
+        case 0xB7:
+            sprintf(&vidmem[21], "%s", "SST39SF040 (512kb)");
+            __nrbanks = 8;
+            break;
+        default:
+            // stop initialization and throw error message
+            sprintf(&vidmem[0x50 * 10], "%s", "[ERROR]: Cannot detect external chip");
+            sprintf(&vidmem[0x50 * 11], "%s", "Ensure a ROM is inserted in the data");
+            sprintf(&vidmem[0x50 * 12], "%s", "cartridge and press RESET");
+            while(0 == 0){}; // put in infinite loop
+    }
 
     static const char str2[] = "Press [n/p] to scroll between pages.";
     memcpy(&vidmem[0x50*20], str2, strlen(str2));

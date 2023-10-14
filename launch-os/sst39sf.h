@@ -22,6 +22,18 @@ void sst39sf_send_byte(uint16_t addr, uint8_t byte);
  */
 uint8_t sst39sf_read_byte(uint16_t addr);
 
+/**
+ * @brief      Set the rom bank
+ *
+ * @param[in]  rom bank
+ */
 void sst39sf_set_bank(uint8_t bank);
+
+/**
+ * @brief      Get the chip id
+ *
+ * @return     Chip identifier token
+ */
+uint16_t sst39sf_get_chip_id(void);
 
 #endif // _SST39SF_H
