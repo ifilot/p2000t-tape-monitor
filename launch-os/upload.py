@@ -68,7 +68,9 @@ def upload_rom(ser, filename):
     # expand data to 4k-size
     data.extend(np.zeros(0x4000 - len(data)))
     
-    for i in range(0,4):
+    # program cannot exceed 0x2000 bytes (by design), so only flash the
+    # first two banks
+    for i in range(0,2):
         ser.write(b'WRSECT%02X' % i)
         res = ser.read(8)
         print(res)

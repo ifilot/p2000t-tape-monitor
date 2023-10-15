@@ -12,6 +12,9 @@ env:
   BUILD_TYPE: Release
   PROGNAME: p2000t-fat-flasher
   EXEC: p2000t-fat-flasher.exe
+  FIRMWAREFLASHER_BIN: FIRMWAREFLASHER.BIN
+  LAUNCHERFIRMWARE_BIN: LAUNCHERFIRMWARE.BIN
+  BASICROM_BIN: BASICROM.BIN
 
 jobs:
   # (optional) Create release
@@ -48,12 +51,13 @@ jobs:
         cd launch-os
         sed -i 's/node2000/node2000000/' Makefile
         make
-        mv main.rom LAUNCHERFIRMWARE.BIN
+        mv main.rom ${{env.LAUNCHERFIRMWARE_BIN}}
+        truncate -s 8K ${{env.LAUNCHERFIRMWARE_BIN}}
     - name: Upload launcher
       uses: actions/upload-artifact@v3
       with:
-        name: LAUNCHERFIRMWARE.BIN
-        path: launch-os/LAUNCHERFIRMWARE.BIN
+        name: ${{env.LAUNCHERFIRMWARE_BIN}}
+        path: launch-os/${{env.LAUNCHERFIRMWARE_BIN}}
 
   deploy-launcher-firmware:
     runs-on: ubuntu-latest
@@ -64,7 +68,7 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v3
       with:
-        name: LAUNCHERFIRMWARE.BIN
+        name: ${{env.LAUNCHERFIRMWARE_BIN}}
         path: ./
     - name: Upload Release Asset
       id: upload-release-asset 
@@ -73,8 +77,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: LAUNCHERFIRMWARE.BIN
-        asset_name: LAUNCHERFIRMWARE.BIN
+        asset_path: ${{env.LAUNCHERFIRMWARE_BIN}}
+        asset_name: ${{env.LAUNCHERFIRMWARE_BIN}}
         asset_content_type: application/octet-stream
 
 ################################################################################
@@ -92,12 +96,13 @@ jobs:
         cd firmwareflasher
         sed -i 's/node2000/node2000000/' Makefile
         make
-        mv main.rom FIRMWAREFLASHER.BIN
+        mv main.rom ${{env.FIRMWAREFLASHER_BIN}}
+        truncate -s 16K ${{env.FIRMWAREFLASHER_BIN}}
     - name: Upload launcher
       uses: actions/upload-artifact@v3
       with:
-        name: FIRMWAREFLASHER.BIN
-        path: firmwareflasher/FIRMWAREFLASHER.BIN
+        name: ${{env.FIRMWAREFLASHER_BIN}}
+        path: firmwareflasher/${{env.FIRMWAREFLASHER_BIN}}
 
   deploy-firmware-flasher-rom:
     runs-on: ubuntu-latest
@@ -108,7 +113,7 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v3
       with:
-        name: FIRMWAREFLASHER.BIN
+        name: ${{env.FIRMWAREFLASHER_BIN}}
         path: ./
     - name: Upload Release Asset
       id: upload-release-asset 
@@ -117,8 +122,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: FIRMWAREFLASHER.BIN
-        asset_name: FIRMWAREFLASHER.BIN
+        asset_path: ${{env.FIRMWAREFLASHER_BIN}}
+        asset_name: ${{env.FIRMWAREFLASHER_BIN}}
         asset_content_type: application/octet-stream
 
 ################################################################################
@@ -140,8 +145,8 @@ jobs:
     - name: Upload
       uses: actions/upload-artifact@v1
       with:
-        name: BASICBOOTSTRAP.BIN
-        path: basicmod/BASICBOOTSTRAP.BIN
+        name: ${{env.BASICROM_BIN}}
+        path: basicmod/${{env.BASICROM_BIN}}
 
   deploy-basic-cartridge:
     runs-on: ubuntu-latest
@@ -152,7 +157,7 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v3
       with:
-        name: BASICBOOTSTRAP.BIN
+        name: ${{env.BASICROM_BIN}}
         path: ./
     - name: Upload Release Asset
       id: upload-release-asset 
@@ -161,8 +166,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ needs.create-release.outputs.upload_url }}
-        asset_path: BASICBOOTSTRAP.BIN
-        asset_name: BASICBOOTSTRAP.BIN
+        asset_path: ${{env.BASICROM_BIN}}
+        asset_name: ${{env.BASICROM_BIN}}
         asset_content_type: application/octet-stream
 
 ################################################################################
