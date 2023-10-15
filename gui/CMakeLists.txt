@@ -26,7 +26,7 @@ find_package(Qt5 REQUIRED COMPONENTS Widgets SerialPort)
 add_executable(p2000t-fat-flasher
     src/blockmap.cpp
     src/dialogslotselection.cpp
-    src/fatflashergui.cpp \
+    src/fatflashergui.cpp
     src/fileallocationtable.cpp
     src/flashthread.cpp
     src/ioworker.cpp
