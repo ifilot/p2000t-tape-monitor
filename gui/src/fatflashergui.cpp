@@ -1,6 +1,6 @@
 /****************************************************************************
  *                                                                          *
- *   PICO-SST39SF0x0-FLASHER                                                *
+ *   P2000T-FAT-READER                                                      *
  *   Copyright (C) 2023 Ivo Filot <ivo@ivofilot.nl>                         *
  *                                                                          *
  *   This program is free software: you can redistribute it and/or modify   *
@@ -18,13 +18,42 @@
  *                                                                          *
  ****************************************************************************/
 
-#ifndef _CONFIG_H
-#define _CONFIG_H
+#include "fatflashergui.h"
 
-#define PROGRAM_NAME "P2000T FAT READER"
-#define PROGRAM_VERSION "0.2.1"
-#define ICON_PATH ":/assets/icon/icon_128px.png"
+/**
+ * @brief Default constructor
+ * @param argc number of command line argument
+ * @param argv command line arguments
+ */
+FATFlasherGUI::FATFlasherGUI(int& argc, char** argv) :
+QApplication(argc, argv) {}
 
-#define UNUSED(x) (void)(x)
+/**
+ * @brief notify
+ * @param receiver
+ * @param event
+ * @return
+ */
+bool FATFlasherGUI::notify(QObject* receiver, QEvent* event) {
+    bool done = true;
+    try {
+        done = QApplication::notify(receiver, event);
+    } catch (const std::exception& e) {
+        this->throw_message_window(tr("Uncaught exception was thrown."),
+                                   tr("An uncaught exception was thrown by the program. This is undiserable behavior and "
+                                      "the program will be terminated. Please carefully read the error message "
+                                      "and consult the manual or contact one of the developers.\n\nError:\n") + e.what());
+        throw(e);
+    }
+    return done;
+}
 
-#endif // _CONFIG_H
+
+void FATFlasherGUI::throw_message_window(const QString& title, const QString& message) {
+    QMessageBox message_box;
+    message_box.setText(message);
+    message_box.setIcon(QMessageBox::Critical);
+    message_box.setWindowTitle(title);
+    message_box.setWindowIcon(QIcon(ICON_PATH));
+    message_box.exec();
+}

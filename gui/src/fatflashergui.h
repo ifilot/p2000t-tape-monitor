@@ -1,6 +1,6 @@
 /****************************************************************************
  *                                                                          *
- *   PICO-SST39SF0x0-FLASHER                                                *
+ *   P2000T-FAT-READER                                                      *
  *   Copyright (C) 2023 Ivo Filot <ivo@ivofilot.nl>                         *
  *                                                                          *
  *   This program is free software: you can redistribute it and/or modify   *
@@ -18,13 +18,35 @@
  *                                                                          *
  ****************************************************************************/
 
-#ifndef _CONFIG_H
-#define _CONFIG_H
+#ifndef FATFLASHERGUI_H
+#define FATFLASHERGUI_H
 
-#define PROGRAM_NAME "P2000T FAT READER"
-#define PROGRAM_VERSION "0.2.1"
-#define ICON_PATH ":/assets/icon/icon_128px.png"
+#include <QApplication>
+#include <QMessageBox>
+#include <QIcon>
 
-#define UNUSED(x) (void)(x)
+#include "config.h"
 
-#endif // _CONFIG_H
+class FATFlasherGUI : public QApplication
+{
+public:
+    /**
+     * @brief Default constructor
+     * @param argc number of command line argument
+     * @param argv command line arguments
+     */
+    FATFlasherGUI(int& argc, char** argv);
+
+    /**
+     * @brief notify
+     * @param receiver
+     * @param event
+     * @return
+     */
+    bool notify(QObject* receiver, QEvent* event);
+
+private:
+    void throw_message_window(const QString& title, const QString& message);
+};
+
+#endif // FATFLASHERGUI_H
