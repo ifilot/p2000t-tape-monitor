@@ -51,7 +51,7 @@ The latest version of the files below can be obtained from the action artifacts
 of the [last build](https://github.com/ifilot/p2000t-tape-monitor/actions/workflows/build.yml).
 
 * [`BASICBOOTSTRAP.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/BASICBOOTSTRAP.BIN.zip): Modified BASIC cartridge (SLOT1)
-* [`FIRMWAREFLASHER.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/FIRMWAREFLASHER.BIN): Firwmare flasher for the data cartridge firmware (SLOT1)
+* [`FIRMWAREFLASHER.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/FIRMWAREFLASHER.BIN): Firmware flasher for the data cartridge firmware (SLOT1)
 * [`LAUNCHER.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/LAUNCHER.BIN): Firmware for the data cartridge (SLOT2)
 * [`p2000t-fat-flasher--installer-win64.exe`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/p2000t-fat-flasher-installer-win64.exe.zip): Windows installer for GUI
 
