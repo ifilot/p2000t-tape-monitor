@@ -18,6 +18,7 @@
  *                                                                          *
  ****************************************************************************/
 #include "mainwindow.h"
+#include "fatflashergui.h"
 
 #include <QApplication>
 #include <QStringList>
@@ -64,7 +65,7 @@ void message_output(QtMsgType type, const QMessageLogContext &context, const QSt
 
 int main(int argc, char *argv[])
 {
-    QApplication app(argc, argv);
+    FATFlasherGUI app(argc, argv);
     qRegisterMetaType<std::vector<uint8_t>>("stdvector_uint8_t");
 
     std::unique_ptr<MainWindow> mainWindow;
@@ -74,7 +75,7 @@ int main(int argc, char *argv[])
         // build main window
         qInstallMessageHandler(message_output);
         mainWindow = std::make_unique<MainWindow>(log_messages);
-        mainWindow->setWindowTitle(QString(PROGRAM_NAME) + " " + QString(PROGRAM_VERSION));
+        mainWindow->setWindowTitle(QString(PROGRAM_NAME));
     } catch(const std::exception& e) {
         std::cerr << "Error detected!" << std::endl;
         std::cerr << e.what() << std::endl;
@@ -85,7 +86,7 @@ int main(int argc, char *argv[])
 
     int res = -1;
     try {
-        int res = app.exec();
+        res = app.exec();
     }  catch (const std::exception& e) {
         std::cerr << "Error detected!" << std::endl;
         std::cerr << e.what() << std::endl;

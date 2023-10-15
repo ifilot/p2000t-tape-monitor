@@ -71,7 +71,8 @@ MainWindow::MainWindow(const std::shared_ptr<QStringList> _log_messages, QWidget
     padding_frame->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
 
     // add compile information
-    this->label_compile_data = new QLabel(tr("<b>Build:</b><br>Compile time: %1<br>Git id: %2").arg(__DATE__).arg(GIT_HASH));
+    this->label_compile_data = new QLabel(tr("<b>Build:</b><br>Compile time: %1<br>Git id: %2<br>Version: %3")
+                                          .arg(__DATE__).arg(GIT_HASH).arg(PROGRAM_VERSION));
     right_layout->addWidget(this->label_compile_data);
 
     this->setMinimumWidth(1000);
@@ -84,7 +85,7 @@ MainWindow::MainWindow(const std::shared_ptr<QStringList> _log_messages, QWidget
     connect(this->button_select_serial, SIGNAL (released()), this, SLOT (select_com_port()));
 
     // set icon and window title
-    this->setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
+    this->setWindowIcon(QIcon(ICON_PATH));
     this->setWindowTitle(PROGRAM_NAME);
 }
 
@@ -324,7 +325,7 @@ void MainWindow::raise_error_window(QMessageBox::Icon icon, const QString errorm
     QMessageBox msg_box;
     msg_box.setIcon(icon);
     msg_box.setText(errormsg);
-    msg_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
+    msg_box.setWindowIcon(QIcon(ICON_PATH));
     msg_box.exec();
 }
 
@@ -498,7 +499,7 @@ void MainWindow::scan_com_devices() {
               " with the one from the Raspberry Pi Pico. If you have a Raspberry Pi Pico or compatible device plugged in,"
               " take care to unplug it or carefully select the correct port."
         ).arg(port_identifiers.size()));
-        msg_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
+        msg_box.setWindowIcon(QIcon(ICON_PATH));
         msg_box.exec();
     } else {
         QMessageBox msg_box;
@@ -669,7 +670,7 @@ void MainWindow::slot_save_all() {
                         "the ROM chip and stored on the computer.");
     message_box.setIcon(QMessageBox::Warning);
     message_box.setWindowTitle("Warning");
-    message_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
+    message_box.setWindowIcon(QIcon(ICON_PATH));
     message_box.exec();
 
     QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
@@ -706,7 +707,7 @@ void MainWindow::slot_about() {
                         PROGRAM_NAME " is dynamically linked to Qt, which is licensed under LGPLv3.\n");
     message_box.setIcon(QMessageBox::Information);
     message_box.setWindowTitle("About " + tr(PROGRAM_NAME));
-    message_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
+    message_box.setWindowIcon(QIcon(ICON_PATH));
     message_box.exec();
 }
 
@@ -787,7 +788,7 @@ void MainWindow::read_chip_id() {
         msg_box.setIcon(QMessageBox::Warning);
         msg_box.setText(tr("The chip id does not match the proper value for a SST39SF0x0 chip. Please ensure "
                            "that a correct SST39SF0x0 chip is inserted. If so, resocket the chip and try again.\n\nError message: %1.").arg(e.what()));
-        msg_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
+        msg_box.setWindowIcon(QIcon(ICON_PATH));
         msg_box.exec();
     }
 }

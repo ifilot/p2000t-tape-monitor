@@ -7,7 +7,31 @@ ROMBANK     EQU  $63
 ROMEXT      EQU  $65
 
 PUBLIC _copybank0
+PUBLIC _copyfirsttwosectors
 PUBLIC _calculatecrc16
+
+;-------------------------------------------------------------------------------
+; Copy $0000 - $1FFF from external ROM
+; to internal ROM
+;-------------------------------------------------------------------------------
+_copyfirsttwosectors:
+    ld bc,$2000
+    ld de,$0000
+    ld hl,$0000
+    di
+copyfirsttwosectors_nextbyte:
+    push bc                        ; free up bc to be used in the routines below
+    call sst39sfrecv_external      ; load value from external rom addr hl into a
+    call sst39sfwrbyte_internal    ; send value to internal rom addr de from a
+    pop bc
+    inc de
+    inc hl
+    dec bc
+    ld a,b
+    or c
+    jp nz,copyfirsttwosectors_nextbyte
+    ei
+    ret
 
 ;-------------------------------------------------------------------------------
 ; Copy $0000 - $3FFF from external ROM

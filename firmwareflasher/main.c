@@ -28,21 +28,23 @@ int main(void) {
     while(keymem[0x0C] == 0) {}
 
     clearline(row);
-    const char copyfirmwarestr[] = "Copying firmware. Please wait.";
+    const char copyfirmwarestr[] = "Copying firmware (8kb). Please wait...";
     memcpy(&vidmem[row * 0x50], copyfirmwarestr, strlen(copyfirmwarestr));
 
     sst39sf_set_bank(0);
     sst39sf_set_bank_romint(0);
 
-    for(uint16_t i=0; i<4; i++) { // loop over sectors
+    // only wipe the first two sectors as the launch-os is (by design) constrainted
+    // to 0x2000 bytes
+    for(uint16_t i=0; i<2; i++) { // loop over sectors
         sst39sf_wipe_sector_romint(i * 0x1000);
     }
 
     // copy external bank0 to internal rom chip
-    copybank0();
+    copyfirsttwosectors();
 
     clearline(row);
-    const char msgdone[] = "Completed data transfer: 16kb.";
+    const char msgdone[] = "Completed data transfer: 8kb.";
     memcpy(&vidmem[row*0x50], msgdone, strlen(msgdone));
 
     row += 2;
@@ -56,7 +58,7 @@ int main(void) {
     const char crcstr[] = "CRC16 checksums:";
     memcpy(&vidmem[0x50*row], crcstr, strlen(crcstr));
     row++;
-    for(uint8_t i=0; i<4; i++) {
+    for(uint8_t i=0; i<2; i++) {
         printhex(row*0x50+i*5, highmem9000[i*2]);
         printhex(row*0x50+i*5+2, highmem9000[i*2+1]);
     }
