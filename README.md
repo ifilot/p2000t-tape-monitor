@@ -1,6 +1,8 @@
 # P2000T Tape Monitor
 
+![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/ifilot/p2000t-tape-monitor?label=version)
 [![build](https://github.com/ifilot/p2000t-tape-monitor/actions/workflows/build.yml/badge.svg)](https://github.com/ifilot/p2000t-tape-monitor/actions/workflows/build.yml)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 ## Features
 - [x] Launch tape files from data cartridge in SLOT2
