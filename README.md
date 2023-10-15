@@ -5,9 +5,31 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 ## Features
+
+This project is still under development. Below a list of features can be found.
+Checked features are implemented, unchecked features are work in progress.
+
 - [x] Launch tape files from data cartridge in SLOT2
 - [ ] Write tape data to data cartridge in SLOT2
 - [ ] Write data back to tapes from the data cartridge
+
+## Explainer
+
+In the image below, the working of the data cartridge is schematically shown.
+In the conventional approach, the user would start the P2000T and load programs
+from the cassette. Under the hood, data is copied from the cassette to the
+internal memory after which the program can be started.
+
+The data cartridge essentially imitates on this process. Upon boot, a bit of
+firmware is loaded from the data cartridge into memory and launched. This firmware
+scans the external ram chip for programs and shows a list of those programs. The
+user can then select a program and execute it. Upon selection, the program is
+first copied from the external chip to the internal RAM chip in the data cartridge.
+Next, the firmware is removed (actually, it is simply overwritten), and the new
+data is copied from the RAM chip to the same position as where normally cassette
+data is copied. Finally, the `RUN` command is executed which starts the program.
+
+![Explain how the data cartridge works](img/datacartridge_explainer.jpg)
 
 ## Contents
 This repository is organized as follows
@@ -38,3 +60,14 @@ of the [last build](https://github.com/ifilot/p2000t-tape-monitor/actions/workfl
 
 Data is stored on the ROM using a custom file system. Specifications of the file
 system are documented [in a separate file](docs/fat.md).
+
+## FAQ
+
+* Where can I find programs?
+
+  *A rather huge archive of P2000T cassette programs 
+  (which is also being actively maintained), can be found in the
+  [P2000T Preservation Project](https://github.com/p2000t/software) repository.*
+* Where can I find the documentation?
+
+  *All documentation can be found on the [philips-p2000t.nl](https://philips-p2000t.nl) website.*
