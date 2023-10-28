@@ -289,7 +289,7 @@ unsigned int FileAllocationTable::get_number_occupied_blocks() const {
  * @param header
  * @param data
  */
-void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& data) {
+bankblock FileAllocationTable::add_file(const QByteArray& header, const QByteArray& data) {
     qDebug() << "Adding file";
 
     char filename[16];
@@ -318,6 +318,7 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
     qInfo() << "Starting looking for free blocks";
     emit(read_operation(0, nrblocks));
     auto newbankblock = this->find_next_free_block();
+    bankblock startpos = newbankblock;
 
     // loop over program blocks
     for(uint8_t i=0; i<nrblocks; i++) {
@@ -382,6 +383,58 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
     }
 
     emit(signal_sync_needed());
+    return startpos;
+}
+
+/**
+ * @brief Check wether a file is valid
+ * @param startpos
+ */
+std::vector<std::pair<uint16_t, uint16_t>> FileAllocationTable::check_file(const bankblock& startpos) {
+    qDebug() << "Obtaining linked list for program";
+    auto bankblocks = this->build_linked_list_bankblock(startpos);
+
+    // invalidate cache for these blocks
+    for(const auto& bankblock : bankblocks) {
+        uint8_t bank = bankblock.first;
+        uint8_t block = bankblock.second;
+        qDebug() << "Invalidating bank " << bank << ", block " << block;
+        unsigned int dataoffset = 0x10000 * bank + 0x1000 + block * 0x400;
+        for(unsigned int i=0; i<4; i++) {
+            this->update_cache_status(dataoffset / 0x100 + i, CACHE_UNKNOWN);
+        }
+    }
+
+    // read blocks anew
+    for(const auto& bankblock : bankblocks) {
+        uint8_t bank = bankblock.first;
+        uint8_t block = bankblock.second;
+        qDebug() << "Reloading bank " << bank << ", block " << block;
+        unsigned int dataoffset = 0x10000 * bank + 0x1000 + block * 0x400;
+        for(unsigned int i=0; i<4; i++) {
+            this->read_block(dataoffset / 0x100 + i);
+        }
+    }
+
+    // perform checksum validation
+    std::vector<std::pair<uint16_t, uint16_t>> checksums;
+    for(const auto& bankblock : bankblocks) {
+        // retrieve stored checksum
+        uint8_t bank = bankblock.first;
+        uint8_t block = bankblock.second;
+        unsigned int meta_addr = bank * 0x10000 + block * 0x40 + 0x100;
+        this->read_block(meta_addr / 100);
+        uint16_t checksum = *((uint16_t*)&this->contents.data()[meta_addr + 0x06]);
+
+        // calculate actual checksum
+        unsigned int addr = bank * 0x10000 + 0x1000 + block * 0x400;
+        QByteArray data = QByteArray(&this->contents[addr], 0x400);
+        uint16_t crc16 = this->crc16_xmodem(data, 0x400);
+
+        checksums.emplace_back(checksum, crc16);
+    }
+
+    return checksums;
 }
 
 /**
@@ -582,6 +635,45 @@ void FileAllocationTable::build_linked_list(unsigned int id) {
         uint16_t checksum = *((uint16_t*)&metadata.data()[0x06]);
         file.metachecksums.push_back(checksum);
     }
+}
+
+/**
+ * @brief Extract linked list of file
+ * @param vector of bank/block pairs
+ */
+std::vector<bankblock> FileAllocationTable::build_linked_list_bankblock(const bankblock& startpos) {
+    uint8_t bank = startpos.first;
+    uint8_t block = startpos.second;
+
+    std::vector<bankblock> blocks;
+    unsigned int counter = 0;
+
+    while(bank != 0xFF) {
+        counter++;
+        if(counter > 64 * 4) {
+            throw std::runtime_error("Error occured while collecting linked list. Most likely a cyclic reference.");
+        }
+
+        qDebug() << "Collecting: " << bank << " / " << block;
+
+        // insert into list
+        blocks.emplace_back(bank, block);
+
+        // set address locations for metadata of current block
+        unsigned int addr = bank * 0x10000 + 0x100 + block * 0x40;
+        unsigned int saddr = addr / 0x100;
+        unsigned int offset = addr % 0x100;
+
+        // read metadata of current block
+        QByteArray meta = this->read_block(saddr);
+        QByteArray metadata = meta.mid(offset, 0x40);
+
+        // retrieve data of new block
+        bank = metadata[0x03];  // next bank
+        block = metadata[0x04]; // next block
+    }
+
+    return blocks;
 }
 
 /**

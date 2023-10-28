@@ -111,6 +111,7 @@ private:
     QLabel* label_checksums;
     BlockMap* blockmap;
     BlockMap* syncmap;
+    bankblock lastbankblock = {0xFF,0xFF};
 
     static const unsigned int FILETABLE_OPEN_COLUMN = 4;
     static const unsigned int FILETABLE_DELETE_COLUMN = 5;

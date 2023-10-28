@@ -47,7 +47,7 @@ void SerialInterface::open_port() {
     this->port->open(QIODevice::ReadWrite);
     this->port->setDataTerminalReady(true);
 
-    qDebug() << QObject::tr("Opening COM port:") + QObject::tr(this->portname.c_str());
+    qDebug() << "Opening COM port: " + QObject::tr(this->portname.c_str());
 }
 
 /**

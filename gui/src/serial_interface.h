@@ -41,8 +41,8 @@
 class SerialInterface {
 
 private:
-    static const unsigned int SERIAL_TIMEOUT = 100;             // timeout for regular serial communication
-    static const unsigned int SERIAL_TIMEOUT_SECTOR = 0;        // timeout when reading sector data (0x1000 bytes)
+    static const unsigned int SERIAL_TIMEOUT = 120;             // timeout for regular serial communication
+    static const unsigned int SERIAL_TIMEOUT_SECTOR = 10;       // timeout when reading sector data (0x1000 bytes)
     static const unsigned int SERIAL_TIMEOUT_BLOCK = 3000;      // timeout when reading sector data (0x1000 bytes)
     std::string portname;                                       // communication port address
     std::unique_ptr<QSerialPort> port;                          // pointer to QSerialPort object

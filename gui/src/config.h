@@ -22,7 +22,7 @@
 #define _CONFIG_H
 
 #define PROGRAM_NAME "P2000T FAT READER"
-#define PROGRAM_VERSION "0.2.1"
+#define PROGRAM_VERSION "0.3.0"
 #define ICON_PATH ":/assets/icon/icon_128px.png"
 
 #define UNUSED(x) (void)(x)

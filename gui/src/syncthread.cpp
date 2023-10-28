@@ -23,13 +23,11 @@
 /**
  * @brief run cart flash routine
  */
-void SyncThread::run() {
-    // maximum number of sectors
-    static const unsigned int nrsects = 128;
-
+void SyncThread::run() {   
+    qDebug() << "Starting syncthread";
     // determine number of sectors to write
     unsigned int nrsectowrite = 0;
-    for(unsigned int i=0; i<nrsects; i++) { // loop over sectors
+    for(unsigned int i=0; i<this->nr_sectors; i++) { // loop over sectors
         for(unsigned int j=0; j<0x10; j++) {
             if(this->cache_status[i * 0x10 + j] == 0x02 ||
                this->cache_status[i * 0x10 + j] == 0x03) {
@@ -39,8 +37,10 @@ void SyncThread::run() {
         }
     }
 
+    qDebug() << "Where?";
+
     unsigned int nrsects_written = 0;
-    for(unsigned int i=0; i<nrsects; i++) { // loop over sectors
+    for(unsigned int i=0; i<this->nr_sectors; i++) { // loop over sectors
         for(unsigned int j=0; j<0x10; j++) {
 
             // if at least one sector page has a - to be written - flag, write
@@ -59,6 +59,7 @@ void SyncThread::run() {
                 this->serial_interface->open_port();
                 this->serial_interface->burn_sector(i, QByteArray(&this->contents[i * 0x1000], 0x1000));
                 this->serial_interface->close_port();
+                qDebug() << "Done writing sector: " << i;
 
                 // emit status update
                 emit(sync_item_done(++nrsects_written, nrsectowrite));
@@ -77,4 +78,8 @@ void SyncThread::run() {
 
     qDebug() << "Done syncing.";
     emit(sync_complete());
+}
+
+SyncThread::~SyncThread() {
+    qDebug() << "Destroying Synchronization Thread";
 }

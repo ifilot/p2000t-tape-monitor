@@ -93,6 +93,10 @@ MainWindow::MainWindow(const std::shared_ptr<QStringList> _log_messages, QWidget
  * @brief Default destructor method
  */
 MainWindow::~MainWindow() {
+    if(this->syncthread) {
+        this->syncthread->terminate();
+        this->syncthread->wait();
+    }
 }
 
 /**
@@ -624,8 +628,9 @@ void MainWindow::slot_add_program() {
             qDebug() << "Disabling all buttons";
             this->disable_all_buttons();
 
+            // add data to flash chip
             qDebug() << "Start adding data";
-            this->fat->add_file(header, romdata);
+            this->lastbankblock = this->fat->add_file(header, romdata);
         } else {
             return;
         }
@@ -922,6 +927,7 @@ void MainWindow::slot_start_sync() {
     qInfo() << "Received synchronization request";
     this->disable_all_buttons();
     this->syncthread = std::make_unique<SyncThread>(this->serial_interface);
+    this->syncthread->set_sectors(this->fat->get_nr_banks() * 0x10);
     syncthread->set_contents(this->fat->get_contents());
     syncthread->set_cache_status(this->fat->get_cache_status());
     connect(this->syncthread.get(), SIGNAL(sync_item_done(int, int)), this, SLOT(read_operation(int, int)));
@@ -934,14 +940,34 @@ void MainWindow::slot_sync_complete() {
     qInfo() << "Synchronization process completed";
     this->fat->set_cache_status(this->syncthread->get_cache_status());
     this->index_files();
-    this->enable_all_buttons();
+
     this->syncthread.release();
+
+    if(this->lastbankblock.first != 0xFF) {
+        auto checksums = this->fat->check_file(this->lastbankblock);
+        unsigned int wrongblocks = 0;
+        for(const auto& i : checksums) {
+            qDebug() << i.first << "\t" << i.second;
+            if(i.first != i.second) {
+                wrongblocks++;
+            }
+        }
+
+        if(wrongblocks > 0) {
+            this->raise_error_window(QMessageBox::Critical,
+                                     tr("%1 blocks were not flashed correctly. Please ensure the chip is properly socketed in the ZIF"
+                                     " socket, delete the last written file and try again.").arg(wrongblocks));
+        }
+    }
+
+    this->enable_all_buttons();
+    this->lastbankblock = {0xFF,0xFF};
 }
 
 /**
  * @brief Update synchronization map
  */
 void MainWindow::slot_update_syncmap(const std::vector<uint8_t> _cache_status) {
-    qDebug() << "Updating syncmap";
+//    qDebug() << "Updating syncmap";
     this->syncmap->set_cache(_cache_status);
 }
