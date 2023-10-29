@@ -15,6 +15,7 @@ void read_programs(void) {
     uint16_t ram_ptr = RAMADDRPROG;
 
     // loop over the rom banks
+    led_rd_on(); // turn read led on
     for(uint8_t bank=0; bank<__nrbanks; bank++) {
 
         // set rom bank
@@ -68,6 +69,7 @@ void read_programs(void) {
             }
         }
     }
+    led_rd_off(); // turn read led off
 }
 
 /**
@@ -87,6 +89,7 @@ void read_programs_offset(uint16_t offset) {
     uint16_t addr = 0x0000;
 
     // skip first items by offset
+    led_rd_on();
     while((numprogs < offset) && (bank < 8)) {
         startblock = sst39sf_read_byte(addr++);
 
@@ -105,8 +108,10 @@ void read_programs_offset(uint16_t offset) {
 
         numprogs++;
     }
+    led_rd_off();
 
     // grab 16 programs
+    led_rd_on();
     while((numprogs < (offset+16)) && (bank < __nrbanks) && numprogs < __nrprogs) {
         startblock = sst39sf_read_byte(addr++);
 
@@ -155,6 +160,7 @@ void read_programs_offset(uint16_t offset) {
             write_ram(ram_ptr++, ((char*)&prg)[i]);
         }
     }
+    led_rd_off();
 }
 
 /**
@@ -167,6 +173,7 @@ uint16_t get_number_programs(void) {
     uint16_t ram_ptr = RAMADDRPROG;
 
     // loop over the rom banks
+    led_rd_on();
     for(uint8_t bank=0; bank<__nrbanks; bank++) {
 
         // set rom bank
@@ -188,6 +195,7 @@ uint16_t get_number_programs(void) {
             numprogs++;
         }
     }
+    led_rd_off();
 
     return numprogs;
 }
@@ -261,6 +269,7 @@ uint16_t build_linked_list(uint16_t progid) {
     uint16_t addr = 0x0000;
 
     // skip first items by offset
+    led_rd_on();
     while((numprogs < progid) && (bank < __nrbanks)) {
         startblock = sst39sf_read_byte(addr++);
 
@@ -279,6 +288,7 @@ uint16_t build_linked_list(uint16_t progid) {
 
         numprogs++;
     }
+    led_rd_off();
 
     // establish startbank and startblock of chosen program
     uint8_t nextblock = sst39sf_read_byte(addr);
@@ -289,6 +299,7 @@ uint16_t build_linked_list(uint16_t progid) {
     uint16_t prgsize = (sst39sf_read_byte(0x0100 + 0x40 * nextblock + 0x25) << 8) +
                         sst39sf_read_byte(0x0100 + 0x40 * nextblock + 0x24);
 
+    led_rd_on();
     while(nextbank != 0xFF) {
         // write linked list to ram
         write_ram(ramptr++, nextbank);
@@ -302,6 +313,8 @@ uint16_t build_linked_list(uint16_t progid) {
     // terminate with two 0xFF characters
     write_ram(ramptr++, 0xFF);
     write_ram(ramptr++, 0xFF);
+
+    led_rd_off();
 
     return prgsize;
 }
@@ -330,17 +343,16 @@ void copyprogramlinkedlist(void) {
     uint8_t nextblock = read_ram(llptr++);
 
     uint16_t ramptr = 0x0000;
+    led_rd_on();
     while(nextbank != 0xFF) {
         sst39sf_set_bank(nextbank);
 
         uint16_t romptr = 0x1000 + nextblock * 0x400;
         copyblock(ramptr, romptr);
         ramptr += 0x400;
-        // for(uint16_t i=0; i<0x400; i++) {
-        //     write_ram(ramptr++, sst39sf_read_byte(romptr++));
-        // }
 
         nextbank = read_ram(llptr++);
         nextblock = read_ram(llptr++);
     }
+    led_rd_off();
 }

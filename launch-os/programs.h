@@ -7,6 +7,7 @@
 #include "util.h"
 #include "constants.h"
 #include "sst39sf.h"
+#include "leds.h"
 
 #define RAMADDRPROG 0x4000
 #define RAMLINKEDLIST 0x5000
