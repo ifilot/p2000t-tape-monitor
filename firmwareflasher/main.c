@@ -7,6 +7,7 @@
 #include "memory.h"
 #include "util.h"
 #include "copy.h"
+#include "leds.h"
 #include "config.h"
 
 // forward declarations
@@ -34,14 +35,18 @@ int main(void) {
     sst39sf_set_bank(0);
     sst39sf_set_bank_romint(0);
 
-    // only wipe the first two sectors as the launch-os is (by design) constrainted
-    // to 0x2000 bytes
+    // only wipe the first two sectors as the launch-os is (by design)
+    // constrainted to 0x2000 bytes
+    led_wr_on();
     for(uint16_t i=0; i<2; i++) { // loop over sectors
         sst39sf_wipe_sector_romint(i * 0x1000);
     }
+    led_wr_off();
 
     // copy external bank0 to internal rom chip
+    led_wr_on();
     copyfirsttwosectors();
+    led_wr_off();
 
     clearline(row);
     const char msgdone[] = "Completed data transfer: 8kb.";
@@ -52,7 +57,9 @@ int main(void) {
     memcpy(&vidmem[0x50*row], calccrc16str, strlen(calccrc16str));
 
     // calculate CRC16
+    led_rd_on();
     calculatecrc16();
+    led_rd_off();
 
     clearline(row);
     const char crcstr[] = "CRC16 checksums:";
@@ -85,6 +92,7 @@ int main(void) {
 }
 
 void init(void) {
+    ledbank_init(); // turn all leds off
     sprintf(&vidmem[0x50*22], "Version: %s", __VERSION__);
     sprintf(&vidmem[0x50*23], "Compiled at: %s / %s", __DATE__, __TIME__);
 }

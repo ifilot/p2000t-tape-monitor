@@ -1,10 +1,11 @@
-main.bin main.map main.rom: main.c sst39sf.c memory.c util.c copy.asm config.h
+main.bin main.map main.rom: main.c sst39sf.c memory.c util.c copy.asm leds.c
 	zcc \
 	+embedded -clib=sdcc_iy \
 	main.c \
 	copy.asm \
 	sst39sf.c \
 	memory.c \
+	leds.c \
 	util.c \
 	-startup=2 \
 	-pragma-define:CRT_ORG_CODE=0x1000 \

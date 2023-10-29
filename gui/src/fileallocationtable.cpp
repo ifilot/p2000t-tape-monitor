@@ -34,6 +34,9 @@ FileAllocationTable::FileAllocationTable(unsigned int _nrbanks) :
  * @return whether rom chip is correctly formatted
  */
 bool FileAllocationTable::check_fat() {
+    // open port at the start of the formatting operation
+    this->serial_interface->open_port();
+
     // loop over all programs and capture starting blocks
     emit(this->message("Parsing banks..."));
     this->progblocks.clear();
@@ -47,6 +50,7 @@ bool FileAllocationTable::check_fat() {
             if((uint8_t)data[0x100 + i * 0x40] != bank) {
                 qDebug() << tr("Bank %1 does not have bank digit set to %2 (%3)")
                             .arg(bank).arg((unsigned int)bank).arg((unsigned int)data[0x100 + i * 0x40]);
+                this->serial_interface->close_port();
                 return false;
             }
 
@@ -54,6 +58,7 @@ bool FileAllocationTable::check_fat() {
             if((uint8_t)data[0x100 + i * 0x40 + 1] != 0x00) {
                 qDebug() << tr("Bank %1 does not have lower byte set to %2")
                             .arg(bank).arg((unsigned int)0x00);
+                this->serial_interface->close_port();
                 return false;
             }
 
@@ -63,11 +68,13 @@ bool FileAllocationTable::check_fat() {
                             .arg(bank)
                             .arg(i * 4 + 0x10, 2, 16, QLatin1Char('0'))
                             .arg((uint8_t)data[0x100 + i * 0x40 + 2], 2, 16, QLatin1Char('0'));
+                this->serial_interface->close_port();
                 return false;
             }
         }
     }
 
+    this->serial_interface->close_port();
     return true;
 }
 
@@ -75,8 +82,11 @@ bool FileAllocationTable::check_fat() {
  * @brief Format the chip
  */
 void FileAllocationTable::format_chip() {
+    // open port at the start of the formatting operation
+    this->serial_interface->open_port();
+
+    // loop over banks and format the chip
     for(unsigned int bank=0; bank<this->nrbanks; bank++) {
-        this->serial_interface->open_port();
 
         // erase all banks on sector
         for(unsigned int i=0; i<0x10; i++) {
@@ -91,8 +101,10 @@ void FileAllocationTable::format_chip() {
         }
 
         this->serial_interface->burn_sector(bank * 0x10, data);
-        this->serial_interface->close_port();
     }
+
+    // close the port at the end of the operation
+    this->serial_interface->close_port();
 
     // clean cache
     memset(this->cache_status.data(), 0x00, this->cache_status.size());
@@ -103,6 +115,9 @@ void FileAllocationTable::format_chip() {
  * @brief Read file metadata from chip
  */
 void FileAllocationTable::read_files() {
+    // open port at the start of the formatting operation
+    this->serial_interface->open_port();
+
     // loop over all programs and capture starting blocks
     emit(this->message("Parsing banks..."));
     this->progblocks.clear();
@@ -144,6 +159,10 @@ void FileAllocationTable::read_files() {
         file.size = *((uint16_t*)&metadata.data()[0x24]);
         this->files.push_back(file);
     }
+
+    // close the port at the end of the operation
+    this->serial_interface->close_port();
+
     emit(this->message("Done loading file metadata."));
     emit(signal_sync_status_changed(this->cache_status));
 }
@@ -190,8 +209,16 @@ QStringList FileAllocationTable::get_files_listing() const {
  */
 const File& FileAllocationTable::get_file(unsigned int id) {
     emit(this->message("Transferring file from chip..."));
+
+    // open the port
+    this->serial_interface->open_port();
+
     this->build_linked_list(id);
     this->attach_filedata(id);
+
+    // close the port at the end of the operation
+    this->serial_interface->close_port();
+
     emit(this->message(tr("Succesfully loaded %1").arg(QString::fromUtf8(this->files[id].filename, 16))));
 
     return this->files[id];
@@ -215,6 +242,9 @@ QByteArray FileAllocationTable::create_cas_file(unsigned int id) {
     qDebug() << "Building CAS file";
     const auto& file = this->get_file(id);
 
+    // open port
+    this->serial_interface->open_port();
+
     QByteArray data = QByteArray(file.blocks.size() * 0x500, 0x00);
 
     for(unsigned int i=0; i<file.blocks.size(); i++) {
@@ -230,6 +260,9 @@ QByteArray FileAllocationTable::create_cas_file(unsigned int id) {
         qDebug() << "Copying data for block " << i;
         memcpy(&(data.data()[i*0x500 + 0x100]), &(file.data.data()[i*0x400]), 0x400);
     }
+
+    // close port at the end of the operation
+    this->serial_interface->close_port();
 
     return data;
 }
@@ -289,7 +322,10 @@ unsigned int FileAllocationTable::get_number_occupied_blocks() const {
  * @param header
  * @param data
  */
-void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& data) {
+bankblock FileAllocationTable::add_file(const QByteArray& header, const QByteArray& data) {
+    // open the port
+    this->serial_interface->open_port();
+
     qDebug() << "Adding file";
 
     char filename[16];
@@ -318,6 +354,7 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
     qInfo() << "Starting looking for free blocks";
     emit(read_operation(0, nrblocks));
     auto newbankblock = this->find_next_free_block();
+    bankblock startpos = newbankblock;
 
     // loop over program blocks
     for(uint8_t i=0; i<nrblocks; i++) {
@@ -381,7 +418,68 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
         }
     }
 
+    // close the serial interface at the end of the operation
+    this->serial_interface->close_port();
+
     emit(signal_sync_needed());
+    return startpos;
+}
+
+/**
+ * @brief Check wether a file is valid
+ * @param startpos
+ */
+std::vector<std::pair<uint16_t, uint16_t>> FileAllocationTable::check_file(const bankblock& startpos) {
+    // open the port
+    this->serial_interface->open_port();
+
+    qDebug() << "Obtaining linked list for program";
+    auto bankblocks = this->build_linked_list_bankblock(startpos);
+
+    // invalidate cache for these blocks
+    for(const auto& bankblock : bankblocks) {
+        uint8_t bank = bankblock.first;
+        uint8_t block = bankblock.second;
+        qDebug() << "Invalidating bank " << bank << ", block " << block;
+        unsigned int dataoffset = 0x10000 * bank + 0x1000 + block * 0x400;
+        for(unsigned int i=0; i<4; i++) {
+            this->update_cache_status(dataoffset / 0x100 + i, CACHE_UNKNOWN);
+        }
+    }
+
+    // read blocks anew
+    for(const auto& bankblock : bankblocks) {
+        uint8_t bank = bankblock.first;
+        uint8_t block = bankblock.second;
+        qDebug() << "Reloading bank " << bank << ", block " << block;
+        unsigned int dataoffset = 0x10000 * bank + 0x1000 + block * 0x400;
+        for(unsigned int i=0; i<4; i++) {
+            this->read_block(dataoffset / 0x100 + i);
+        }
+    }
+
+    // perform checksum validation
+    std::vector<std::pair<uint16_t, uint16_t>> checksums;
+    for(const auto& bankblock : bankblocks) {
+        // retrieve stored checksum
+        uint8_t bank = bankblock.first;
+        uint8_t block = bankblock.second;
+        unsigned int meta_addr = bank * 0x10000 + block * 0x40 + 0x100;
+        this->read_block(meta_addr / 100);
+        uint16_t checksum = *((uint16_t*)&this->contents.data()[meta_addr + 0x06]);
+
+        // calculate actual checksum
+        unsigned int addr = bank * 0x10000 + 0x1000 + block * 0x400;
+        QByteArray data = QByteArray(&this->contents[addr], 0x400);
+        uint16_t crc16 = this->crc16_xmodem(data, 0x400);
+
+        checksums.emplace_back(checksum, crc16);
+    }
+
+    // close the serial interface at the end of the operation
+    this->serial_interface->close_port();
+
+    return checksums;
 }
 
 /**
@@ -389,6 +487,9 @@ void FileAllocationTable::add_file(const QByteArray& header, const QByteArray& d
  * @param file_id
  */
 void FileAllocationTable::delete_file(unsigned int file_id) {
+    // open the port
+    this->serial_interface->open_port();
+
     this->build_linked_list(file_id);       // build linked list of file on rom chip
     const auto& linked_list = this->files[file_id].blocks;
     QString filename = QString::fromUtf8(this->files[file_id].filename, 16);
@@ -439,6 +540,9 @@ void FileAllocationTable::delete_file(unsigned int file_id) {
         }
     }
 
+    // close the port at the end of the operation
+    this->serial_interface->close_port();
+
     emit(signal_sync_needed());
 }
 
@@ -448,6 +552,9 @@ void FileAllocationTable::delete_file(unsigned int file_id) {
  * @return datablock
  */
 QByteArray FileAllocationTable::read_block(unsigned int address) {
+    // check whether the interface is opened, if not, throw logic exception
+    this->check_port_open();
+
     if(address > this->cache_status.size()) {
         std::runtime_error("Attempting to access cache_status element out of bounds.");
     }
@@ -456,9 +563,7 @@ QByteArray FileAllocationTable::read_block(unsigned int address) {
         QByteArray data(&this->contents[address * 0x100], 0x100);
         return data;
     } else {
-        this->serial_interface->open_port();
         QByteArray data = this->serial_interface->read_block(address);
-        this->serial_interface->close_port();
         memcpy((void*)&this->contents[address * 0x100], data.data(), 0x100);
         this->update_cache_status(address, CACHE_SYNCED);
         return data;
@@ -471,11 +576,12 @@ QByteArray FileAllocationTable::read_block(unsigned int address) {
  * @return datablock
  */
 QByteArray FileAllocationTable::read_sector(uint8_t sector_id) {
+    // check whether the interface is opened, if not, throw logic exception
+    this->check_port_open();
+
     for(unsigned int i=0; i<BLOCKS_PER_SECTOR; i++) {
         if(this->cache_status[sector_id * BLOCKS_PER_SECTOR + i] == CACHE_UNKNOWN) {
-            this->serial_interface->open_port();
             QByteArray data = this->serial_interface->read_sector(sector_id);
-            this->serial_interface->close_port();
             memcpy((void*)&this->contents[sector_id *SECTOR_SIZE], data.data(), SECTOR_SIZE);
             for(unsigned int j=0; j<BLOCKS_PER_SECTOR; j++) {
                 this->update_cache_status(sector_id * BLOCKS_PER_SECTOR + j, CACHE_SYNCED);
@@ -493,11 +599,12 @@ QByteArray FileAllocationTable::read_sector(uint8_t sector_id) {
  * @return datablock
  */
 QByteArray FileAllocationTable::read_bank(uint8_t bank_id) {
+    // check whether the interface is opened, if not, throw logic exception
+    this->check_port_open();
+
     for(unsigned int i=0; i<BLOCKS_PER_BANK; i++) {
         if(this->cache_status[bank_id * BLOCKS_PER_BANK + i] == CACHE_UNKNOWN) {
-            this->serial_interface->open_port();
             QByteArray data = this->serial_interface->read_bank(bank_id);
-            this->serial_interface->close_port();
             memcpy((void*)&this->contents[bank_id * BANK_SIZE], data.data(), BANK_SIZE);
             for(unsigned int j=0; j<BLOCKS_PER_BANK; j++) {
                 this->update_cache_status(bank_id * BLOCKS_PER_BANK + j, CACHE_SYNCED);
@@ -516,6 +623,9 @@ QByteArray FileAllocationTable::read_bank(uint8_t bank_id) {
  * @return datablock
  */
 QByteArray FileAllocationTable::read_block_cache_bank(unsigned int address) {
+    // check whether the interface is opened, if not, throw logic exception
+    this->check_port_open();
+
     if(address > this->cache_status.size()) {
         std::runtime_error("Attempting to access cache_status element out of bounds.");
     }
@@ -526,9 +636,7 @@ QByteArray FileAllocationTable::read_block_cache_bank(unsigned int address) {
     } else {
         // calculate bank address
         uint8_t bank_address = address / (0x4000 / 0x100);
-        this->serial_interface->open_port();
         QByteArray data = this->serial_interface->read_bank(bank_address);
-        this->serial_interface->close_port();
 
         memcpy((void*)&this->contents[bank_address * 0x4000], data.data(), 0x4000);
 
@@ -544,6 +652,8 @@ QByteArray FileAllocationTable::read_block_cache_bank(unsigned int address) {
  * @param vector of bank/block pairs
  */
 void FileAllocationTable::build_linked_list(unsigned int id) {
+    this->check_port_open();
+
     qDebug() << "Building linked list";
     auto& file = this->files[id];
     if(file.blocks.size() != 0) {
@@ -585,10 +695,53 @@ void FileAllocationTable::build_linked_list(unsigned int id) {
 }
 
 /**
+ * @brief Extract linked list of file
+ * @param vector of bank/block pairs
+ */
+std::vector<bankblock> FileAllocationTable::build_linked_list_bankblock(const bankblock& startpos) {
+    this->check_port_open();
+
+    uint8_t bank = startpos.first;
+    uint8_t block = startpos.second;
+
+    std::vector<bankblock> blocks;
+    unsigned int counter = 0;
+
+    while(bank != 0xFF) {
+        counter++;
+        if(counter > 64 * 4) {
+            throw std::runtime_error("Error occured while collecting linked list. Most likely a cyclic reference.");
+        }
+
+        qDebug() << "Collecting: " << bank << " / " << block;
+
+        // insert into list
+        blocks.emplace_back(bank, block);
+
+        // set address locations for metadata of current block
+        unsigned int addr = bank * 0x10000 + 0x100 + block * 0x40;
+        unsigned int saddr = addr / 0x100;
+        unsigned int offset = addr % 0x100;
+
+        // read metadata of current block
+        QByteArray meta = this->read_block(saddr);
+        QByteArray metadata = meta.mid(offset, 0x40);
+
+        // retrieve data of new block
+        bank = metadata[0x03];  // next bank
+        block = metadata[0x04]; // next block
+    }
+
+    return blocks;
+}
+
+/**
  * @brief Attach file data to file object
  * @param file id
  */
 void FileAllocationTable::attach_filedata(unsigned int id) {
+    this->check_port_open();
+
     auto& file = this->files[id];
     if(file.blocks.size() == 0) {
         this->build_linked_list(id);
@@ -614,7 +767,6 @@ void FileAllocationTable::attach_filedata(unsigned int id) {
         QByteArray block = file.data.mid(i*0x400, 0x400);
         uint16_t crc16 = this->crc16_xmodem(block, 0x400);
         file.checksums.push_back(crc16);
-        //qDebug() << tr("0x%1 vs 0x%2").arg(crc16,4,16,QLatin1Char('0')).arg(file.metachecksums[i],4,16,QLatin1Char('0'));
     }
 }
 
@@ -646,6 +798,8 @@ uint16_t FileAllocationTable::crc16_xmodem(const QByteArray& data, uint16_t leng
  * @return
  */
 std::pair<uint8_t, uint8_t> FileAllocationTable::find_next_free_block() {
+    this->check_port_open();
+
     for(uint8_t bank=0; bank<this->nrbanks; bank++) {
         QByteArray data = this->read_sector(bank * 0x10);
         for(uint8_t block=0; block<60; block++) {
@@ -667,4 +821,16 @@ std::pair<uint8_t, uint8_t> FileAllocationTable::find_next_free_block() {
 void FileAllocationTable::update_cache_status(unsigned int block_id, uint8_t cache_status) {
     this->cache_status[block_id] = cache_status;
     emit(signal_sync_status_changed(this->cache_status));
+}
+
+/**
+ * @brief Check whether the serial port is opened
+ *
+ * This function is used as a development safeguard to ensure that the
+ * serial port is opened prior to performing serial I/O operations
+ */
+void FileAllocationTable::check_port_open() {
+    if(!this->serial_interface->is_open()) {
+        throw std::logic_error("Serial port has not been opened. This is a development error.");
+    }
 }

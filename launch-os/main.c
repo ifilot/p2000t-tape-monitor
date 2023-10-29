@@ -8,6 +8,7 @@
 #include "ram.h"
 #include "memory.h"
 #include "config.h"
+#include "leds.h"
 
 // forward declarations
 void init(void);
@@ -173,6 +174,7 @@ uint8_t handle_keybuffer_return(void) {
 
 void init(void) {
     clearscreen();
+    ledbank_init();
 
     vidmem[0x0000] = 0x06;    // cyan color
     vidmem[0x0001] = 0x0D;    // double height

@@ -85,6 +85,8 @@ private:
     QLabel* label_chip_type;
     QPushButton* button_identify_chip;
     QPushButton* button_read_rom;
+    QPushButton* button_explainer_file_info;
+    QPushButton* button_explainer_synchronization;
 
     // chip data
     int nrbanks = -1;
@@ -111,6 +113,7 @@ private:
     QLabel* label_checksums;
     BlockMap* blockmap;
     BlockMap* syncmap;
+    bankblock lastbankblock = {0xFF,0xFF};
 
     static const unsigned int FILETABLE_OPEN_COLUMN = 4;
     static const unsigned int FILETABLE_DELETE_COLUMN = 5;
@@ -220,6 +223,16 @@ private slots:
      * @brief Show an about window
      */
     void slot_debug_log();
+
+    /**
+     * @brief Show window explaining file info
+     */
+    void slot_file_info_explainer();
+
+    /**
+     * @brief Show window explaining synchronization
+     */
+    void slot_sync_explainer();
 
     /****************************************************************************
      *  SIGNALS :: COMMUNICATION INTERFACE ROUTINES
