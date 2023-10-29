@@ -242,6 +242,9 @@ QByteArray FileAllocationTable::create_cas_file(unsigned int id) {
     qDebug() << "Building CAS file";
     const auto& file = this->get_file(id);
 
+    // open port
+    this->serial_interface->open_port();
+
     QByteArray data = QByteArray(file.blocks.size() * 0x500, 0x00);
 
     for(unsigned int i=0; i<file.blocks.size(); i++) {
@@ -257,6 +260,9 @@ QByteArray FileAllocationTable::create_cas_file(unsigned int id) {
         qDebug() << "Copying data for block " << i;
         memcpy(&(data.data()[i*0x500 + 0x100]), &(file.data.data()[i*0x400]), 0x400);
     }
+
+    // close port at the end of the operation
+    this->serial_interface->close_port();
 
     return data;
 }
