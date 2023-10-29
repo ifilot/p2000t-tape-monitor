@@ -84,6 +84,14 @@ public:
      */
     void close_port();
 
+    /**
+     * @brief whether the port is open
+     * @return
+     */
+    inline bool is_open() const {
+        return this->port ? true : false;
+    }
+
     /********************************************************
      *  Cardreader interfacing routines
      ********************************************************/

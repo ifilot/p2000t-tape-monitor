@@ -23,7 +23,10 @@
 /**
  * @brief run cart flash routine
  */
-void SyncThread::run() {   
+void SyncThread::run() {
+    // open the port at the start of the run
+    this->serial_interface->open_port();
+
     qDebug() << "Starting syncthread";
     // determine number of sectors to write
     unsigned int nrsectowrite = 0;
@@ -50,15 +53,12 @@ void SyncThread::run() {
 
                 if(this->cache_status[i * 0x10 + j] == 0x03) {
                     qDebug() << "Erasing sector: " << i;
-                    this->serial_interface->open_port();
                     this->serial_interface->erase_sector(i * 0x10); // !! this function takes a block_id as input !!
                     this->serial_interface->close_port();
                 }
 
                 qDebug() << "Writing sector: " << i;
-                this->serial_interface->open_port();
                 this->serial_interface->burn_sector(i, QByteArray(&this->contents[i * 0x1000], 0x1000));
-                this->serial_interface->close_port();
                 qDebug() << "Done writing sector: " << i;
 
                 // emit status update
@@ -76,10 +76,17 @@ void SyncThread::run() {
         }
     }
 
+    // close the port at the end of the configuration
+    this->serial_interface->close_port();
+
+    // signal that synchronization is complete
     qDebug() << "Done syncing.";
     emit(sync_complete());
 }
 
 SyncThread::~SyncThread() {
     qDebug() << "Destroying Synchronization Thread";
+
+    // ensure that the port is closed when destroying this object
+    this->serial_interface->close_port();
 }

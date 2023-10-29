@@ -33,6 +33,11 @@ SerialInterface::SerialInterface(const std::string& _portname) {
  *        communication settings
  */
 void SerialInterface::open_port() {
+    // do not re-open the port if the port is already open
+    if(this->port) {
+        return;
+    }
+
     if(this->portname.size() == 0) {
         throw std::runtime_error("No port has been set");
     }
@@ -55,10 +60,11 @@ void SerialInterface::open_port() {
  *        the QSerialPort object
  */
 void SerialInterface::close_port() {
-    this->port->close();
-    this->port.reset();
-
-    qDebug() << QObject::tr("Closing COM port:") + QObject::tr(this->portname.c_str());
+    if(this->port) {
+        qDebug() << "Closing COM port: " + QObject::tr(this->portname.c_str());
+        this->port->close();
+        this->port.reset();
+    }
 }
 
 /********************************************************

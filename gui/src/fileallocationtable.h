@@ -311,6 +311,14 @@ private:
      * @param cache_status
      */
     void update_cache_status(unsigned int block_id, uint8_t cache_status);
+
+    /**
+     * @brief Check whether the serial port is opened
+     *
+     * This function is used as a development safeguard to ensure that the
+     * serial port is opened prior to performing serial I/O operations
+     */
+    void check_port_open();
 };
 
 #endif // FILEALLOCATIONTABLE_H

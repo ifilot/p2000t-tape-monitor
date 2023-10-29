@@ -947,7 +947,9 @@ void MainWindow::slot_sync_complete() {
         auto checksums = this->fat->check_file(this->lastbankblock);
         unsigned int wrongblocks = 0;
         for(const auto& i : checksums) {
-            qDebug() << i.first << "\t" << i.second;
+            qDebug() << tr("%1").arg(i.first,4,16,QLatin1Char('0'))
+                     << "\t"
+                     << tr("%2").arg(i.second,4,16,QLatin1Char('0'));
             if(i.first != i.second) {
                 wrongblocks++;
             }
