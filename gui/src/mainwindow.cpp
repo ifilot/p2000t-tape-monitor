@@ -76,7 +76,7 @@ MainWindow::MainWindow(const std::shared_ptr<QStringList> _log_messages, QWidget
     right_layout->addWidget(this->label_compile_data);
 
     this->setMinimumWidth(1000);
-    this->setMinimumHeight(700);
+    this->setMinimumHeight(800);
 
     this->create_dropdown_menu();
 
@@ -190,9 +190,16 @@ void MainWindow::build_serial_interface_menu(QVBoxLayout* target_layout) {
     serial_layout->addWidget(comportlabel);
     this->combobox_serial_ports = new QComboBox(this);
     serial_layout->addWidget(this->combobox_serial_ports);
+
     this->button_scan_ports = new QPushButton(tr("Scan"));
+    this->button_scan_ports->setIcon(QIcon(":/assets/icons/find.png"));
+    this->button_scan_ports->setIconSize(QSize(16, 16));
+
+
     serial_layout->addWidget(this->button_scan_ports);
     this->button_select_serial = new QPushButton(tr("Select"));
+    this->button_select_serial->setIcon(QIcon(":/assets/icons/select.png"));
+    this->button_select_serial->setIconSize(QSize(16, 16));
     this->button_select_serial->setEnabled(false);
     serial_layout->addWidget(this->button_select_serial);
 
@@ -224,7 +231,12 @@ void MainWindow::build_operations_menu(QVBoxLayout* target_layout) {
 
     // add individual buttons here
     this->button_identify_chip = new QPushButton("Identify chip");
+    this->button_identify_chip->setIcon(QIcon(":/assets/icons/identify_chip.png"));
+    this->button_identify_chip->setIconSize(QSize(16, 16));
+
     this->button_read_rom = new QPushButton("Access FAT");
+    this->button_read_rom->setIcon(QIcon(":/assets/icons/access_fat.png"));
+    this->button_read_rom->setIconSize(QSize(16, 16));
 
     layout->addWidget(this->button_identify_chip);
     layout->addWidget(this->button_read_rom);
@@ -254,6 +266,10 @@ void MainWindow::build_filedata_interface(QVBoxLayout* target_layout) {
     this->label_startlocation = new QLabel("");
     this->label_checksums = new QLabel("");
     this->blockmap = new BlockMap(60,8,5,this);
+    this->button_explainer_file_info = new QPushButton("What is this?");
+    this->button_explainer_file_info->setIcon(QIcon(":/assets/icons/help.png"));
+    this->button_explainer_file_info->setIconSize(QSize(16, 16));
+
     QVBoxLayout* layout_files = new QVBoxLayout();
     file_groupbox->setLayout(layout_files);
     layout_files->addWidget(this->label_filename);
@@ -262,6 +278,9 @@ void MainWindow::build_filedata_interface(QVBoxLayout* target_layout) {
     layout_files->addWidget(this->label_startlocation);
     layout_files->addWidget(this->label_checksums);
     layout_files->addWidget(this->blockmap);
+    layout_files->addWidget(this->button_explainer_file_info);
+
+    connect(this->button_explainer_file_info, SIGNAL(released()), this, SLOT(slot_file_info_explainer()));
 }
 
 /**
@@ -276,6 +295,15 @@ void MainWindow::build_synchronization_interface(QVBoxLayout* target_layout) {
     groupbox->setLayout(layout);
     this->syncmap = new BlockMap(64,0,3);
     layout->addWidget(this->syncmap);
+
+    this->button_explainer_synchronization = new QPushButton("What is this?");
+    this->button_explainer_synchronization->setIcon(QIcon(":/assets/icons/help.png"));
+    this->button_explainer_synchronization->setIconSize(QSize(16, 16));
+
+    this->button_explainer_synchronization->setVisible(false);
+    layout->addWidget(this->button_explainer_synchronization);
+
+    connect(this->button_explainer_synchronization, SIGNAL(released()), this, SLOT(slot_sync_explainer()));
 }
 
 /**
@@ -665,11 +693,14 @@ void MainWindow::slot_save() {
  * @brief Save all files
  */
 void MainWindow::slot_save_all() {
-
+    // grab storage folder
     QString folder = QFileDialog::getExistingDirectory(this, tr("Save all files"), QDir::homePath());
+    if(folder.isEmpty()) {
+        return; // return on cancel
+    }
 
+    // warn user about potentially long waiting times
     QMessageBox message_box;
-    //message_box.setStyleSheet("QLabel{min-width: 250px; font-weight: normal;}");
     message_box.setText("Please note that the program might be unresponsive for a"
                         " brief amount of time while all files are extracted from "
                         "the ROM chip and stored on the computer.");
@@ -724,6 +755,53 @@ void MainWindow::slot_about() {
 
 void MainWindow::slot_debug_log() {
     this->log_window->show();
+}
+
+/**
+ * @brief Show window explaining file info
+ */
+void MainWindow::slot_file_info_explainer() {
+    QMessageBox message_box;
+    message_box.setText("<p>This box shows information about the currently selected file. Upon selection of a file "
+                        "by clicking on the \"open\" button in the file selection menu, the following in formation "
+                        "is shown: </p>"
+                        "<ul>"
+                        "<li>File name</li>"
+                        "<li>File extension</li>"
+                        "<li>File size</li>"
+                        "<li>Starting band and block</li>"
+                        "<li>The checksums for all the blocks</li></ul>"
+                        "<p>When the checksums are all displayed in <font color=\"green\">green</font>, "
+                        "the checksums of the metadata match the actual data, indicative that this file is "
+                        "correctly stored on the chip. When one or more checksums "
+                        "are displayed in <font color=\"red\">red</font>, this is an indication that the file is corrupt.</p>"
+                        "<p>Finally, the box with the grid provides a visual representation on which blocks on the chip the "
+                        "file is stored. Each row corresponds to a bank and each bank contains 60 blocks as indicated by the squares. "
+                        "The squares marked in green indicate the blocks on which the file is stored."
+                        );
+    message_box.setIcon(QMessageBox::Information);
+    message_box.setWindowTitle("Explainer: File information");
+    message_box.setWindowIcon(QIcon(ICON_PATH));
+    message_box.exec();
+}
+
+/**
+ * @brief Show window explaining synchronization
+ */
+void MainWindow::slot_sync_explainer() {
+    QMessageBox message_box;
+    message_box.setText("<p>This box visually represents the synchronization (cache) status of the rom chip.</p>"
+                        "<p>Each box represents a 256 byte block. When a block is synchronized (in cache), it is displayed "
+                        "in <font color=\"green\">green</font>. When the cache is invalidated, e.g. because new data is "
+                        "written to it, it will be displayed in <font color=\"orange\">orange</font>. Finally, when a block "
+                        "is designated to be deleted, it will be displayed in <font color=\"red\">red</font>.</p><p>As a user, you "
+                        "do not have to manually maintain the synchronization process, it will be handled automatically by the "
+                        "program and this box mainly serves to inform you, as the user, on the input/output operations.</p>"
+                        );
+    message_box.setIcon(QMessageBox::Information);
+    message_box.setWindowTitle("Explainer: Synchronization status");
+    message_box.setWindowIcon(QIcon(ICON_PATH));
+    message_box.exec();
 }
 
 /**
@@ -789,6 +867,7 @@ void MainWindow::read_chip_id() {
             throw std::runtime_error("Unknown chip id: " + chip_id_str);
         }
 
+        this->blockmap->set_blocklist({}, this->nrbanks);
         this->progress_bar_load->reset();
         this->filetable->clear();
         this->filetable->setColumnCount(0);
@@ -899,7 +978,7 @@ void MainWindow::slot_select_file(int row) {
         this->label_checksums->setWordWrap(true);
 
         // create image of block locations
-        this->blockmap->set_blocklist(file.blocks);
+        this->blockmap->set_blocklist(file.blocks, this->nrbanks);
 
         // set data in hexviewer
         this->hex_widget->setData(new QHexView::DataStorageArray(file.data));
@@ -976,6 +1055,6 @@ void MainWindow::slot_sync_complete() {
  * @brief Update synchronization map
  */
 void MainWindow::slot_update_syncmap(const std::vector<uint8_t> _cache_status) {
-//    qDebug() << "Updating syncmap";
     this->syncmap->set_cache(_cache_status);
+    this->button_explainer_synchronization->setVisible(true);
 }

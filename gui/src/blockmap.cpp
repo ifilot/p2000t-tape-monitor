@@ -24,7 +24,13 @@ BlockMap::BlockMap(unsigned int _columns,
  * @brief Custom function wherein active blocks are highlighted
  * @param _blocks
  */
-void BlockMap::set_blocklist(const std::vector<std::pair<uint8_t, uint8_t>>& _blocks) {
+void BlockMap::set_blocklist(const std::vector<std::pair<uint8_t, uint8_t>>& _blocks, uint8_t nrbanks) {
+    this->rows = nrbanks;
+    this->height = this->rows * this->blocksize + 1;
+    this->resize(this->width, this->height);
+    this->setMinimumHeight(this->height);
+    this->setMinimumWidth(this->width);
+
     memset(this->blockvalues.data(), 0x00, this->blockvalues.size());
     for(const auto& block : _blocks) {
         this->blockvalues[block.first * this->columns + block.second] = 0x01;

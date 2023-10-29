@@ -40,8 +40,6 @@ void SyncThread::run() {
         }
     }
 
-    qDebug() << "Where?";
-
     unsigned int nrsects_written = 0;
     for(unsigned int i=0; i<this->nr_sectors; i++) { // loop over sectors
         for(unsigned int j=0; j<0x10; j++) {
@@ -54,7 +52,6 @@ void SyncThread::run() {
                 if(this->cache_status[i * 0x10 + j] == 0x03) {
                     qDebug() << "Erasing sector: " << i;
                     this->serial_interface->erase_sector(i * 0x10); // !! this function takes a block_id as input !!
-                    this->serial_interface->close_port();
                 }
 
                 qDebug() << "Writing sector: " << i;

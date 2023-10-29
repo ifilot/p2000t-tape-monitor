@@ -1,6 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file>assets/icon/icon_128px.png</file>
         <file>assets/emulator/allegro_audio-5.2.dll</file>
         <file>assets/emulator/allegro_dialog-5.2.dll</file>
         <file>assets/emulator/allegro_image-5.2.dll</file>
@@ -11,5 +10,11 @@
         <file>assets/emulator/M2000.exe</file>
         <file>assets/emulator/P2000.cas</file>
         <file>assets/emulator/P2000ROM.bin</file>
+        <file>assets/icons/fat_flasher_128px.png</file>
+        <file>assets/icons/access_fat.png</file>
+        <file>assets/icons/find.png</file>
+        <file>assets/icons/identify_chip.png</file>
+        <file>assets/icons/select.png</file>
+        <file>assets/icons/help.png</file>
     </qresource>
 </RCC>
