@@ -22,7 +22,7 @@ internal memory after which the program can be started.
 
 The data cartridge essentially imitates on this process. Upon boot, a bit of
 firmware is loaded from the data cartridge into memory and launched. This firmware
-scans the external ram chip for programs and shows a list of those programs. The
+scans the external ROM chip for programs and shows a list of those programs. The
 user can then select a program and execute it. Upon selection, the program is
 first copied from the external chip to the internal RAM chip in the data cartridge.
 Next, the firmware is removed (actually, it is simply overwritten), and the new
@@ -50,10 +50,11 @@ This repository is organized as follows
 The latest version of the files below can be obtained from the action artifacts
 of the [last build](https://github.com/ifilot/p2000t-tape-monitor/actions/workflows/build.yml).
 
-* [`BASICBOOTSTRAP.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/BASICBOOTSTRAP.BIN.zip): Modified BASIC cartridge (SLOT1)
-* [`FIRMWAREFLASHER.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/FIRMWAREFLASHER.BIN): Firmware flasher for the data cartridge firmware (SLOT1)
-* [`LAUNCHER.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/LAUNCHER.BIN): Firmware for the data cartridge (SLOT2)
-* [`p2000t-fat-flasher--installer-win64.exe`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/p2000t-fat-flasher-installer-win64.exe.zip): Windows installer for GUI
+* [`BASICBOOTSTRAP.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/BASICBOOTSTRAP.BIN.zip): Modified BASIC cartridge. This is a SLOT1 cartridge.
+* [`FIRMWAREFLASHER.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/FIRMWAREFLASHER.BIN): Firmware flasher for the data cartridge firmware. This is a SLOT1 cartridge that copies firmware from the external to the internal ROM on the SLOT2 cartridge.
+* [`LAUNCHER.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/LAUNCHER.BIN): Firmware for the data cartridge. This firmware is stored on the internal ROM of the SLOT2 cartridge.
+* [`p2000t-fat-flasher--installer-win64.exe`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/p2000t-fat-flasher-installer-win64.exe.zip): Windows installer for the Flasher GUI. This GUI is used to put cassette files on a ROM
+chip which can be loaded on the P2000T.
 
 ## File system
 

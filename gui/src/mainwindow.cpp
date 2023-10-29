@@ -707,9 +707,15 @@ void MainWindow::slot_about() {
     message_box.setText(PROGRAM_NAME
                         " version "
                         PROGRAM_VERSION
-                        ".\n\nAuthor:\nIvo Filot <ivo@ivofilot.nl>\n\n"
-                        PROGRAM_NAME " is licensed under the GPLv3 license.\n\n"
-                        PROGRAM_NAME " is dynamically linked to Qt, which is licensed under LGPLv3.\n");
+                        ".\n\nAuthor:\nIvo Filot <ivo@ivofilot.nl>\n"
+                        "Sources: https://github.com/ifilot/p2000t-tape-monitor\n\n"
+                        PROGRAM_NAME " is licensed under the GPLv3 license and "
+                        "is dynamically linked to Qt, which is licensed under LGPLv3.\n\n"
+                        PROGRAM_NAME " comes bundled with the M2000 emulator, which was originally "
+                        "developed by Marcel de Kogel, but has received important additions by Dion Olsthoorn. "
+                        "For more information about the emulator, see "
+                        "https://github.com/p2000t/M2000."
+                        );
     message_box.setIcon(QMessageBox::Information);
     message_box.setWindowTitle("About " + tr(PROGRAM_NAME));
     message_box.setWindowIcon(QIcon(ICON_PATH));
