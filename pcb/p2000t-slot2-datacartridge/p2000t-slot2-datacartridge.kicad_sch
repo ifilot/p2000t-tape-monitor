@@ -2148,7 +2148,6 @@
 
   (no_connect (at 54.61 189.23) (uuid 02feee9f-6000-4ffd-a59b-a37d1f5507b3))
   (no_connect (at 167.64 179.705) (uuid 0ef77b90-bf32-402e-b0ae-6006136b8eee))
-  (no_connect (at 189.865 179.705) (uuid 0ef77b90-bf32-402e-b0ae-6006136b8eef))
   (no_connect (at 57.15 189.23) (uuid 60ef4a52-4f6d-4a81-8ddf-4283897ba742))
   (no_connect (at 52.07 189.23) (uuid 68cf9945-56b1-46d3-ae62-7736dbda480a))
   (no_connect (at 196.215 71.755) (uuid 9836553d-e716-45bc-b5c7-6636e073b2ac))
@@ -5179,24 +5178,6 @@
     (pin "2" (uuid 1b7ab6de-ea0f-4407-b0b1-0393df5a0e8a))
   )
 
-  (symbol (lib_id "power:VCC") (at 174.625 179.705 180) (unit 1)
-    (in_bom yes) (on_board yes) (fields_autoplaced)
-    (uuid 138cabe3-0f37-4bdf-9884-6db95dacc365)
-    (property "Reference" "#PWR020" (id 0) (at 174.625 175.895 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Value" "VCC" (id 1) (at 173.228 181.4088 0)
-      (effects (font (size 1.27 1.27)) (justify left))
-    )
-    (property "Footprint" "" (id 2) (at 174.625 179.705 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "" (id 3) (at 174.625 179.705 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (pin "1" (uuid 464f590d-5b0c-4ccb-bf22-faffcad8fcf8))
-  )
-
   (symbol (lib_id "power:GND") (at 329.565 71.755 0) (unit 1)
     (in_bom yes) (on_board yes)
     (uuid 13fc9974-3ddf-4c05-9d08-55e8da2dd4f0)
@@ -5639,9 +5620,6 @@
     )
     (path "/6a8c8035-bbda-41a5-9f04-be85656c39f0"
       (reference "#PWR019") (unit 1) (value "GND") (footprint "")
-    )
-    (path "/138cabe3-0f37-4bdf-9884-6db95dacc365"
-      (reference "#PWR020") (unit 1) (value "VCC") (footprint "")
     )
     (path "/00000000-0000-0000-0000-0000633bfb64"
       (reference "#PWR021") (unit 1) (value "VCC") (footprint "")
