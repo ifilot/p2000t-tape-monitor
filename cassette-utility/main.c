@@ -29,13 +29,17 @@ int main(void) {
     uint8_t iter = 0;
 
     while(memory[CASSTAT] != 'M') {
-        // set file identifier
+        // read the first block from the tape
+        tape_read_block();
+        if(memory[CASSTAT] != 0) {
+            sprintf(&vidmem[0x50*20], "Stop reading tape, exit code: %c", memory[CASSTAT]);
+            break;
+        }
+
+        // set file counter
         vidmem[0x50*line] = COL_YELLOW;
         sprintf(&vidmem[0x50*line+1], "%03i", iter+1);
         vidmem[0x50*line+4] = COL_WHITE;
-
-        // read the first block from the tape
-        tape_read_block();
 
         // grab total blocks and start copying first block
         const uint8_t totalblocks = memory[BLOCKCTR];
@@ -65,6 +69,10 @@ int main(void) {
             blockcounter++;
             sprintf(&vidmem[0x50*line+35], "%02i", memory[BLOCKCTR]-1);
             tape_read_block();
+            if(memory[CASSTAT] != 0) {
+                sprintf(&vidmem[0x50*20], "Stop reading tape, exit code: %c", memory[CASSTAT]);
+                return 0;
+            }
             bankblock = copyblock(blockcounter, totalblocks, bankblock);
         }
         vidmem[0x50*line+34] = COL_GREEN;
