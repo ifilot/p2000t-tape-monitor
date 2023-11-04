@@ -2,12 +2,7 @@
 #define _SST39SF_H
 
 #include <z80.h>
-
-#define ADDR_LOW  0x60
-#define ADDR_HIGH 0x61
-#define ROMINT    0x62
-#define ROMCHIP   0x65
-#define ROMBANK   0x63
+#include "constants.h"
 
 /**
  * Send a byte to the SST39SF0x0
@@ -22,6 +17,15 @@ void sst39sf_send_byte(uint16_t addr, uint8_t byte);
  * @return     byte value
  */
 uint8_t sst39sf_read_byte(uint16_t addr);
+
+/**
+ * @brief      Write a byte to external ROM
+ *
+ * @param[in]  addr  The address
+ *
+ * @return     byte value
+ */
+void sst39sf_write_byte(uint16_t addr, uint8_t byte);
 
 /**
  * @brief      Read a byte from the internal rom chip
@@ -62,5 +66,12 @@ void sst39sf_set_bank(uint8_t bank);
  * @param[in]  bank  The bank
  */
 void sst39sf_set_bank_romint(uint8_t bank);
+
+/**
+ * @brief      Get the chip id
+ *
+ * @return     Chip identifier token
+ */
+uint16_t sst39sf_get_chip_id(void);
 
 #endif // _SST39SF_H

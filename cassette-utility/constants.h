@@ -10,6 +10,7 @@
 #define COL_MAGENTA 0x05
 #define COL_CYAN    0x06
 #define COL_WHITE   0x07
+#define TEXT_DOUBLE 0x0D
 
 // variables for the cassette header
 #define CASSTAT    0x6017
@@ -25,4 +26,12 @@
 #define TAPE       0x0018
 #define BUFFER     0x6100
 
-#endif
+// I/O ports
+#define ADDR_LOW  0x60
+#define ADDR_HIGH 0x61
+#define ROMINT    0x62
+#define ROMBANK   0x63
+#define ROMCHIP   0x65
+#define LEDBANK   0x66
+
+#endif // _CONSTANTS_H
