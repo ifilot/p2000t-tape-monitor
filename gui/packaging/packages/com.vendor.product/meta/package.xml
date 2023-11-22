@@ -2,7 +2,7 @@
 <Package>
     <DisplayName>Core</DisplayName>
     <Description>Install P2000T FAT Flasher.</Description>
-    <Version>0.1.0</Version>
+    <Version>0.3.0</Version>
     <ReleaseDate>2023-10-09</ReleaseDate>
     <Default>true</Default>
     <Script>installscript.qs</Script>

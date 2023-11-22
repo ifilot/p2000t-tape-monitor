@@ -24,12 +24,13 @@
  * @brief run cart flash routine
  */
 void SyncThread::run() {
-    // maximum number of sectors
-    static const unsigned int nrsects = 128;
+    // open the port at the start of the run
+    this->serial_interface->open_port();
 
+    qDebug() << "Starting syncthread";
     // determine number of sectors to write
     unsigned int nrsectowrite = 0;
-    for(unsigned int i=0; i<nrsects; i++) { // loop over sectors
+    for(unsigned int i=0; i<this->nr_sectors; i++) { // loop over sectors
         for(unsigned int j=0; j<0x10; j++) {
             if(this->cache_status[i * 0x10 + j] == 0x02 ||
                this->cache_status[i * 0x10 + j] == 0x03) {
@@ -40,7 +41,7 @@ void SyncThread::run() {
     }
 
     unsigned int nrsects_written = 0;
-    for(unsigned int i=0; i<nrsects; i++) { // loop over sectors
+    for(unsigned int i=0; i<this->nr_sectors; i++) { // loop over sectors
         for(unsigned int j=0; j<0x10; j++) {
 
             // if at least one sector page has a - to be written - flag, write
@@ -50,15 +51,12 @@ void SyncThread::run() {
 
                 if(this->cache_status[i * 0x10 + j] == 0x03) {
                     qDebug() << "Erasing sector: " << i;
-                    this->serial_interface->open_port();
                     this->serial_interface->erase_sector(i * 0x10); // !! this function takes a block_id as input !!
-                    this->serial_interface->close_port();
                 }
 
                 qDebug() << "Writing sector: " << i;
-                this->serial_interface->open_port();
                 this->serial_interface->burn_sector(i, QByteArray(&this->contents[i * 0x1000], 0x1000));
-                this->serial_interface->close_port();
+                qDebug() << "Done writing sector: " << i;
 
                 // emit status update
                 emit(sync_item_done(++nrsects_written, nrsectowrite));
@@ -75,6 +73,17 @@ void SyncThread::run() {
         }
     }
 
+    // close the port at the end of the configuration
+    this->serial_interface->close_port();
+
+    // signal that synchronization is complete
     qDebug() << "Done syncing.";
     emit(sync_complete());
+}
+
+SyncThread::~SyncThread() {
+    qDebug() << "Destroying Synchronization Thread";
+
+    // ensure that the port is closed when destroying this object
+    this->serial_interface->close_port();
 }

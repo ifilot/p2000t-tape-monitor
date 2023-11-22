@@ -73,10 +73,20 @@ void sst39sf_wipe_sector_romint(uint16_t addr) {
     }
 }
 
+/**
+ * @brief      Set the bank on the external ROM
+ *
+ * @param[in]  bank  The bank
+ */
 void sst39sf_set_bank(uint8_t bank) {
     z80_outp(ROMBANK, bank);
 }
 
+/**
+ * @brief      Set the bank on the internal ROM chip
+ *
+ * @param[in]  bank  The bank
+ */
 void sst39sf_set_bank_romint(uint8_t bank) {
     z80_outp(ROMINT, bank);
 }

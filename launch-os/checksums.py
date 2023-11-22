@@ -1,5 +1,5 @@
 #
-# Calculate the four checksums
+# Calculate the two checksums
 #
 
 import numpy as np
@@ -9,14 +9,19 @@ def main():
     data = bytearray(f.read())
     f.close()
 
+    print()
+    print('Filesize: %i bytes' % len(data))
     data.extend(np.zeros(0x4000 - len(data)))
     print()
     print("Outputting checksums:")
-    for i in range(0,4):
+    for i in range(0,2):
         checksum = crc16(data[i*0x1000:(i+1)*0x1000])
         print('%02i: %04X' % (i,checksum))
 
 def crc16(data):
+    """
+    Calculate CRC16 XMODEM checksum
+    """
     crc = int(0)
 
     poly = 0x1021

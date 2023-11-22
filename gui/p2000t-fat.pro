@@ -12,6 +12,7 @@ SOURCES += \
     src/blockmap.cpp \
     src/dialogslotselection.cpp \
     src/fileallocationtable.cpp \
+    src/fatflashergui.cpp \
     src/flashthread.cpp \
     src/ioworker.cpp \
     src/logwindow.cpp \
@@ -27,6 +28,7 @@ HEADERS += \
     src/blockmap.h \
     src/config.h \
     src/dialogslotselection.h \
+    src/fatflashergui.h \
     src/fileallocationtable.h \
     src/flashthread.h \
     src/ioworker.h \

@@ -8,9 +8,13 @@
 #include "util.h"
 #include "copy.h"
 #include "leds.h"
+#include "config.h"
+
+// forward declarations
+void init(void);
 
 int main(void) {
-    ledbank_init();           // turn all leds off
+    init();
 
     uint8_t row = 0;
     vidmem[0x0000] = 0x06;    // cyan color
@@ -25,25 +29,27 @@ int main(void) {
     while(keymem[0x0C] == 0) {}
 
     clearline(row);
-    const char copyfirmwarestr[] = "Copying firmware. Please wait.";
+    const char copyfirmwarestr[] = "Copying firmware (8kb). Please wait...";
     memcpy(&vidmem[row * 0x50], copyfirmwarestr, strlen(copyfirmwarestr));
 
     sst39sf_set_bank(0);
     sst39sf_set_bank_romint(0);
 
+    // only wipe the first two sectors as the launch-os is (by design)
+    // constrainted to 0x2000 bytes
     led_wr_on();
-    for(uint16_t i=0; i<4; i++) { // loop over sectors
+    for(uint16_t i=0; i<2; i++) { // loop over sectors
         sst39sf_wipe_sector_romint(i * 0x1000);
     }
     led_wr_off();
 
     // copy external bank0 to internal rom chip
     led_wr_on();
-    copybank0();
+    copyfirsttwosectors();
     led_wr_off();
 
     clearline(row);
-    const char msgdone[] = "Completed data transfer: 16kb.";
+    const char msgdone[] = "Completed data transfer: 8kb.";
     memcpy(&vidmem[row*0x50], msgdone, strlen(msgdone));
 
     row += 2;
@@ -59,7 +65,7 @@ int main(void) {
     const char crcstr[] = "CRC16 checksums:";
     memcpy(&vidmem[0x50*row], crcstr, strlen(crcstr));
     row++;
-    for(uint8_t i=0; i<4; i++) {
+    for(uint8_t i=0; i<2; i++) {
         printhex(row*0x50+i*5, highmem9000[i*2]);
         printhex(row*0x50+i*5+2, highmem9000[i*2+1]);
     }
@@ -83,4 +89,10 @@ int main(void) {
     memcpy(&vidmem[0x50*row], alldonestr2, strlen(alldonestr2));
 
     return 0;
+}
+
+void init(void) {
+    ledbank_init(); // turn all leds off
+    sprintf(&vidmem[0x50*22], "Version: %s", __VERSION__);
+    sprintf(&vidmem[0x50*23], "Compiled at: %s / %s", __DATE__, __TIME__);
 }

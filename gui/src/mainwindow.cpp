@@ -71,11 +71,12 @@ MainWindow::MainWindow(const std::shared_ptr<QStringList> _log_messages, QWidget
     padding_frame->setSizePolicy(QSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding));
 
     // add compile information
-    this->label_compile_data = new QLabel(tr("<b>Build:</b><br>Compile time: %1<br>Git id: %2").arg(__DATE__).arg(GIT_HASH));
+    this->label_compile_data = new QLabel(tr("<b>Build:</b><br>Compile time: %1<br>Git id: %2<br>Version: %3")
+                                          .arg(__DATE__).arg(GIT_HASH).arg(PROGRAM_VERSION));
     right_layout->addWidget(this->label_compile_data);
 
     this->setMinimumWidth(1000);
-    this->setMinimumHeight(700);
+    this->setMinimumHeight(800);
 
     this->create_dropdown_menu();
 
@@ -84,7 +85,7 @@ MainWindow::MainWindow(const std::shared_ptr<QStringList> _log_messages, QWidget
     connect(this->button_select_serial, SIGNAL (released()), this, SLOT (select_com_port()));
 
     // set icon and window title
-    this->setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
+    this->setWindowIcon(QIcon(ICON_PATH));
     this->setWindowTitle(PROGRAM_NAME);
 }
 
@@ -92,6 +93,10 @@ MainWindow::MainWindow(const std::shared_ptr<QStringList> _log_messages, QWidget
  * @brief Default destructor method
  */
 MainWindow::~MainWindow() {
+    if(this->syncthread) {
+        this->syncthread->terminate();
+        this->syncthread->wait();
+    }
 }
 
 /**
@@ -107,25 +112,39 @@ void MainWindow::create_dropdown_menu() {
 
     // actions for file menu
     QAction *action_save = new QAction(menu_file);
-    QAction *action_quit = new QAction(menu_file);
     action_save->setText(tr("Save"));
     action_save->setShortcuts(QKeySequence::Save);
+    menu_file->addAction(action_save);
+
+    this->action_save_all = new QAction(menu_file);
+    this->action_save_all->setText(tr("Save all"));
+    menu_file->addAction(action_save_all);
+    this->action_save_all->setEnabled(false);
+
+    QAction *action_quit = new QAction(menu_file);
     action_quit->setText(tr("Quit"));
     action_quit->setShortcuts(QKeySequence::Quit);
-    menu_file->addAction(action_save);
     menu_file->addAction(action_quit);
 
     // actions for tools menu
     QAction *action_run = new QAction(menu_tools);
     action_run->setText(tr("Run file"));
     menu_tools->addAction(action_run);
-    QAction *action_list = new QAction(menu_tools);
-    action_list->setText(tr("List programs"));
-    menu_tools->addAction(action_list);
+
+//    this->action_list_programs = new QAction(menu_tools);
+//    this->action_list_programs->setText(tr("List programs"));
+//    this->action_list_programs->setEnabled(false);
+//    menu_tools->addAction(this->action_list_programs);
+
     this->action_add_file = new QAction(menu_tools);
     this->action_add_file->setText(tr("Add program"));
     this->action_add_file->setEnabled(false);
     menu_tools->addAction(this->action_add_file);
+
+    this->action_format_rom = new QAction(menu_tools);
+    this->action_format_rom->setText(tr("Format ROM"));
+    this->action_format_rom->setEnabled(false);
+    menu_tools->addAction(this->action_format_rom);
 
     // actions for help menu
     QAction *action_about = new QAction(menu_help);
@@ -141,9 +160,11 @@ void MainWindow::create_dropdown_menu() {
 
     // connect actions file menu
     connect(action_run, &QAction::triggered, this, &MainWindow::slot_run);
-    connect(action_list, &QAction::triggered, this, &MainWindow::slot_list);
+//    connect(action_list_programs, &QAction::triggered, this, &MainWindow::slot_list);
     connect(action_add_file, &QAction::triggered, this, &MainWindow::slot_add_program);
+    connect(action_format_rom, &QAction::triggered, this, &MainWindow::slot_format_rom);
     connect(action_save, &QAction::triggered, this, &MainWindow::slot_save);
+    connect(action_save_all, &QAction::triggered, this, &MainWindow::slot_save_all);
     connect(action_about, &QAction::triggered, this, &MainWindow::slot_about);
     connect(action_quit, &QAction::triggered, this, &MainWindow::exit);
 
@@ -169,9 +190,16 @@ void MainWindow::build_serial_interface_menu(QVBoxLayout* target_layout) {
     serial_layout->addWidget(comportlabel);
     this->combobox_serial_ports = new QComboBox(this);
     serial_layout->addWidget(this->combobox_serial_ports);
+
     this->button_scan_ports = new QPushButton(tr("Scan"));
+    this->button_scan_ports->setIcon(QIcon(":/assets/icons/find.png"));
+    this->button_scan_ports->setIconSize(QSize(16, 16));
+
+
     serial_layout->addWidget(this->button_scan_ports);
     this->button_select_serial = new QPushButton(tr("Select"));
+    this->button_select_serial->setIcon(QIcon(":/assets/icons/select.png"));
+    this->button_select_serial->setIconSize(QSize(16, 16));
     this->button_select_serial->setEnabled(false);
     serial_layout->addWidget(this->button_select_serial);
 
@@ -203,7 +231,12 @@ void MainWindow::build_operations_menu(QVBoxLayout* target_layout) {
 
     // add individual buttons here
     this->button_identify_chip = new QPushButton("Identify chip");
+    this->button_identify_chip->setIcon(QIcon(":/assets/icons/identify_chip.png"));
+    this->button_identify_chip->setIconSize(QSize(16, 16));
+
     this->button_read_rom = new QPushButton("Access FAT");
+    this->button_read_rom->setIcon(QIcon(":/assets/icons/access_fat.png"));
+    this->button_read_rom->setIconSize(QSize(16, 16));
 
     layout->addWidget(this->button_identify_chip);
     layout->addWidget(this->button_read_rom);
@@ -233,6 +266,10 @@ void MainWindow::build_filedata_interface(QVBoxLayout* target_layout) {
     this->label_startlocation = new QLabel("");
     this->label_checksums = new QLabel("");
     this->blockmap = new BlockMap(60,8,5,this);
+    this->button_explainer_file_info = new QPushButton("What is this?");
+    this->button_explainer_file_info->setIcon(QIcon(":/assets/icons/help.png"));
+    this->button_explainer_file_info->setIconSize(QSize(16, 16));
+
     QVBoxLayout* layout_files = new QVBoxLayout();
     file_groupbox->setLayout(layout_files);
     layout_files->addWidget(this->label_filename);
@@ -241,6 +278,9 @@ void MainWindow::build_filedata_interface(QVBoxLayout* target_layout) {
     layout_files->addWidget(this->label_startlocation);
     layout_files->addWidget(this->label_checksums);
     layout_files->addWidget(this->blockmap);
+    layout_files->addWidget(this->button_explainer_file_info);
+
+    connect(this->button_explainer_file_info, SIGNAL(released()), this, SLOT(slot_file_info_explainer()));
 }
 
 /**
@@ -253,8 +293,17 @@ void MainWindow::build_synchronization_interface(QVBoxLayout* target_layout) {
     target_layout->addWidget(groupbox);
     QVBoxLayout* layout = new QVBoxLayout();
     groupbox->setLayout(layout);
-    this->syncmap = new BlockMap(64,32,3);
+    this->syncmap = new BlockMap(64,0,3);
     layout->addWidget(this->syncmap);
+
+    this->button_explainer_synchronization = new QPushButton("What is this?");
+    this->button_explainer_synchronization->setIcon(QIcon(":/assets/icons/help.png"));
+    this->button_explainer_synchronization->setIconSize(QSize(16, 16));
+
+    this->button_explainer_synchronization->setVisible(false);
+    layout->addWidget(this->button_explainer_synchronization);
+
+    connect(this->button_explainer_synchronization, SIGNAL(released()), this, SLOT(slot_sync_explainer()));
 }
 
 /**
@@ -308,7 +357,7 @@ void MainWindow::raise_error_window(QMessageBox::Icon icon, const QString errorm
     QMessageBox msg_box;
     msg_box.setIcon(icon);
     msg_box.setText(errormsg);
-    msg_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
+    msg_box.setWindowIcon(QIcon(ICON_PATH));
     msg_box.exec();
 }
 
@@ -392,6 +441,11 @@ void MainWindow::disable_all_buttons() {
         qobject_cast<QPushButton*>(this->filetable->cellWidget(i, FILETABLE_OPEN_COLUMN))->setEnabled(false);
         qobject_cast<QPushButton*>(this->filetable->cellWidget(i, FILETABLE_DELETE_COLUMN))->setEnabled(false);
     }
+
+//    this->action_list_programs->setEnabled(false);
+    this->action_add_file->setEnabled(false);
+    this->action_save_all->setEnabled(false);
+    this->action_format_rom->setEnabled(false);
 }
 
 void MainWindow::enable_all_buttons() {
@@ -405,6 +459,11 @@ void MainWindow::enable_all_buttons() {
         qobject_cast<QPushButton*>(this->filetable->cellWidget(i, FILETABLE_OPEN_COLUMN))->setEnabled(true);
         qobject_cast<QPushButton*>(this->filetable->cellWidget(i, FILETABLE_DELETE_COLUMN))->setEnabled(true);
     }
+
+//    this->action_list_programs->setEnabled(true);
+    this->action_add_file->setEnabled(true);
+    this->action_save_all->setEnabled(true);
+    this->action_format_rom->setEnabled(true);
 }
 
 /****************************************************************************
@@ -472,7 +531,7 @@ void MainWindow::scan_com_devices() {
               " with the one from the Raspberry Pi Pico. If you have a Raspberry Pi Pico or compatible device plugged in,"
               " take care to unplug it or carefully select the correct port."
         ).arg(port_identifiers.size()));
-        msg_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
+        msg_box.setWindowIcon(QIcon(ICON_PATH));
         msg_box.exec();
     } else {
         QMessageBox msg_box;
@@ -512,6 +571,25 @@ void MainWindow::slot_run() {
     runthread->set_process_configuration(ThreadRun::ProcessConfiguration::MCODE_AS_CAS);
     connect(runthread, SIGNAL(signal_run_complete(void*)), this, SLOT(slot_run_complete(void*)));
     runthread->start();
+}
+
+/**
+ * @brief Format a ROM chip
+ */
+void MainWindow::slot_format_rom() {
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this,
+        "Format chip?",
+        tr("Are you sure you want to format this chip?"),
+        QMessageBox::Yes | QMessageBox::No
+    );
+
+    if(reply != QMessageBox::Yes) {
+        return;
+    }
+
+    this->fat->format_chip();
+    this->slot_access_fat();
 }
 
 /**
@@ -578,8 +656,9 @@ void MainWindow::slot_add_program() {
             qDebug() << "Disabling all buttons";
             this->disable_all_buttons();
 
+            // add data to flash chip
             qDebug() << "Start adding data";
-            this->fat->add_file(header, romdata);
+            this->lastbankblock = this->fat->add_file(header, romdata);
         } else {
             return;
         }
@@ -611,25 +690,118 @@ void MainWindow::slot_save() {
 }
 
 /**
+ * @brief Save all files
+ */
+void MainWindow::slot_save_all() {
+    // grab storage folder
+    QString folder = QFileDialog::getExistingDirectory(this, tr("Save all files"), QDir::homePath());
+    if(folder.isEmpty()) {
+        return; // return on cancel
+    }
+
+    // warn user about potentially long waiting times
+    QMessageBox message_box;
+    message_box.setText("Please note that the program might be unresponsive for a"
+                        " brief amount of time while all files are extracted from "
+                        "the ROM chip and stored on the computer.");
+    message_box.setIcon(QMessageBox::Warning);
+    message_box.setWindowTitle("Warning");
+    message_box.setWindowIcon(QIcon(ICON_PATH));
+    message_box.exec();
+
+    QApplication::setOverrideCursor(QCursor(Qt::WaitCursor));
+
+    for(unsigned int i=0; i<this->fat->get_num_files(); i++) {
+        File file = this->fat->get_file(i);
+
+        QString filename = tr("%1_").arg(i+1, 3, 10, QLatin1Char('0')) + this->fat->build_filename(i);
+        QFile p(folder + QDir::separator() + filename);
+        qInfo() << "Storing file: " << p.fileName();
+        if(p.open(QIODevice::WriteOnly)) {
+            p.write(this->fat->create_cas_file(i));
+        }
+        p.close();
+
+        // allow the app to process additional events
+        QCoreApplication::processEvents();
+    }
+
+    QApplication::restoreOverrideCursor();
+}
+
+/**
  * @brief Show an about window
  */
 void MainWindow::slot_about() {
     QMessageBox message_box;
-        //message_box.setStyleSheet("QLabel{min-width: 250px; font-weight: normal;}");
-        message_box.setText(PROGRAM_NAME
-                            " version "
-                            PROGRAM_VERSION
-                            ".\n\nAuthor:\nIvo Filot <ivo@ivofilot.nl>\n\n"
-                            PROGRAM_NAME " is licensed under the GPLv3 license.\n\n"
-                            PROGRAM_NAME " is dynamically linked to Qt, which is licensed under LGPLv3.\n");
-        message_box.setIcon(QMessageBox::Information);
-        message_box.setWindowTitle("About " + tr(PROGRAM_NAME));
-        message_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
-        message_box.exec();
+    //message_box.setStyleSheet("QLabel{min-width: 250px; font-weight: normal;}");
+    message_box.setText(PROGRAM_NAME
+                        " version "
+                        PROGRAM_VERSION
+                        ".\n\nAuthor:\nIvo Filot <ivo@ivofilot.nl>\n"
+                        "Sources: https://github.com/ifilot/p2000t-tape-monitor\n\n"
+                        PROGRAM_NAME " is licensed under the GPLv3 license and "
+                        "is dynamically linked to Qt, which is licensed under LGPLv3.\n\n"
+                        PROGRAM_NAME " comes bundled with the M2000 emulator, which was originally "
+                        "developed by Marcel de Kogel, but has received important additions by Dion Olsthoorn. "
+                        "For more information about the emulator, see "
+                        "https://github.com/p2000t/M2000."
+                        );
+    message_box.setIcon(QMessageBox::Information);
+    message_box.setWindowTitle("About " + tr(PROGRAM_NAME));
+    message_box.setWindowIcon(QIcon(ICON_PATH));
+    message_box.exec();
 }
 
 void MainWindow::slot_debug_log() {
     this->log_window->show();
+}
+
+/**
+ * @brief Show window explaining file info
+ */
+void MainWindow::slot_file_info_explainer() {
+    QMessageBox message_box;
+    message_box.setText("<p>This box shows information about the currently selected file. Upon selection of a file "
+                        "by clicking on the \"open\" button in the file selection menu, the following in formation "
+                        "is shown: </p>"
+                        "<ul>"
+                        "<li>File name</li>"
+                        "<li>File extension</li>"
+                        "<li>File size</li>"
+                        "<li>Starting band and block</li>"
+                        "<li>The checksums for all the blocks</li></ul>"
+                        "<p>When the checksums are all displayed in <font color=\"green\">green</font>, "
+                        "the checksums of the metadata match the actual data, indicative that this file is "
+                        "correctly stored on the chip. When one or more checksums "
+                        "are displayed in <font color=\"red\">red</font>, this is an indication that the file is corrupt.</p>"
+                        "<p>Finally, the box with the grid provides a visual representation on which blocks on the chip the "
+                        "file is stored. Each row corresponds to a bank and each bank contains 60 blocks as indicated by the squares. "
+                        "The squares marked in green indicate the blocks on which the file is stored."
+                        );
+    message_box.setIcon(QMessageBox::Information);
+    message_box.setWindowTitle("Explainer: File information");
+    message_box.setWindowIcon(QIcon(ICON_PATH));
+    message_box.exec();
+}
+
+/**
+ * @brief Show window explaining synchronization
+ */
+void MainWindow::slot_sync_explainer() {
+    QMessageBox message_box;
+    message_box.setText("<p>This box visually represents the synchronization (cache) status of the rom chip.</p>"
+                        "<p>Each box represents a 256 byte block. When a block is synchronized (in cache), it is displayed "
+                        "in <font color=\"green\">green</font>. When the cache is invalidated, e.g. because new data is "
+                        "written to it, it will be displayed in <font color=\"orange\">orange</font>. Finally, when a block "
+                        "is designated to be deleted, it will be displayed in <font color=\"red\">red</font>.</p><p>As a user, you "
+                        "do not have to manually maintain the synchronization process, it will be handled automatically by the "
+                        "program and this box mainly serves to inform you, as the user, on the input/output operations.</p>"
+                        );
+    message_box.setIcon(QMessageBox::Information);
+    message_box.setWindowTitle("Explainer: Synchronization status");
+    message_box.setWindowIcon(QIcon(ICON_PATH));
+    message_box.exec();
 }
 
 /**
@@ -695,6 +867,7 @@ void MainWindow::read_chip_id() {
             throw std::runtime_error("Unknown chip id: " + chip_id_str);
         }
 
+        this->blockmap->set_blocklist({}, this->nrbanks);
         this->progress_bar_load->reset();
         this->filetable->clear();
         this->filetable->setColumnCount(0);
@@ -705,7 +878,7 @@ void MainWindow::read_chip_id() {
         msg_box.setIcon(QMessageBox::Warning);
         msg_box.setText(tr("The chip id does not match the proper value for a SST39SF0x0 chip. Please ensure "
                            "that a correct SST39SF0x0 chip is inserted. If so, resocket the chip and try again.\n\nError message: %1.").arg(e.what()));
-        msg_box.setWindowIcon(QIcon(":/assets/icon/icon_128px.png"));
+        msg_box.setWindowIcon(QIcon(ICON_PATH));
         msg_box.exec();
     }
 }
@@ -745,6 +918,25 @@ void MainWindow::slot_access_fat() {
     this->fat = new FileAllocationTable(this->nrbanks);  // recreate
     this->fat->set_serial_interface(this->serial_interface);
 
+    if(!this->fat->check_fat()) {
+        QMessageBox::StandardButton reply = QMessageBox::question(
+            this,
+            "Unformatted chip?",
+            tr("This chip seems to be unformatted. Do you want to format this chip to the P2000T compatible FAT?"),
+            QMessageBox::Yes | QMessageBox::No
+        );
+
+        if(reply == QMessageBox::Yes) {
+            this->fat->format_chip();
+        } else {
+            delete this->fat;
+            this->fat = nullptr;
+            this->button_read_rom->setEnabled(true);
+            this->button_identify_chip->setEnabled(true);
+            return;
+        }
+    }
+
     // connect signals
     connect(this->fat, SIGNAL(read_operation(int,int)), this, SLOT(read_operation(int,int)));
     connect(this->fat, SIGNAL(signal_sync_needed()), this, SLOT(slot_start_sync()));
@@ -752,7 +944,10 @@ void MainWindow::slot_access_fat() {
     connect(this->fat, SIGNAL(signal_sync_status_changed(const std::vector<uint8_t>)), this, SLOT(slot_update_syncmap(const std::vector<uint8_t>)));
 
     this->index_files();
+//    this->action_list_programs->setEnabled(true);
     this->action_add_file->setEnabled(true);
+    this->action_save_all->setEnabled(true);
+    this->action_format_rom->setEnabled(true);
 }
 
 /**
@@ -783,7 +978,7 @@ void MainWindow::slot_select_file(int row) {
         this->label_checksums->setWordWrap(true);
 
         // create image of block locations
-        this->blockmap->set_blocklist(file.blocks);
+        this->blockmap->set_blocklist(file.blocks, this->nrbanks);
 
         // set data in hexviewer
         this->hex_widget->setData(new QHexView::DataStorageArray(file.data));
@@ -817,6 +1012,7 @@ void MainWindow::slot_start_sync() {
     qInfo() << "Received synchronization request";
     this->disable_all_buttons();
     this->syncthread = std::make_unique<SyncThread>(this->serial_interface);
+    this->syncthread->set_sectors(this->fat->get_nr_banks() * 0x10);
     syncthread->set_contents(this->fat->get_contents());
     syncthread->set_cache_status(this->fat->get_cache_status());
     connect(this->syncthread.get(), SIGNAL(sync_item_done(int, int)), this, SLOT(read_operation(int, int)));
@@ -829,14 +1025,36 @@ void MainWindow::slot_sync_complete() {
     qInfo() << "Synchronization process completed";
     this->fat->set_cache_status(this->syncthread->get_cache_status());
     this->index_files();
-    this->enable_all_buttons();
+
     this->syncthread.release();
+
+    if(this->lastbankblock.first != 0xFF) {
+        auto checksums = this->fat->check_file(this->lastbankblock);
+        unsigned int wrongblocks = 0;
+        for(const auto& i : checksums) {
+            qDebug() << tr("%1").arg(i.first,4,16,QLatin1Char('0'))
+                     << "\t"
+                     << tr("%2").arg(i.second,4,16,QLatin1Char('0'));
+            if(i.first != i.second) {
+                wrongblocks++;
+            }
+        }
+
+        if(wrongblocks > 0) {
+            this->raise_error_window(QMessageBox::Critical,
+                                     tr("%1 blocks were not flashed correctly. Please ensure the chip is properly socketed in the ZIF"
+                                     " socket, delete the last written file and try again.").arg(wrongblocks));
+        }
+    }
+
+    this->enable_all_buttons();
+    this->lastbankblock = {0xFF,0xFF};
 }
 
 /**
  * @brief Update synchronization map
  */
 void MainWindow::slot_update_syncmap(const std::vector<uint8_t> _cache_status) {
-    qDebug() << "Updating syncmap";
     this->syncmap->set_cache(_cache_status);
+    this->button_explainer_synchronization->setVisible(true);
 }

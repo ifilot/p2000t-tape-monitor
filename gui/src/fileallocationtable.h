@@ -25,6 +25,8 @@
 #include <memory>
 #include "serial_interface.h"
 
+typedef std::pair<uint8_t, uint8_t> bankblock;
+
 /**
  * @brief Class containing file metadata and data
  */
@@ -35,7 +37,7 @@ public:
     uint16_t size;
     uint8_t startblock;
     uint8_t startbank;
-    std::vector<std::pair<uint8_t, uint8_t>> blocks;
+    std::vector<bankblock> blocks;
     std::vector<uint16_t> metachecksums;    // checksums as supplied in metadata
     std::vector<uint16_t> checksums;        // checksums from data
     QByteArray data;
@@ -91,6 +93,17 @@ public:
     void set_serial_interface(const std::shared_ptr<SerialInterface>& _serial_interface) {
         this->serial_interface = _serial_interface;
     }
+
+    /**
+     * @brief Check whether this ROM chip is correctly formatted
+     * @return whether rom chip is correctly formatted
+     */
+    bool check_fat();
+
+    /**
+     * @brief Format the chip
+     */
+    void format_chip();
 
     /**
      * @brief Read file metadata from chip
@@ -162,7 +175,7 @@ public:
      * @param header
      * @param data
      */
-    void add_file(const QByteArray& header, const QByteArray& data);
+    bankblock add_file(const QByteArray& header, const QByteArray& data);
 
     /**
      * @brief Remove a file from the ROM
@@ -170,16 +183,42 @@ public:
      */
     void delete_file(unsigned int file_id);
 
+    /**
+     * @brief Check wether a file is valid
+     * @param startpos
+     */
+    std::vector<std::pair<uint16_t, uint16_t>> check_file(const bankblock& startpos);
+
+    /**
+     * @brief Get cached contents of the ROM chip
+     * @return
+     */
     inline const auto& get_contents() const {
         return this->contents;
     }
 
+    /**
+     * @brief Get current cahe status
+     * @return
+     */
     inline const auto& get_cache_status() const {
         return this->cache_status;
     }
 
+    /**
+     * @brief Update cache status
+     * @param _cache_status
+     */
     inline void set_cache_status(const std::vector<uint8_t>& _cache_status) {
         this->cache_status = _cache_status;
+    }
+
+    /**
+     * @brief get_nr_banks
+     * @return
+     */
+    inline uint8_t get_nr_banks() const {
+        return this->nrbanks;
     }
 
 signals:
@@ -241,6 +280,12 @@ private:
     void build_linked_list(unsigned int id);
 
     /**
+     * @brief Construct linked list from start position
+     * @param startpos
+     */
+    std::vector<bankblock> build_linked_list_bankblock(const bankblock& startpos);
+
+    /**
      * @brief Attach file data to file object
      * @param file id
      */
@@ -266,6 +311,14 @@ private:
      * @param cache_status
      */
     void update_cache_status(unsigned int block_id, uint8_t cache_status);
+
+    /**
+     * @brief Check whether the serial port is opened
+     *
+     * This function is used as a development safeguard to ensure that the
+     * serial port is opened prior to performing serial I/O operations
+     */
+    void check_port_open();
 };
 
 #endif // FILEALLOCATIONTABLE_H

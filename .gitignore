@@ -2,3 +2,4 @@
 tniasm.sym
 tniasm.tmp
 build/*
+debug/*

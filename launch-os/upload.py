@@ -17,8 +17,7 @@ def connect():
     ports = serial.tools.list_ports.comports()
     portfound = None
     for port in ports:
-        print(port.pid, port.vid)
-        if port.pid == 54 and port.vid == 0x2341:
+        if port.pid == 0x0A and port.vid == 0x2E8A:
             portfound = port.device
             break
 
@@ -37,22 +36,19 @@ def connect():
     return ser
 
 def test_board_id(ser):
+    """
+    Test reading board id
+    """
     ser.write(b'READINFO')
-    res = ser.read(8)
-    print(res)
-    res = ser.read(16)
-    print(res)
-    
-    if res == b'Ph2k-32u4-v1.0.3':
-        print('Connection established. All ok!')
-    else:
-        raise Exception('Cannot connect. Invalid response.')
+    rsp = ser.read(8)
+    rsp = ser.read(16)
+    print(rsp)
 
 def upload_rom(ser, filename):
     ser.write(b'DEVIDSST')
     rsp = ser.read(8)
     rsp = ser.read(2)
-    if rsp == bytearray([0xBF,0xB7]):
+    if rsp[0] == 0xBF and rsp[1] in [0xB5, 0xB6, 0xB7]:
         print('Chip ID verified: %s' % rsp)
     else:
         raise Exception("Incorrect chip id.")
@@ -69,22 +65,19 @@ def upload_rom(ser, filename):
         res = ser.read(2)
         print(res)
     
-    # expand data to 256-size
-    sz = len(data)
-    exp = (sz // 256 + 1) * 256
-    print('Expanding %i to %i' % (sz, exp))
-    data.extend(np.zeros(exp - sz))
+    # expand data to 4k-size
+    data.extend(np.zeros(0x4000 - len(data)))
     
-    for i in range(0, exp // 256):
-        ser.write(b'WRBK%04X' % i)
+    # program cannot exceed 0x2000 bytes (by design), so only flash the
+    # first two banks
+    for i in range(0,2):
+        ser.write(b'WRSECT%02X' % i)
         res = ser.read(8)
         print(res)
-        parcel = data[i*256:(i+1)*256]
+        parcel = data[i*0x1000:(i+1)*0x1000]
         ser.write(parcel)
-        checksum = np.uint8(ser.read(1)[0])
-        print(checksum)
-        print(np.sum(parcel) & 0xFF)
-        
-        
+        crc16checksum = np.uint16(ser.read(2)[0])
+        print('%04X' % crc16checksum)
+
 if __name__ == '__main__':
     main()

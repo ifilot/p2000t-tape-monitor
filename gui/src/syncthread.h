@@ -41,6 +41,7 @@ private:
     // enable caching
     std::vector<char> contents;
     std::vector<uint8_t> cache_status;
+    unsigned int nr_sectors = 0;
 
 public:
     /**
@@ -67,10 +68,16 @@ public:
         return this->cache_status;
     }
 
+    inline void set_sectors(unsigned int _nr_sectors) {
+        this->nr_sectors = _nr_sectors;
+    }
+
     /**
      * @brief run cart flash routine
      */
     void run() override;
+
+    ~SyncThread();
 
 private:
 

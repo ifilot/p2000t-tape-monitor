@@ -25,7 +25,7 @@ public:
              unsigned int _blocksize,
              QWidget *parent = nullptr);
 
-    void set_blocklist(const std::vector<std::pair<uint8_t, uint8_t>>& _blocks);
+    void set_blocklist(const std::vector<std::pair<uint8_t, uint8_t>>& _blocks, uint8_t nrbanks);
 
     void set_cache(const std::vector<uint8_t> _cache_status);
 

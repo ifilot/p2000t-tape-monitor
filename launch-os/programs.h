@@ -7,6 +7,7 @@
 #include "util.h"
 #include "constants.h"
 #include "sst39sf.h"
+#include "leds.h"
 
 #define RAMADDRPROG 0x4000
 #define RAMLINKEDLIST 0x5000
@@ -14,6 +15,7 @@
 
 // store number of programs
 extern uint16_t __nrprogs;
+extern uint8_t __nrbanks;
 
 struct Program {
     uint8_t bank;
