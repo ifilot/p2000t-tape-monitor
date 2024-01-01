@@ -3,13 +3,19 @@
 #
 
 import numpy as np
+import argparse
 
 def main():
-    f = open('main.rom', 'rb')
+    parser = argparse.ArgumentParser(prog='launcher-checksum-tester',
+                                     description='Produces checksum of the launcher firmware')
+    parser.add_argument('filename')
+    args = parser.parse_args()
+
+    f = open(args.filename, 'rb')
     data = bytearray(f.read())
     f.close()
 
-    print()
+    print('Reading: ', args.filename)
     print('Filesize: %i bytes' % len(data))
     data.extend(np.zeros(0x4000 - len(data)))
     print()
@@ -17,6 +23,12 @@ def main():
     for i in range(0,2):
         checksum = crc16(data[i*0x1000:(i+1)*0x1000])
         print('%02i: %04X' % (i,checksum))
+
+    print()
+    print("First 64 bytes:")
+    for i in range(8):
+        for j in range(8):
+            print('%02X' % data[i*8+j], end=' ' if j<7 else '\n')
 
 def crc16(data):
     """
