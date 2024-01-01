@@ -26,4 +26,17 @@ BASIC infrastructure).
 ## Output
 
 * `BASICBOOTSTRAP.bin`: Modified BASIC cartridge
-* `excode.bin`: External rom file to load
+
+## Compilation instructions
+
+Prepare the Docker compiler image
+
+```bash
+docker build . -t basicmod-compiler
+```
+
+Use the Docker image for the compilation
+
+```bash
+./compile
+```
