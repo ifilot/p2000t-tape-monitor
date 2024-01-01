@@ -4,5 +4,6 @@
 extern char* memory;
 extern char* vidmem;
 extern char* keymem;
+extern char* highmem9000;
 
 #endif

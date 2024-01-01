@@ -183,6 +183,9 @@ void init(void) {
     memcpy(&vidmem[0x0002], str1, strlen(str1));
 
     // show version and compile information
+    uint16_t basictop = memory[0x63b8] | (uint16_t)memory[0x63b9] << 8;
+    uint16_t stringspace_size = memory[0x6258] | (uint16_t)memory[0x6259] << 8;
+    sprintf(&vidmem[0x50*19], "Basic pointers: %04X / %04X", basictop, stringspace_size);
     sprintf(&vidmem[0x50*23], "Version %s (%s, %s)", __VERSION__, __DATE__, __TIME__);
 
     // determine chip id
@@ -209,9 +212,6 @@ void init(void) {
             while(0 == 0){}; // put in infinite loop
     }
 
-    static const char str2[] = "Press [n/p] to scroll between pages.";
-    memcpy(&vidmem[0x50*20], str2, strlen(str2));
-
-    static const char str3[] = "Select program by entering [0-9]: ";
-    memcpy(&vidmem[0x50*21], str3, strlen(str3));
+    sprintf(&vidmem[0x50*20], "Press [n/p] to scroll between pages.");
+    sprintf(&vidmem[0x50*21], "Select program by entering [0-9]: ");
 }

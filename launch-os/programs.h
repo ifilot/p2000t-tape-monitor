@@ -9,8 +9,8 @@
 #include "sst39sf.h"
 #include "leds.h"
 
-#define RAMADDRPROG 0x4000
-#define RAMLINKEDLIST 0x5000
+#define RAMADDRPROG 0x7000
+#define RAMLINKEDLIST 0x7D00
 #define PRINTPROGROW 3
 
 // store number of programs
