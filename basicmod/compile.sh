@@ -1,14 +1,9 @@
 #!/bin/bash
 
-# set directory of the assembler
-CPATH="/d/PROGRAMMING/P2000T/assembler"
-
-# compile custom assembly
-$CPATH/tniasm.exe bootstrap.asm bootstrap.bin
-$CPATH/tniasm.exe launcher.asm launcher.bin
-
-# modify BASIC.rom
-python hackrom.py
-
-# waiting for key press to continue
-read -p "Press any key to continue... " -n1 -s
+if [[ "$OSTYPE" == "msys" ]]; then
+    winpty docker run -v `pwd | sed 's/\//\/\//g'`://src/ -w //src -it basicmod-compiler make
+elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    docker run -v `pwd`:/src/ -w /src -it basicmod-compiler make
+else
+    echo "Unknown operating system"
+fi

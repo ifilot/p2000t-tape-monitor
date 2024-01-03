@@ -121,9 +121,19 @@ cdnextbyte:
     pop bc
     ld hl,BASICPROGSTART
     add hl,bc
+
+    ; set basic pointers to variable space
     ld ($6405),hl
     ld ($6407),hl
     ld ($6409),hl
+    
+    ; reset the pointers to end of memory for BASIC
+    ; TODO: need to fix these instructions
+    ;ld hl,$dfff
+    ;ld ($63b8),hl
+    ;ld hl,$32
+    ;ld ($6258),hl
+
     ei
     ret
 
@@ -221,43 +231,4 @@ write_ram:
     out (IO_AL),a         ; store lower bytes in register
     pop af
     out (IO_RAMEX),a      ; write byte
-    ret
-
-;-----------------------------------------------------
-; printhex subroutine
-;
-; input: a  - value to print
-;        de - video memory address
-; uses:  a
-; output: de - new cursor position of video address
-;-------------------------------------------------------------------------------
-printhex:
-    push af
-    rra                     ; shift right by 4, ignore leaving bits
-    rra
-    rra
-    rra
-    and $0f                 ; mask
-    call printnibble        ; print upper nibble
-    pop af
-    and $0f                 ; mask
-    call printnibble        ; print lower nibble
-    ret
-
-;-------------------------------------------------------------------------------
-; printnibble subroutine
-;
-; input: a  - value to print
-;        de - video memory address
-; uses:  a
-; output: de - new cursor position of video address
-;-------------------------------------------------------------------------------
-printnibble:
-    add $30                 ; add $30 to number in a
-    cp $3A                  ; less than $3A?
-    jp c,pnprint            ; if so, number between 0-9, so print it
-    add 7                   ; if not, number between A-F, so add 7
-pnprint:
-    ld (de),a               ; load accumulator into (de)
-    inc de                  ; increment video position
     ret
