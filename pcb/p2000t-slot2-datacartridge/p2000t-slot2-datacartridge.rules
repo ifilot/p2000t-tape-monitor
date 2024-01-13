@@ -11,7 +11,7 @@
     (via_costs 50)
     (plane_via_costs 5)
     (start_ripup_costs 100)
-    (start_pass_no 26575)
+    (start_pass_no 22902)
     (layer_rule F.Cu
       (active on)
       (preferred_direction vertical)
@@ -52,15 +52,6 @@
     "kicad_default" "Via[0-1]_800:400_um-kicad_default"
   )
   (class default
-    GND VCC D0 D2 D4 D6 A0 A2
-    A4 A6 ~{RD} ~{IORQ} ~{RES} A7 A5 A1
-    D7 D5 D3 D1 "Net-(U1-Pad1)" ~{WR} "unconnected-(J1-Pad1a)" "unconnected-(J1-Pad7b)"
-    CA2 CA4 CA1 CA3 CA0 CA10 CA12 CA9
-    CA11 CA8 CA14 CA13 CA5 CA7 CA6 CA15
-    "Net-(U1-Pad4)" SO6 M1 "unconnected-(J1-Pad12a)" "Net-(U1-Pad13)" "Net-(D1-Pad2)" "Net-(U1-Pad11)" "Net-(D2-Pad2)"
-    "Net-(R1-Pad1)" "Net-(R2-Pad1)" "Net-(U2-Pad2)" SO5 SO4 SO2 CA17 CA16
-    CA18 "Net-(U3-Pad6)" "unconnected-(U3-Pad7)" "Net-(U2-Pad4)" "Net-(U1-Pad10)" "Net-(U1-Pad5)" "Net-(U1-Pad2)" "unconnected-(U4-Pad8)"
-    "Net-(U2-Pad6)" "Net-(U2-Pad8)" "Net-(U2-Pad10)" "unconnected-(U7-Pad6)" "unconnected-(U9-Pad5)" "unconnected-(U9-Pad6)"
     (clearance_class default)
     (via_rule default)
     (rule
@@ -71,6 +62,15 @@
     )
   )
   (class "kicad_default"
+    GND VCC D0 D2 D4 D6 A0 A2
+    A4 A6 ~{RD} ~{IORQ} ~{RES} A7 A5 A1
+    D7 D5 D3 D1 "Net-(D1-A)" ~{WR} "Net-(D2-A)" "unconnected-(J1-Pin_1a-Pad1a)"
+    CA2 CA4 CA1 CA3 CA0 CA10 CA12 CA9
+    CA11 CA8 CA14 CA13 CA5 CA7 CA6 CA15
+    A3 SO6 "unconnected-(J1-Pin_11b-Pad11b)" "unconnected-(J1-Pin_12a-Pad12a)" "Net-(U9-Q0)" "Net-(U9-Q1)" "Net-(U6-Cp)" "Net-(U3-O0)"
+    "Net-(U5-Cp)" "Net-(U3-O1)" "Net-(U2-Pad2)" SO5 SO4 SO2 CA17 CA16
+    CA18 "Net-(U9-Cp)" "Net-(U3-O3)" "Net-(U2-Pad4)" "Net-(U7-Cp)" "Net-(U3-E1)" "Net-(U7-Mr)" "unconnected-(U4-Pad8)"
+    "Net-(U9-Mr)" "unconnected-(U2-Pad12)" "Net-(U3-E3)" "unconnected-(U3-O7-Pad7)" "unconnected-(U7-Q3-Pad6)" "unconnected-(U9-Q2-Pad5)" "unconnected-(U9-Q3-Pad6)"
     (clearance_class "kicad_default")
     (via_rule kicad_default)
     (rule
