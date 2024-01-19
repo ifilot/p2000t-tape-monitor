@@ -9,6 +9,7 @@
 #include "memory.h"
 #include "config.h"
 #include "leds.h"
+#include "stack.h"
 
 // forward declarations
 void init(void);
@@ -145,13 +146,17 @@ uint8_t handle_keybuffer_return(void) {
     if(progid > 0 && progid <= __nrprogs) {
 
         clearscreen();
-        vidmem[0x50*10] = 0x06;
-        vidmem[0x50*10+1] = 0x0D;
-        sprintf(&vidmem[0x50*10+2], "Loading program");
+        vidmem[0x50*1] = 0x06;
+        vidmem[0x50*1+1] = 0x0D;
+
+        sprintf(&vidmem[0x50*1+2], "Loading program (validating)");
 
         uint16_t prgsize = build_linked_list(progid-1);
         //print_linked_list(20);
         copyprogramlinkedlist();
+
+        // perform validation on the RAM chip
+        validatelinkedlist();
 
         // write number of bytes in memory, note that prgsize is stored
         // in big endian order
@@ -182,10 +187,12 @@ void init(void) {
     static const char str1[] = "Launcher";
     memcpy(&vidmem[0x0002], str1, strlen(str1));
 
+    // show debug information about BASIC locations and stack pointer
+    // uint16_t basictop = memory[0x63b8] | (uint16_t)memory[0x63b9] << 8; // highest address that BASIC is allowed to use
+    // uint16_t stringspace_size = memory[0x6258] | (uint16_t)memory[0x6259] << 8; // start of string space
+    // sprintf(&vidmem[0x50*19], "Basic pointers: %04X / %04X / %04X", basictop, stringspace_size, get_stack_pointer());
+
     // show version and compile information
-    uint16_t basictop = memory[0x63b8] | (uint16_t)memory[0x63b9] << 8;
-    uint16_t stringspace_size = memory[0x6258] | (uint16_t)memory[0x6259] << 8;
-    sprintf(&vidmem[0x50*19], "Basic pointers: %04X / %04X", basictop, stringspace_size);
     sprintf(&vidmem[0x50*23], "Version %s (%s, %s)", __VERSION__, __DATE__, __TIME__);
 
     // determine chip id

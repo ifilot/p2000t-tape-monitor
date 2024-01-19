@@ -337,22 +337,73 @@ void print_linked_list(uint8_t row) {
     }
 }
 
+/**
+ * @brief Copy program from external ROM to the external RAM chip in the
+ *        datacartridge. Use the linked list to grab the right banks and
+ *        blocks. The complete program is written to 0x0000 on the RAM chip.
+ */
 void copyprogramlinkedlist(void) {
     uint16_t llptr = RAMLINKEDLIST;
     uint8_t nextbank = read_ram(llptr++);
     uint8_t nextblock = read_ram(llptr++);
 
+    // start address on ram chip for the program
     uint16_t ramptr = 0x0000;
+
+    // block counter
+    uint8_t ctr = 0;
+
     led_rd_on();
-    while(nextbank != 0xFF) {
+    while(nextbank != 0xFF) { // loop over all the blocks
         sst39sf_set_bank(nextbank);
 
-        uint16_t romptr = 0x1000 + nextblock * 0x400;
-        copyblock(ramptr, romptr);
-        ramptr += 0x400;
+        uint16_t romptr = 0x1000 + nextblock * 0x400;   // address on rom chip
+        copyblock(ramptr, romptr);                      // assembly routine
+        ramptr += 0x400;                                // go to next ram position
 
+        vidmem[0x50*(ctr%16+4) + (ctr >= 16 ? 20 : 0)] = COL_WHITE;
+        sprintf(&vidmem[0x50*(ctr%16+4) + (ctr >= 16 ? 21 : 1)], "%02X", ctr+1);
+
+        // set indices to next bank and block
         nextbank = read_ram(llptr++);
         nextblock = read_ram(llptr++);
+        ctr++;
+    }
+    led_rd_off();
+}
+
+void validatelinkedlist(void) {
+    uint16_t llptr = RAMLINKEDLIST;
+    uint8_t nextbank = read_ram(llptr++);
+    uint8_t nextblock = read_ram(llptr++);
+
+    // start address on ram chip for the program
+    uint16_t ramptr = 0x0000;
+    uint8_t ctr = 0;
+    led_rd_on();
+    while(nextbank != 0xFF) { // loop over all the blocks
+        sst39sf_set_bank(nextbank);
+
+        // read checksum from ROM chip
+        uint16_t checksum = (sst39sf_read_byte(0x0100 + 0x40 * nextblock + 0x07) << 8) +
+                             sst39sf_read_byte(0x0100 + 0x40 * nextblock + 0x06);
+
+        // construct checksum from RAM chip
+        uint16_t crc16 = crc16_ramchip(ramptr, 0x400);
+
+        // perform check
+        if(crc16 == checksum) {
+            vidmem[0x50*(ctr%16+4) + (ctr >= 16 ? 20 : 0)] = COL_GREEN;
+        } else {
+            vidmem[0x50*(ctr%16+4) + (ctr >= 16 ? 20 : 0)] = COL_RED;
+        }
+        sprintf(&vidmem[0x50*(ctr%16+4) + (ctr >= 16 ? 21 : 1)], "%02X: %04X (%04X)", ctr+1, checksum, crc16);
+
+        // set indices to next bank and block
+        nextbank = read_ram(llptr++);
+        nextblock = read_ram(llptr++);
+        ramptr += 0x400;
+        ctr++;
     }
     led_rd_off();
 }
