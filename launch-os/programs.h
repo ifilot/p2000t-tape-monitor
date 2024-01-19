@@ -43,6 +43,8 @@ void get_progname(uint16_t progid, char* progname);
 
 uint16_t find_bankblock(uint16_t progid);
 
+uint16_t get_deploy_location(uint16_t progid);
+
 /**
  * @brief Copy program from external ROM to the external RAM chip in the
  *        datacartridge. Use the linked list to grab the right banks and

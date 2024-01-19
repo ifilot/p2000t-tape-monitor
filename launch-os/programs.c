@@ -305,6 +305,20 @@ void get_progname(uint16_t progid, char* progname) {
     }
 }
 
+uint16_t get_deploy_location(uint16_t progid) {
+    // establish startbank and startblock of chosen program
+    uint16_t bankblock = find_bankblock(progid);
+    uint8_t block = bankblock & 0xFF;
+    uint8_t bank = bankblock >> 8;
+
+    sst39sf_set_bank(bank);
+
+    uint16_t deploy = (sst39sf_read_byte(0x0100 + 0x40 * block + 0x21) << 8) +
+                       sst39sf_read_byte(0x0100 + 0x40 * block + 0x20);
+
+    return deploy;
+}
+
 uint16_t find_bankblock(uint16_t progid) {
     uint16_t numprogs = 0;
     uint16_t ram_ptr = RAMADDRPROG;

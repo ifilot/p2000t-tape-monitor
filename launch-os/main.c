@@ -165,6 +165,12 @@ uint8_t handle_keybuffer_return(void) {
         get_progname(progid-1, progname);
         sprintf(&vidmem[0x50*1+2], "Loading program: %s", progname);
 
+        // write deploy location in memory
+        uint16_t deploy = get_deploy_location(progid-1);
+        write_ram(0x8000-4, (uint8_t)(deploy & 0xFF));
+        write_ram(0x8000-3, (uint8_t)(deploy >> 8));
+        sprintf(&vidmem[0x50*3], "Deploying program to: 0x%04X", deploy);
+
         uint16_t prgsize = build_linked_list(progid-1);
         //print_linked_list(22);
         copyprogramlinkedlist();
