@@ -11,6 +11,9 @@
 #include "leds.h"
 #include "stack.h"
 
+// set printf io
+#pragma printf "%u %X %s"
+
 // forward declarations
 void init(void);
 void handle_key(uint8_t key);
@@ -19,6 +22,7 @@ uint8_t handle_keybuffer_return(void);
 // store program selection keys
 char keybuffer[4] = {0x00, 0x00, 0x00, 0x00};
 uint8_t numkeysbuf = 0;
+uint8_t flag_validation = 1; // whether to perform validation on the loaded program
 
 void main(void) {
     init();
@@ -65,6 +69,10 @@ void main(void) {
                         read_programs_offset(offset);
                         print_programs(16, offset);
                         break;
+                    case 31: // 'v'
+                        flag_validation ^= 1; // toggle first bit
+                        sprintf(&vidmem[0x50*20+1], "Checksum validation %s. [V]", flag_validation == 1 ? "enabled" : "disabled");
+                        break;
                     case 46:
                     case 63:
                     case 4:
@@ -78,7 +86,7 @@ void main(void) {
                     case 44:
                         handle_key(keymem[i]);
                         break;
-                    case 52:
+                    case 52: // enter
                         exit_loop = handle_keybuffer_return();
                         if(exit_loop != 0) {
                             read_programs_offset(offset);
@@ -95,8 +103,10 @@ void main(void) {
 }
 
 void handle_key(uint8_t key) {
-    if(key == 44 && numkeysbuf > 0) {
-        numkeysbuf--;
+    if(key == 44) { // backspace
+        if(numkeysbuf > 0) {
+            numkeysbuf--;
+        }
         keybuffer[numkeysbuf] = ' ';
     } else {
         if(numkeysbuf < 3) {
@@ -137,7 +147,8 @@ void handle_key(uint8_t key) {
             return;
         }
     }
-    memcpy(&vidmem[0x50*21+34], keybuffer, 3);
+    vidmem[0x50*22+34] = COL_WHITE;
+    memcpy(&vidmem[0x50*22+35], keybuffer, 3);
 }
 
 uint8_t handle_keybuffer_return(void) {
@@ -149,14 +160,23 @@ uint8_t handle_keybuffer_return(void) {
         vidmem[0x50*1] = 0x06;
         vidmem[0x50*1+1] = 0x0D;
 
-        sprintf(&vidmem[0x50*1+2], "Loading program (validating)");
+        char progname[17];
+        memset(progname, 0x00, 17);
+        get_progname(progid-1, progname);
+        sprintf(&vidmem[0x50*1+2], "Loading program: %s", progname);
 
         uint16_t prgsize = build_linked_list(progid-1);
-        //print_linked_list(20);
+        //print_linked_list(22);
         copyprogramlinkedlist();
 
         // perform validation on the RAM chip
-        validatelinkedlist();
+        if(flag_validation == 1) {
+            validatelinkedlist();
+
+            sprintf(&vidmem[0x50 * 23], "Press any key to start the program.");
+            keymem[0x0C] = 0;
+            while(keymem[0x0C] == 0) {} // wait until a key is pressed
+        }
 
         // write number of bytes in memory, note that prgsize is stored
         // in big endian order
@@ -166,7 +186,7 @@ uint8_t handle_keybuffer_return(void) {
         return 0;
 
     } else {
-        sprintf(&vidmem[0x50*10], "Invalid program id: %03i", progid);
+        sprintf(&vidmem[0x50*10], "Invalid program id: %03u", progid);
     }
 
     // clean video buffer
@@ -193,7 +213,8 @@ void init(void) {
     // sprintf(&vidmem[0x50*19], "Basic pointers: %04X / %04X / %04X", basictop, stringspace_size, get_stack_pointer());
 
     // show version and compile information
-    sprintf(&vidmem[0x50*23], "Version %s (%s, %s)", __VERSION__, __DATE__, __TIME__);
+    vidmem[0x50*23] = COL_BLUE;
+    sprintf(&vidmem[0x50*23+1], "Version %s (%s, %s)", __VERSION__, __DATE__, __TIME__);
 
     // determine chip id
     uint16_t chip_id = sst39sf_get_chip_id();
@@ -219,6 +240,10 @@ void init(void) {
             while(0 == 0){}; // put in infinite loop
     }
 
-    sprintf(&vidmem[0x50*20], "Press [n/p] to scroll between pages.");
-    sprintf(&vidmem[0x50*21], "Select program by entering [0-9]: ");
+    vidmem[0x50*20] = COL_MAGENTA;
+    sprintf(&vidmem[0x50*20+1], "Checksum validation enabled. [v]");
+    vidmem[0x50*21] = COL_BLUE;
+    sprintf(&vidmem[0x50*21+1], "Press [n/p] to scroll between pages.");
+    vidmem[0x50*22] = COL_BLUE;
+    sprintf(&vidmem[0x50*22+1], "Select program by entering [0-9]: ");
 }

@@ -90,7 +90,7 @@ void read_programs_offset(uint16_t offset) {
 
     // skip first items by offset
     led_rd_on();
-    while((numprogs < offset) && (bank < 8)) {
+    while((numprogs < offset) && (bank < __nrbanks)) {
         startblock = sst39sf_read_byte(addr++);
 
         // terminate loop upon reading 0xFF
@@ -100,7 +100,6 @@ void read_programs_offset(uint16_t offset) {
             sst39sf_set_bank(bank);
 
             // reset start position on bank
-            startblock = 0;
             addr = 0x0000;
 
             continue;
@@ -209,7 +208,7 @@ uint16_t get_number_programs(void) {
 void print_programs(uint8_t numprogs, uint16_t offset) {
     // print header line
     clearline(2);
-    char header[] = {COL_RED,' ','I','D',' ',
+    char header[] = {COL_WHITE,' ','I','D',' ',
                      'N','A','M','E',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ',
                      'E','X','T',' ',
                      ' ','S','I','Z','E',' ',
@@ -251,48 +250,16 @@ void print_programs(uint8_t numprogs, uint16_t offset) {
         printhex((i+PRINTPROGROW)*0x50+35, read_ram(RAMADDRPROG + i * 24 + 1));
     }
 
-    clearline(22);
-    vidmem[22 * 0x50] = 0x05;
-    sprintf(&vidmem[22 * 0x50+1], "Showing %u-%u of %u programs.", offset+1, offset+16, __nrprogs);
+    clearline(19);
+    vidmem[19 * 0x50] = COL_MAGENTA;
+    sprintf(&vidmem[19 * 0x50+1], "Showing %u-%u of %u programs.", offset+1, offset+16, __nrprogs);
 }
 
 uint16_t build_linked_list(uint16_t progid) {
-    uint16_t numprogs = 0;
-    uint16_t ram_ptr = RAMADDRPROG;
-
-    // set starting bank
-    uint8_t bank = 0;
-    sst39sf_set_bank(bank);
-
-    // set start positions
-    uint8_t startblock = 0;
-    uint16_t addr = 0x0000;
-
-    // skip first items by offset
-    led_rd_on();
-    while((numprogs < progid) && (bank < __nrbanks)) {
-        startblock = sst39sf_read_byte(addr++);
-
-        // terminate loop upon reading 0xFF
-        if(startblock == 0xFF) {
-            // increment bank
-            bank++;
-            sst39sf_set_bank(bank);
-
-            // reset start position on bank
-            startblock = 0;
-            addr = 0x0000;
-
-            continue;
-        }
-
-        numprogs++;
-    }
-    led_rd_off();
-
     // establish startbank and startblock of chosen program
-    uint8_t nextblock = sst39sf_read_byte(addr);
-    uint8_t nextbank = bank;
+    uint16_t bankblock = find_bankblock(progid);
+    uint8_t nextblock = bankblock & 0xFF;
+    uint8_t nextbank = bankblock >> 8;
     uint16_t ramptr = RAMLINKEDLIST;
 
     // note that prgsize is stored in big endian order on the ROM
@@ -317,6 +284,64 @@ uint16_t build_linked_list(uint16_t progid) {
     led_rd_off();
 
     return prgsize;
+}
+
+void get_progname(uint16_t progid, char* progname) {
+    // establish startbank and startblock of chosen program
+    uint16_t bankblock = find_bankblock(progid);
+    uint8_t block = bankblock & 0xFF;
+    uint8_t bank = bankblock >> 8;
+
+    sst39sf_set_bank(bank);
+
+    // read first 8 bytes of program name
+    for(uint8_t i=0; i<8; i++) {
+        progname[i] = sst39sf_read_byte(0x0100 + 0x40 * block + 0x26 + i);
+    }
+
+    // read last 8 bytes of program name
+    for(uint8_t i=0; i<8; i++) {
+        progname[i+8] = sst39sf_read_byte(0x0100 + 0x40 * block + 0x37 + i);
+    }
+}
+
+uint16_t find_bankblock(uint16_t progid) {
+    uint16_t numprogs = 0;
+    uint16_t ram_ptr = RAMADDRPROG;
+
+    // set starting bank
+    uint8_t bank = 0;
+    sst39sf_set_bank(bank);
+
+    // set start positions
+    uint8_t startblock = 0xFF;
+    uint16_t addr = 0x0000;
+
+    // skip first items by offset
+    led_rd_on();
+    while((numprogs <= progid) && (bank < __nrbanks)) {
+        startblock = sst39sf_read_byte(addr++);
+
+        // terminate loop upon reading 0xFF
+        if(startblock == 0xFF) {
+            // increment bank
+            bank++;
+            sst39sf_set_bank(bank);
+
+            // reset start position on bank
+            addr = 0x0000;
+
+            continue;
+        }
+
+        numprogs++;
+    }
+    led_rd_off();
+
+    uint8_t nextblock = startblock;
+    uint8_t nextbank = bank;
+
+    return nextbank << 8 | startblock;
 }
 
 void print_linked_list(uint8_t row) {
@@ -362,7 +387,7 @@ void copyprogramlinkedlist(void) {
         ramptr += 0x400;                                // go to next ram position
 
         vidmem[0x50*(ctr%16+4) + (ctr >= 16 ? 20 : 0)] = COL_WHITE;
-        sprintf(&vidmem[0x50*(ctr%16+4) + (ctr >= 16 ? 21 : 1)], "%02X", ctr+1);
+        sprintf(&vidmem[0x50*(ctr%16+4) + (ctr >= 16 ? 21 : 1)], "%02X/%02X", nextbank, nextblock);
 
         // set indices to next bank and block
         nextbank = read_ram(llptr++);
@@ -397,7 +422,7 @@ void validatelinkedlist(void) {
         } else {
             vidmem[0x50*(ctr%16+4) + (ctr >= 16 ? 20 : 0)] = COL_RED;
         }
-        sprintf(&vidmem[0x50*(ctr%16+4) + (ctr >= 16 ? 21 : 1)], "%02X: %04X (%04X)", ctr+1, checksum, crc16);
+        sprintf(&vidmem[0x50*(ctr%16+4) + (ctr >= 16 ? 21 : 1)], "%02X/%02X: %04X (%04X)", nextbank, nextblock, checksum, crc16);
 
         // set indices to next bank and block
         nextbank = read_ram(llptr++);
