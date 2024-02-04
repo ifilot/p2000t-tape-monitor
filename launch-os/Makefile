@@ -11,4 +11,4 @@ main.bin main.map main.rom: *.c *.asm
 	-pragma-define:CRT_ENABLE_EIDI=0x33 \
 	--max-allocs-per-node2000 \
 	-SO3 -bn main.bin \
-	-create-app -m && truncate -s 8k main.rom
+	-create-app -m && wc -c < main.rom && truncate -s 8k main.rom

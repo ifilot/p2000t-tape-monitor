@@ -57,7 +57,7 @@ uses more than one block. If not, the default value corresponds to `0xFF`.
 |       $0008 | Free?              | $FF if free, else $00    |
 |       $0009 | Current block      |                          |
 |       $000A | Total blocks       |                          |
-| $0009-$001F | *Unused*           |                          |
+| $000B-$001F | *Unused*           |                          |
 | $0020-$003F | CAS header         |                          |
 
 ### Storage location of cassette metadata

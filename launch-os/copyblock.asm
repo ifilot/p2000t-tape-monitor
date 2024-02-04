@@ -8,7 +8,7 @@ RAMCHIP   EQU $64
 ROMCHIP   EQU $65
 
 _copyblock:
-    di
+    di                      ; disable interrupt
     pop bc                  ; return address
     pop de                  ; ramptr
     pop hl                  ; romptr
@@ -33,4 +33,5 @@ cpnextbyte:
     ld a,b
     or c
     jp nz,cpnextbyte
+    ei                      ; enable interrupts
     ret

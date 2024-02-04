@@ -20,7 +20,7 @@ IO_AH:          EQU $61         ; address high
 IO_BANK:        EQU $63         ; address bank
 NUMBYTES:       EQU $2000
 PROGADDR:       EQU $0000
-BASICPROGSTART: EQU $6547
+DEPLOYADDR:     EQU $6152       ; storage location of deploy addr
 
 ;-----------------------------------------------------
 ; CODE INJECTION PART
@@ -87,6 +87,12 @@ msgbl:
 loadrom:
     ld hl,msglp
     call printmsg
+    ld de,$8000-3
+    call read_ram       ; load high byte deploy addr
+    ld (DEPLOYADDR+1),a
+    ld de,$8000-4
+    call read_ram       ; load low byte deploy addr
+    ld (DEPLOYADDR),a
     ld de,$8000-1
     call read_ram       ; load high byte
     ld b,a
@@ -108,7 +114,7 @@ copydata:
     di
     push bc                 ; store number of bytes
     ld de,$0000             ; start of external ram address
-    ld hl,BASICPROGSTART    ; start of ram address
+    ld hl,(DEPLOYADDR)      ; start of ram address
 cdnextbyte:
     call read_ram           ; load from external ram into a register
     ld (hl),a
@@ -119,20 +125,16 @@ cdnextbyte:
     or c
     jp nz,cdnextbyte
     pop bc
-    ld hl,BASICPROGSTART
-    add hl,bc
+
+    ld hl,(DEPLOYADDR)      ; set deploy address
+    ld ($625C), hl
+
+    add hl,bc               ; add program length
 
     ; set basic pointers to variable space
     ld ($6405),hl
     ld ($6407),hl
     ld ($6409),hl
-    
-    ; reset the pointers to end of memory for BASIC
-    ; TODO: need to fix these instructions
-    ;ld hl,$dfff
-    ;ld ($63b8),hl
-    ;ld hl,$32
-    ;ld ($6258),hl
 
     ei
     ret

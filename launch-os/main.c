@@ -9,6 +9,10 @@
 #include "memory.h"
 #include "config.h"
 #include "leds.h"
+#include "stack.h"
+
+// set printf io
+#pragma printf "%u %X %s"
 
 // forward declarations
 void init(void);
@@ -18,6 +22,7 @@ uint8_t handle_keybuffer_return(void);
 // store program selection keys
 char keybuffer[4] = {0x00, 0x00, 0x00, 0x00};
 uint8_t numkeysbuf = 0;
+uint8_t flag_validation = 1; // whether to perform validation on the loaded program
 
 void main(void) {
     init();
@@ -64,6 +69,10 @@ void main(void) {
                         read_programs_offset(offset);
                         print_programs(16, offset);
                         break;
+                    case 31: // 'v'
+                        flag_validation ^= 1; // toggle first bit
+                        sprintf(&vidmem[0x50*20+1], "Checksum validation %s. [V]", flag_validation == 1 ? "enabled" : "disabled");
+                        break;
                     case 46:
                     case 63:
                     case 4:
@@ -77,7 +86,7 @@ void main(void) {
                     case 44:
                         handle_key(keymem[i]);
                         break;
-                    case 52:
+                    case 52: // enter
                         exit_loop = handle_keybuffer_return();
                         if(exit_loop != 0) {
                             read_programs_offset(offset);
@@ -94,8 +103,10 @@ void main(void) {
 }
 
 void handle_key(uint8_t key) {
-    if(key == 44 && numkeysbuf > 0) {
-        numkeysbuf--;
+    if(key == 44) { // backspace
+        if(numkeysbuf > 0) {
+            numkeysbuf--;
+        }
         keybuffer[numkeysbuf] = ' ';
     } else {
         if(numkeysbuf < 3) {
@@ -136,7 +147,8 @@ void handle_key(uint8_t key) {
             return;
         }
     }
-    memcpy(&vidmem[0x50*21+34], keybuffer, 3);
+    vidmem[0x50*22+34] = COL_WHITE;
+    memcpy(&vidmem[0x50*22+35], keybuffer, 3);
 }
 
 uint8_t handle_keybuffer_return(void) {
@@ -145,13 +157,32 @@ uint8_t handle_keybuffer_return(void) {
     if(progid > 0 && progid <= __nrprogs) {
 
         clearscreen();
-        vidmem[0x50*10] = 0x06;
-        vidmem[0x50*10+1] = 0x0D;
-        sprintf(&vidmem[0x50*10+2], "Loading program");
+        vidmem[0x50*1] = 0x06;
+        vidmem[0x50*1+1] = 0x0D;
+
+        char progname[17];
+        memset(progname, 0x00, 17);
+        get_progname(progid-1, progname);
+        sprintf(&vidmem[0x50*1+2], "Loading program: %s", progname);
+
+        // write deploy location in memory
+        uint16_t deploy = get_deploy_location(progid-1);
+        write_ram(0x8000-4, (uint8_t)(deploy & 0xFF));
+        write_ram(0x8000-3, (uint8_t)(deploy >> 8));
+        sprintf(&vidmem[0x50*3], "Deploying program to: 0x%04X", deploy);
 
         uint16_t prgsize = build_linked_list(progid-1);
-        //print_linked_list(20);
+        //print_linked_list(22);
         copyprogramlinkedlist();
+
+        // perform validation on the RAM chip
+        if(flag_validation == 1) {
+            validatelinkedlist();
+
+            sprintf(&vidmem[0x50 * 23], "Press any key to start the program.");
+            keymem[0x0C] = 0;
+            while(keymem[0x0C] == 0) {} // wait until a key is pressed
+        }
 
         // write number of bytes in memory, note that prgsize is stored
         // in big endian order
@@ -161,7 +192,7 @@ uint8_t handle_keybuffer_return(void) {
         return 0;
 
     } else {
-        sprintf(&vidmem[0x50*10], "Invalid program id: %03i", progid);
+        sprintf(&vidmem[0x50*10], "Invalid program id: %03u", progid);
     }
 
     // clean video buffer
@@ -182,11 +213,14 @@ void init(void) {
     static const char str1[] = "Launcher";
     memcpy(&vidmem[0x0002], str1, strlen(str1));
 
+    // show debug information about BASIC locations and stack pointer
+    // uint16_t basictop = memory[0x63b8] | (uint16_t)memory[0x63b9] << 8; // highest address that BASIC is allowed to use
+    // uint16_t stringspace_size = memory[0x6258] | (uint16_t)memory[0x6259] << 8; // start of string space
+    // sprintf(&vidmem[0x50*19], "Basic pointers: %04X / %04X / %04X", basictop, stringspace_size, get_stack_pointer());
+
     // show version and compile information
-    uint16_t basictop = memory[0x63b8] | (uint16_t)memory[0x63b9] << 8;
-    uint16_t stringspace_size = memory[0x6258] | (uint16_t)memory[0x6259] << 8;
-    sprintf(&vidmem[0x50*19], "Basic pointers: %04X / %04X", basictop, stringspace_size);
-    sprintf(&vidmem[0x50*23], "Version %s (%s, %s)", __VERSION__, __DATE__, __TIME__);
+    vidmem[0x50*23] = COL_BLUE;
+    sprintf(&vidmem[0x50*23+1], "Version %s (%s, %s)", __VERSION__, __DATE__, __TIME__);
 
     // determine chip id
     uint16_t chip_id = sst39sf_get_chip_id();
@@ -212,6 +246,10 @@ void init(void) {
             while(0 == 0){}; // put in infinite loop
     }
 
-    sprintf(&vidmem[0x50*20], "Press [n/p] to scroll between pages.");
-    sprintf(&vidmem[0x50*21], "Select program by entering [0-9]: ");
+    vidmem[0x50*20] = COL_MAGENTA;
+    sprintf(&vidmem[0x50*20+1], "Checksum validation enabled. [v]");
+    vidmem[0x50*21] = COL_BLUE;
+    sprintf(&vidmem[0x50*21+1], "Press [n/p] to scroll between pages.");
+    vidmem[0x50*22] = COL_BLUE;
+    sprintf(&vidmem[0x50*22+1], "Select program by entering [0-9]: ");
 }
