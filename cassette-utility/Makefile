@@ -21,3 +21,4 @@ main.bin main.map main.rom: main.c sst39sf.c memory.c leds.c tape.asm util.c \
 	--max-allocs-per-node2000 \
 	-SO3 -bn main.bin \
 	-create-app -m
+

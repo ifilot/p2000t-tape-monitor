@@ -10,7 +10,7 @@ This project is still under development. Below a list of features can be found.
 Checked features are implemented, unchecked features are work in progress.
 
 - [x] Launch tape files from data cartridge in SLOT2
-- [ ] Write tape data to data cartridge in SLOT2
+- [x] Write tape data to data cartridge in SLOT2
 - [ ] Write data back to tapes from the data cartridge
 
 ## Explainer
@@ -20,14 +20,14 @@ In the conventional approach, the user would start the P2000T and load programs
 from the cassette. Under the hood, data is copied from the cassette to the
 internal memory after which the program can be started.
 
-The data cartridge essentially imitates on this process. Upon boot, a bit of
-firmware is loaded from the data cartridge into memory and launched. This firmware
+The data cartridge essentially imitates this process. Upon boot, a driver is 
+loaded from the data cartridge into memory and launched. This driver
 scans the external ROM chip for programs and shows a list of those programs. The
-user can then select a program and execute it. Upon selection, the program is
+user can then select a program and executes it. Upon selection, the program is
 first copied from the external chip to the internal RAM chip in the data cartridge.
-Next, the firmware is removed (actually, it is simply overwritten), and the new
-data is copied from the RAM chip to the same position as where normally cassette
-data is copied. Finally, the `RUN` command is executed which starts the program.
+Next, the driver is unloaded from memory, and the new data is copied from the 
+RAM chip to the same position as where normally cassette data is copied. 
+Finally, the `RUN` command is executed which starts the program.
 
 ![Explain how the data cartridge works](img/datacartridge_explainer.jpg)
 
@@ -35,27 +35,35 @@ data is copied. Finally, the `RUN` command is executed which starts the program.
 This repository is organized as follows
 
 * `basicmod`: Modified BASIC ROM. This ROM is needed for the cartridge in SLOT1.
-* `docs`: Technical documentation; mainly needed for development
-* `firmwareflasher`: SLOT1 program to transfer launch-os from external ROM chip
+* `cassette-utility`: Source code of the SLOT1 program to copy programs and data
+  from the data cassette to the data cartridge.
+* `docs`: Technical documentation; mainly needed for development.
+* `flasher`: SLOT1 program to transfer the launcher from external ROM chip
   on the data cartridge to the internal ROM.
 * `gui`: GUI to add and delete programs from the data cartridge and to format a
   chip.
+* `launcher`: Source code of the launcher application.
 * `pcb`: PCBs for the SLOT2 data cartridge. Also includes .stl files for the cartridge enclosure.
-* `src`: Source files for the SLOT1 program "tape monitor" that can be used to
-  transfer tapes to the external rom. **This program is still in development,
-  use at your own risk.**
+
 
 ## Files
 
 The latest version of the files below can be obtained from the action artifacts
 of the [last build](https://github.com/ifilot/p2000t-tape-monitor/actions/workflows/build.yml).
 
-* [`BASICBOOTSTRAP.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/BASICBOOTSTRAP.BIN.zip): Modified BASIC cartridge. This is a SLOT1 cartridge.
-* [`CASSETTE-UTILITY.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/CASSETTE-UTILITY.BIN.zip): Utility for copying files directly from the cassette to the (external) ROM chip. This is a SLOT1 cartridge.
-* [`FIRMWAREFLASHER.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/FIRMWAREFLASHER.BIN): Firmware flasher for the data cartridge firmware. This is a SLOT1 cartridge that copies firmware from the external to the internal ROM on the SLOT2 cartridge.
-* [`LAUNCHER.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/LAUNCHER.BIN): Firmware for the data cartridge. This firmware is stored on the internal ROM of the SLOT2 cartridge.
-* [`p2000t-fat-flasher--installer-win64.exe`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/p2000t-fat-flasher-installer-win64.exe.zip): Windows installer for the Flasher GUI. This GUI is used to put cassette files on a ROM
-chip which can be loaded on the P2000T.
+* [`BASICBOOTSTRAP.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/BASICBOOTSTRAP.BIN.zip): 
+  Modified BASIC cartridge. This is a SLOT1 cartridge.
+* [`CASSETTE-UTILITY.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/CASSETTE-UTILITY.BIN.zip): 
+  Utility for copying files directly from the cassette to the (external) ROM chip. This is a SLOT1 cartridge.
+* [`FLASHER.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/FLASHER.BIN): 
+  Flasher for the data cartridge driver. This is a SLOT1 cartridge that copies 
+  the driver from the external to the internal ROM on the SLOT2 cartridge.
+* [`LAUNCHER.BIN`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/LAUNCHER.BIN): 
+  Driver for the data cartridge. This driver is stored on the internal ROM of 
+  the SLOT2 cartridge.
+* [`p2000t-fat-flasher--installer-win64.exe`](https://nightly.link/ifilot/p2000t-tape-monitor/workflows/build/master/p2000t-fat-flasher-installer-win64.exe.zip): 
+  Windows installer for the Flasher GUI. This GUI is used to put cassette files 
+  on a ROM chip which can be loaded on the P2000T.
 
 ## File system
 
