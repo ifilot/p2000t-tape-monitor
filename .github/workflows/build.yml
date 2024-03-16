@@ -282,6 +282,7 @@ jobs:
         version: '5.15.2'
         target: 'desktop'
         arch: 'win64_msvc2019_64'
+        dir: '${{ github.workspace }}/qt/'
         tools: 'tools_ifw'
         cache: true
     - name: Download artifact
@@ -294,7 +295,7 @@ jobs:
     - name: Copy assets
       run: copy gui\assets\icons\icon.ico gui\packaging\packages\com.vendor.product\data\icon.ico
     - name: Create installer
-      run: ${{github.workspace}}\..\..\Qt\Tools\QtInstallerFramework\4.6\bin\binarycreator.exe -c config\config.xml -p packages ${{env.PROGNAME}}-installer-win64.exe
+      run: ${{ github.workspace }}\qt\Qt\Tools\QtInstallerFramework\4.6\bin\binarycreator.exe -c config\config.xml -p packages ${{env.PROGNAME}}-installer-win64.exe
       working-directory: gui/packaging
     - name: Upload installer
       uses: actions/upload-artifact@v3
