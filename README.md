@@ -53,7 +53,7 @@ of the [last build](https://github.com/ifilot/p2000t-tape-monitor/actions/workfl
 
 * [`BASICBOOTSTRAP.BIN`](https://github.com/ifilot/p2000t-tape-monitor/releases/latest/download/BASICBOOTSTRAP.BIN): 
   Modified BASIC cartridge. This is a SLOT1 cartridge.
-* [`CASSETTE-UTILITY.BIN`](https://github.com/ifilot/p2000t-tape-monitor/releases/latest/download/CASSETTE-UTILITY.BIN): 
+* [`CASSETTE_UTILITY.BIN`](https://github.com/ifilot/p2000t-tape-monitor/releases/latest/download/CASSETTE_UTILITY.BIN): 
   Utility for copying files directly from the cassette to the (external) ROM chip. This is a SLOT1 cartridge.
 * [`FLASHER.BIN`](https://github.com/ifilot/p2000t-tape-monitor/releases/latest/download/FLASHER.BIN):
   Flasher for the data cartridge driver. This is a SLOT1 cartridge that copies 
@@ -61,7 +61,7 @@ of the [last build](https://github.com/ifilot/p2000t-tape-monitor/actions/workfl
 * [`LAUNCHER.BIN`](https://github.com/ifilot/p2000t-tape-monitor/releases/latest/download/LAUNCHER.BIN): 
   Driver for the data cartridge. This driver is stored on the internal ROM of 
   the SLOT2 cartridge.
-* [`p2000t-fat-flasher--installer-win64.exe`](https://github.com/ifilot/p2000t-tape-monitor/releases/latest/download/p2000t-fat-flasher-installer-win64.exe.zip): 
+* [`p2000t-fat-flasher-installer-win64.exe`](https://github.com/ifilot/p2000t-tape-monitor/releases/latest/download/p2000t-fat-flasher-installer-win64.exe): 
   Windows installer for the Flasher GUI. This GUI is used to put cassette files 
   on a ROM chip which can be loaded on the P2000T.
 
