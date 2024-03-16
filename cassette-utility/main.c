@@ -44,90 +44,98 @@ int main(void) {
         break;
     }
 
-    print_info("Press any key to read the tape.", 1);
-    wait_for_key();
-
-    // rewind the tape
-    print_info("Rewinding tape...", 1);
-    tape_rewind();
-
     // create placeholders to store tape data
     char description[17];
     description[16] = '\0';
     char ext[4];
     ext[3] = '\0';
 
-    while(memory[CASSTAT] != 'M') {
-        // read the first block from the tape; the data from the tape is now
-        // copied to internal memory
-        print_info("Reading next program...", 1);
-        tape_read_block();
-        if(memory[CASSTAT] != 0) {
-            sprintf(termbuffer, "%cStop reading tape, exit code: %c", COL_RED, memory[CASSTAT]);
-            terminal_printtermbuffer();
+    for(;;) {
+        // whether to proceed to next cassette
+        print_info("Start reading cartridge? (Y/N)", 1);
+        if(wait_for_key_fixed(33) == 0) {
             break;
         }
 
-        // copy data from description to screen
-        memcpy(description, &memory[DESC1], 8);
-        memcpy(&description[8], &memory[DESC2], 8);
-        memcpy(ext, &memory[EXT], 3);
-        const uint8_t totalblocks = memory[BLOCKCTR];
-        uint16_t length = (uint16_t)memory[LENGTH] | ((uint16_t)memory[LENGTH+1] << 8);
+        // rewind the tape
+        print_info("Rewinding tape...", 1);
+        tape_rewind();
 
-        // at this point, the data resides in internal memory and the user is
-        // asked whether they want to store the program from tape on the ROM
-        // chip or whether they want to continue searching for the next program
-        // on the tape
-        sprintf(termbuffer, "Found: %c%s %s%c%i%c%i", COL_YELLOW, description, 
-                ext,COL_CYAN,totalblocks,COL_MAGENTA,length);
-        terminal_printtermbuffer();
-        print_info("Copy program to ROM? [Y/N]", 1);
-
-        // check if user presses YES key
-        uint8_t store_continue = wait_for_key_fixed(33);
-
-        if(store_continue == 1) {
-            // grab total blocks and start copying first block
-            uint8_t blockcounter = 0;
-            uint16_t bankblock = copyblock(blockcounter, totalblocks, 0xFFFF);
-
-            if(bankblock == 0xFFFF) {   // chip is full, exit
-                print_error("CHIP IS FULL. TERMINATING.");
-                return 0;
+        while(memory[CASSTAT] != 'M') {
+            // read the first block from the tape; the data from the tape is now
+            // copied to internal memory
+            print_info("Reading next program...", 1);
+            tape_read_block();
+            if(memory[CASSTAT] != 0) {
+                sprintf(termbuffer, "%cStop reading tape, exit code: %c", COL_RED, memory[CASSTAT]);
+                terminal_printtermbuffer();
+                break;
             }
 
-            // write start byte
-            write_startbyte(bankblock);
+            // copy data from description to screen
+            memcpy(description, &memory[DESC1], 8);
+            memcpy(&description[8], &memory[DESC2], 8);
+            memcpy(ext, &memory[EXT], 3);
+            const uint8_t totalblocks = memory[BLOCKCTR];
+            uint16_t length = (uint16_t)memory[LENGTH] | ((uint16_t)memory[LENGTH+1] << 8);
 
-            // consume all blocks
-            while(memory[BLOCKCTR] > 1) {
-                blockcounter++;
-                sprintf(termbuffer, "Remaining blocks: %i...", memory[BLOCKCTR]-1);
-                terminal_redoline();
-                tape_read_block();
-                if(memory[CASSTAT] != 0) {
-                    sprintf(termbuffer, "Stop reading tape, exit code: %c", memory[CASSTAT]);
-                    terminal_printtermbuffer();
+            // at this point, the data resides in internal memory and the user is
+            // asked whether they want to store the program from tape on the ROM
+            // chip or whether they want to continue searching for the next program
+            // on the tape
+            sprintf(termbuffer, "Found: %c%s %s%c%i%c%i", COL_YELLOW, description, 
+                    ext,COL_CYAN,totalblocks,COL_MAGENTA,length);
+            terminal_printtermbuffer();
+            print_info("Copy program to ROM? (Y/N)", 1);
+
+            // check if user presses YES key
+            uint8_t store_continue = wait_for_key_fixed(33);
+
+            if(store_continue == 1) {
+                // grab total blocks and start copying first block
+                uint8_t blockcounter = 0;
+                uint16_t bankblock = copyblock(blockcounter, totalblocks, 0xFFFF);
+
+                if(bankblock == 0xFFFF) {   // chip is full, exit
+                    print_error("CHIP IS FULL. TERMINATING.");
                     return 0;
                 }
-                bankblock = copyblock(blockcounter, totalblocks, bankblock);
+
+                // write start byte
+                write_startbyte(bankblock);
+
+                // consume all blocks
+                while(memory[BLOCKCTR] > 1) {
+                    blockcounter++;
+                    sprintf(termbuffer, "Remaining blocks: %i...", memory[BLOCKCTR]-1);
+                    terminal_redoline();
+                    tape_read_block();
+                    if(memory[CASSTAT] != 0) {
+                        sprintf(termbuffer, "Stop reading tape, exit code: %c", memory[CASSTAT]);
+                        terminal_printtermbuffer();
+                        return 0;
+                    }
+                    bankblock = copyblock(blockcounter, totalblocks, bankblock);
+                }
+                sprintf(termbuffer, "%cCopied: %s to ROM", COL_GREEN, description);
+                terminal_printtermbuffer();
+            } else {
+                // skip all blocks
+                while(memory[BLOCKCTR] > 1) {
+                    sprintf(termbuffer, "Skipping blocks: %i...", memory[BLOCKCTR]-1);
+                    terminal_redoline();
+                    tape_read_block();
+                }
+                sprintf(termbuffer, "%cSkipping: %s", COL_RED, description);
+                terminal_printtermbuffer();
             }
-            sprintf(termbuffer, "%cCopied: %s to ROM", COL_GREEN, description);
-            terminal_printtermbuffer();
-        } else {
-            // skip all blocks
-            while(memory[BLOCKCTR] > 1) {
-                sprintf(termbuffer, "Skipping blocks: %i...", memory[BLOCKCTR]-1);
-                terminal_redoline();
-                tape_read_block();
-            }
-            sprintf(termbuffer, "%cSkipping: %s", COL_RED, description);
-            terminal_printtermbuffer();
         }
+        print_info("All done reading this cartridge.", 0);
+        print_info("Swap cartridge to continue copying.", 0);
+        print_info("", 0);
     }
 
-    print_info("All done", 0);
+    print_info("End of program.", 0);
 
     return 0;
 }
