@@ -16,4 +16,5 @@ main.bin main.map main.rom: main.c sst39sf.c memory.c util.c copy.asm leds.c
 	-pragma-define:CLIB_FOPEN_MAX=0 \
 	--max-allocs-per-node2000 \
 	-SO3 -bn main.bin \
-	-create-app -m
+	-create-app -m \
+	&& mv main.bin flasher.bin

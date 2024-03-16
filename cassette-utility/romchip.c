@@ -2,6 +2,11 @@
 
 uint8_t __nrbanks = 0;
 
+/**
+ * @brief Find the first free bank and block on the ROM chip
+ * 
+ * @return uint16_t bank and block
+ */
 uint16_t findfreeblock(void) {
     led_rd_on();
     for(uint8_t bank = 0; bank < __nrbanks; bank++) {
@@ -20,7 +25,14 @@ uint16_t findfreeblock(void) {
     return 0xFFFF;  // return when no new block can be found
 }
 
-
+/**
+ * @brief Copy a block from internal memory to the SST39SF0x0 chip
+ * 
+ * @param currentblock current block number
+ * @param totalblocks total number of blocks to copy
+ * @param prevbankblock previous bank and block
+ * @return uint16_t which bank and block on the ROM have been written to
+ */
 uint16_t copyblock(uint8_t currentblock, uint8_t totalblocks, uint16_t prevbankblock) {
     // find first free available block
     const uint16_t bankblock = findfreeblock();
@@ -77,9 +89,16 @@ uint16_t copyblock(uint8_t currentblock, uint8_t totalblocks, uint16_t prevbankb
     // stop writing to chip
     led_wr_off();
 
+    // return which bank and block have been written to
     return bankblock;
 }
 
+/**
+ * @brief Write the start byte to the ROM chip, this byte indicates what the first
+ *        block of a file is.
+ * 
+ * @param bankblock bank and block to write
+ */
 void write_startbyte(uint16_t bankblock) {
     uint8_t bank = bankblock >> 8;
     uint8_t block = bankblock & 0xFF;
