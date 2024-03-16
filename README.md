@@ -51,11 +51,11 @@ This repository is organized as follows
 The latest version of the files below can be obtained from the action artifacts
 of the [last build](https://github.com/ifilot/p2000t-tape-monitor/actions/workflows/build.yml).
 
-* [`BASICBOOTSTRAP.BIN`](https://github.com/ifilot/p2000t-tape-monitor/releases/latest/download/BASICBOOTSTRAP.BIN.zip): 
+* [`BASICBOOTSTRAP.BIN`](https://github.com/ifilot/p2000t-tape-monitor/releases/latest/download/BASICBOOTSTRAP.BIN): 
   Modified BASIC cartridge. This is a SLOT1 cartridge.
-* [`CASSETTE-UTILITY.BIN`](https://github.com/ifilot/p2000t-tape-monitor/releases/latest/download/CASSETTE-UTILITY.BIN.zip): 
+* [`CASSETTE-UTILITY.BIN`](https://github.com/ifilot/p2000t-tape-monitor/releases/latest/download/CASSETTE-UTILITY.BIN): 
   Utility for copying files directly from the cassette to the (external) ROM chip. This is a SLOT1 cartridge.
-* [`FLASHER.BIN`](https://github.com/ifilot/p2000t-tape-monitor/releases/latest/download/FLASHER.BIN): 
+* [`FLASHER.BIN`](https://github.com/ifilot/p2000t-tape-monitor/releases/latest/download/FLASHER.BIN):
   Flasher for the data cartridge driver. This is a SLOT1 cartridge that copies 
   the driver from the external to the internal ROM on the SLOT2 cartridge.
 * [`LAUNCHER.BIN`](https://github.com/ifilot/p2000t-tape-monitor/releases/latest/download/LAUNCHER.BIN): 
