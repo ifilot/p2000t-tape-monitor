@@ -248,7 +248,7 @@ jobs:
 
 ################################################################################
 
-  # GUI to interface with a P2000TFAT-chip
+  # GUI to interface with a P2000T FAT-chip
   build-gui-windows:
     runs-on: windows-latest
     steps:
@@ -294,7 +294,7 @@ jobs:
     - name: Copy assets
       run: copy gui\assets\icons\icon.ico gui\packaging\packages\com.vendor.product\data\icon.ico
     - name: Create installer
-      run: ${{github.workspace}}\..\Qt\Tools\QtInstallerFramework\4.6\bin\binarycreator.exe -c config\config.xml -p packages ${{env.PROGNAME}}-installer-win64.exe
+      run: ${{github.workspace}}\..\..\Qt\Tools\QtInstallerFramework\4.6\bin\binarycreator.exe -c config\config.xml -p packages ${{env.PROGNAME}}-installer-win64.exe
       working-directory: gui/packaging
     - name: Upload installer
       uses: actions/upload-artifact@v3

@@ -1,5 +1,5 @@
 main.bin main.map main.rom: main.c sst39sf.c memory.c leds.c tape.asm util.c \
-                            romchip.c copy.asm crc16.asm
+                            romchip.c copy.asm crc16.asm terminal.c
 	zcc \
 	+embedded -clib=sdcc_iy \
 	main.c \
@@ -11,6 +11,7 @@ main.bin main.map main.rom: main.c sst39sf.c memory.c leds.c tape.asm util.c \
 	romchip.c \
 	tape.asm \
 	crc16.asm \
+	terminal.c \
 	-startup=2 \
 	-pragma-define:CRT_ORG_CODE=0x1000 \
 	-pragma-define:CRT_ORG_DATA=0x6500 \

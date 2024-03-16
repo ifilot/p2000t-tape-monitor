@@ -11,6 +11,7 @@
 #include "tape.h"
 #include "util.h"
 #include "romchip.h"
+#include "terminal.h"
 
 // forward declarations
 void init(void);
@@ -29,7 +30,8 @@ int main(void) {
     uint8_t iter = 0;
 
     while(memory[CASSTAT] != 'M') {
-        // read the first block from the tape
+        // read the first block from the tape; the data from the tape is now
+        // copied to internal memory
         tape_read_block();
         if(memory[CASSTAT] != 0) {
             sprintf(&vidmem[0x50*20], "Stop reading tape, exit code: %c", memory[CASSTAT]);
@@ -41,8 +43,24 @@ int main(void) {
         sprintf(&vidmem[0x50*line+1], "%03i", iter+1);
         vidmem[0x50*line+4] = COL_WHITE;
 
-        // grab total blocks and start copying first block
+        // copy data from description to screen
+        memcpy(&vidmem[0x50*line+5], &memory[DESC1], 8);
+        memcpy(&vidmem[0x50*line+5+8], &memory[DESC2], 8);
+        memcpy(&vidmem[0x50*line+5+17], &memory[EXT], 3);
         const uint8_t totalblocks = memory[BLOCKCTR];
+        uint16_t length = (uint16_t)memory[LENGTH] | ((uint16_t)memory[LENGTH+1] << 8);
+        vidmem[0x50*line+25] = COL_CYAN;
+        sprintf(&vidmem[0x50*line+26], "%05i", length);
+        sprintf(&vidmem[0x50*line+32], "%02i", totalblocks);
+        vidmem[0x50*line+34] = COL_RED;
+
+        // at this point, the data resides in internal memory and the user is
+        // asked whether they want to store the program from tape on the ROM
+        // chip or whether they want to continue searching for the next program
+        // on the tape
+
+
+        // grab total blocks and start copying first block
         uint8_t blockcounter = 0;
         uint16_t bankblock = copyblock(blockcounter, totalblocks, 0xFFFF);
 
@@ -53,16 +71,6 @@ int main(void) {
 
         // write start byte
         write_startbyte(bankblock);
-
-        // copy data from description to screen
-        memcpy(&vidmem[0x50*line+5], &memory[DESC1], 8);
-        memcpy(&vidmem[0x50*line+5+8], &memory[DESC2], 8);
-        memcpy(&vidmem[0x50*line+5+17], &memory[EXT], 3);
-        uint16_t length = (uint16_t)memory[LENGTH] | ((uint16_t)memory[LENGTH+1] << 8);
-        vidmem[0x50*line+25] = COL_CYAN;
-        sprintf(&vidmem[0x50*line+26], "%05i", length);
-        sprintf(&vidmem[0x50*line+32], "%02i", totalblocks);
-        vidmem[0x50*line+34] = COL_RED;
 
         // consume all blocks
         while(memory[BLOCKCTR] > 1) {
@@ -96,10 +104,10 @@ int main(void) {
 
 void init(void) {
     ledbank_init(); // turn all leds off
+    clear_screen();
+    terminal_init(3, 21);
 
-    vidmem[0x50] = TEXT_DOUBLE;
-    vidmem[0x50+1] = COL_CYAN;
-    sprintf(&vidmem[0x50+2], "CASSETTE-UTILITY");
+    sprintf(&vidmem[0x50+2], "%c%cCASSETTE-UTILITY", TEXT_DOUBLE, COL_CYAN);
     sprintf(&vidmem[0x50*22], "Version: %s", __VERSION__);
     sprintf(&vidmem[0x50*23], "Compiled at: %s / %s", __DATE__, __TIME__);
 
