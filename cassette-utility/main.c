@@ -20,7 +20,7 @@ int main(void) {
     init();
 
     // try to access the ROM chip
-    print_info("Cassette utilty loaded", 0);
+    print_info("Cassette utility loaded", 0);
     print_info("Try to access ROM chip", 1);
     uint16_t chip_id = sst39sf_get_chip_id();
     sprintf(termbuffer, "Found chip id: %04X", chip_id);
@@ -52,7 +52,7 @@ int main(void) {
 
     for(;;) {
         // whether to proceed to next cassette
-        print_info("Start reading cartridge? (Y/N)", 1);
+        print_info("Start reading tape? (Y/N)", 1);
         if(wait_for_key_fixed(33) == 0) {
             break;
         }
@@ -130,8 +130,8 @@ int main(void) {
                 terminal_printtermbuffer();
             }
         }
-        print_info("All done reading this cartridge.", 0);
-        print_info("Swap cartridge to continue copying.", 0);
+        print_info("All done reading this tape.", 0);
+        print_info("Swap tape to continue copying.", 0);
         print_info("", 0);
     }
 
